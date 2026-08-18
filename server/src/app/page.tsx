@@ -1579,16 +1579,15 @@ export default function DashboardPage() {
                 setNewMcVersion(server.detection?.mcVersion || '1.21.1');
                 setShowChangeLoaderModal(true);
               }}
-              className="text-[10px] text-[var(--color-accent)] hover:underline font-mono ml-1 flex items-center gap-1 bg-[var(--accent-dim)]/50 px-1.5 py-0.5 rounded border border-[var(--accent-border)]/50 hover:bg-[var(--accent-dim)]"
+              className="text-slate-400 hover:text-[var(--color-accent)] transition-colors p-1 rounded hover:bg-[var(--bg-card)] focus:outline-none ml-0.5"
               title="Change server modloader or Minecraft version"
             >
-              <WardenIcon name="edit" size={10} className="text-[var(--color-accent)]" />
-              Change Loader
+              <WardenIcon name="edit" size={13} className="text-slate-400 hover:text-[var(--color-accent)]" />
             </button>
           </div>
         </div>
 
-        {/* RIGHT: Server action controls + mod update + delete */}
+        {/* RIGHT: Server action controls + mod update */}
         <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-between sm:justify-end">
           <div className="flex items-center gap-2 flex-1 sm:flex-initial">
             {isOnline ? (
@@ -1633,16 +1632,6 @@ export default function DashboardPage() {
             <WardenIcon name="plus" size={14} className="text-slate-300" />
             <span className="hidden sm:inline">New Server</span>
             <span className="sm:hidden">+ New</span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDeleteServer(server.id, server.name)}
-            title="Delete this Minecraft server permanently"
-            className="text-red-400 hover:text-red-300 hover:bg-red-950/40 border border-transparent hover:border-red-800/40 p-1.5"
-          >
-            <WardenIcon name="trash" size={14} className="text-red-400" />
           </Button>
         </div>
       </div>
@@ -3681,6 +3670,32 @@ export default function DashboardPage() {
               </div>
             )}
           </Card>
+
+          {/* Danger Zone: Delete Server */}
+          {server && (
+            <Card className="p-5 sm:p-6 border-red-900/40 bg-red-950/10 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-minecraft font-bold text-red-400 tracking-wider flex items-center gap-2 uppercase text-sm">
+                    <WardenIcon name="trash" size={16} className="text-red-400" />
+                    Danger Zone: Delete Server
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
+                    Permanently delete <span className="text-slate-200 font-semibold">{server.name}</span>. This will immediately stop the server, delete all world files, configurations, mods, and player data. This action cannot be reversed.
+                  </p>
+                </div>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => handleDeleteServer(server.id, server.name)}
+                  className="shrink-0 font-semibold"
+                >
+                  <WardenIcon name="trash" size={14} className="text-white" />
+                  Delete Server Permanently
+                </Button>
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
