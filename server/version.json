@@ -1,6 +1,6 @@
 {
-  "version": "v1",
-  "versionNumber": 1,
-  "releaseTitle": "v1 - Initial Release",
+  "version": "v2",
+  "versionNumber": 2,
+  "releaseTitle": "v2 - Server Export & Import (.zip) with Crafty Migration",
   "releaseDate": "2026-08-18"
 }

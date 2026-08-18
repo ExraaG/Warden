@@ -45,12 +45,18 @@ function main() {
 export const WARDEN_VERSION = '${version}';
 export const WARDEN_VERSION_NUMBER = ${versionNumber};
 export const WARDEN_RELEASE_TITLE = ${JSON.stringify(releaseTitle)};
-export const WARDEN_BUILD_TIME = '${new Date().toISOString()}';
+export const WARDEN_BUILD_TIME = '${releaseDate}';
 `;
 
   try {
-    fs.writeFileSync(tsVersionPath, tsContent, 'utf8');
-    console.log(`[stamp-version] Baked version constant into ${tsVersionPath} -> ${version}`);
+    let existingTs = '';
+    if (fs.existsSync(tsVersionPath)) {
+      existingTs = fs.readFileSync(tsVersionPath, 'utf8');
+    }
+    if (existingTs !== tsContent) {
+      fs.writeFileSync(tsVersionPath, tsContent, 'utf8');
+      console.log(`[stamp-version] Baked version constant into ${tsVersionPath} -> ${version}`);
+    }
   } catch (err) {
     console.warn(`[stamp-version] Could not write ${tsVersionPath}:`, err.message);
   }
