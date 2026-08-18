@@ -54,6 +54,21 @@ export class VersionFetcher {
     return cached?.versions || this.getFallbackVersions();
   }
 
+  private static formatSublabel(v: string, isFirst: boolean): string | undefined {
+    if (v.startsWith('26.')) return 'Snapshot (Requires Java 25+)';
+    if (v === '1.21.1') return isFirst ? 'Latest Release (Recommended)' : 'Recommended Release';
+    if (v === '1.21') return 'Tricky Trials';
+    if (v === '1.20.6') return 'Armored Paws';
+    if (v === '1.20.4') return 'Popular Modding Standard';
+    if (v === '1.20.1') return 'LTS Standard';
+    if (v === '1.19.4') return 'Trails & Tales';
+    if (v === '1.19.2') return 'The Wild Update';
+    if (v === '1.18.2') return 'Caves & Cliffs II';
+    if (v === '1.16.5') return 'Nether Update';
+    if (isFirst) return 'Latest Release';
+    return undefined;
+  }
+
   // 1. PaperMC API
   private static async fetchPaperVersions(): Promise<MCVersionInfo[]> {
     const res = await fetch('https://api.papermc.io/v2/projects/paper');
@@ -65,7 +80,7 @@ export class VersionFetcher {
     return rawVersions.slice().reverse().map((v, i) => ({
       id: v,
       label: v,
-      sublabel: i === 0 ? 'Latest Release' : undefined,
+      sublabel: this.formatSublabel(v, i === 0),
       isStable: !v.includes('pre') && !v.includes('rc') && !v.includes('snapshot'),
     }));
   }
@@ -80,7 +95,7 @@ export class VersionFetcher {
     return rawVersions.slice().reverse().map((v, i) => ({
       id: v,
       label: v,
-      sublabel: i === 0 ? 'Latest Release' : undefined,
+      sublabel: this.formatSublabel(v, i === 0),
       isStable: true,
     }));
   }
@@ -96,7 +111,7 @@ export class VersionFetcher {
     return releases.map((item: any, i: number) => ({
       id: item.version,
       label: item.version,
-      sublabel: i === 0 ? 'Latest Stable' : undefined,
+      sublabel: this.formatSublabel(item.version, i === 0),
       isStable: item.stable,
     }));
   }
@@ -112,7 +127,7 @@ export class VersionFetcher {
     return releases.map((item: any, i: number) => ({
       id: item.version,
       label: item.version,
-      sublabel: i === 0 ? 'Latest Stable' : undefined,
+      sublabel: this.formatSublabel(item.version, i === 0),
       isStable: item.stable,
     }));
   }
@@ -128,20 +143,20 @@ export class VersionFetcher {
     return releases.map((v, i) => ({
       id: v.id,
       label: v.id,
-      sublabel: i === 0 ? 'Latest Release' : undefined,
+      sublabel: this.formatSublabel(v.id, i === 0),
       isStable: true,
     }));
   }
 
   private static getFallbackVersions(): MCVersionInfo[] {
     return [
-      { id: '1.21.1', label: '1.21.1', sublabel: 'Latest Release', isStable: true },
+      { id: '1.21.1', label: '1.21.1', sublabel: 'Latest Release (Recommended)', isStable: true },
       { id: '1.21', label: '1.21', sublabel: 'Tricky Trials', isStable: true },
       { id: '1.20.6', label: '1.20.6', sublabel: 'Armored Paws', isStable: true },
-      { id: '1.20.4', label: '1.20.4', sublabel: 'Popular Modding', isStable: true },
+      { id: '1.20.4', label: '1.20.4', sublabel: 'Popular Modding Standard', isStable: true },
       { id: '1.20.2', label: '1.20.2', isStable: true },
       { id: '1.20.1', label: '1.20.1', sublabel: 'LTS Standard', isStable: true },
-      { id: '1.19.4', label: '1.19.4', isStable: true },
+      { id: '1.19.4', label: '1.19.4', sublabel: 'Trails & Tales', isStable: true },
       { id: '1.19.2', label: '1.19.2', sublabel: 'The Wild Update', isStable: true },
       { id: '1.18.2', label: '1.18.2', sublabel: 'Caves & Cliffs II', isStable: true },
       { id: '1.16.5', label: '1.16.5', sublabel: 'Nether Update', isStable: true },

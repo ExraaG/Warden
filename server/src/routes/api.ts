@@ -154,7 +154,7 @@ apiRouter.delete('/v1/servers/:id', authMiddleware, async (req: Request, res: Re
 // 4.2 Change Server Modloader / Software
 apiRouter.post('/v1/servers/:id/change-loader', authMiddleware, async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { loader, mcVersion } = req.body;
+  const { loader, mcVersion, name } = req.body;
 
   if (!loader || !mcVersion) {
     return res.status(400).json({
@@ -165,7 +165,7 @@ apiRouter.post('/v1/servers/:id/change-loader', authMiddleware, async (req: Requ
 
   try {
     console.log(`[Warden API] Changing loader for '${id}' to ${loader} (${mcVersion})...`);
-    const updated = await serverManager.changeLoader(id, loader, mcVersion);
+    const updated = await serverManager.changeLoader(id, loader, mcVersion, name);
     res.json({ success: true, data: updated } as ApiResponse<WardenServer>);
   } catch (err: any) {
     console.error(`[Warden API] Failed to change loader for '${id}':`, err);

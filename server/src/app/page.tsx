@@ -206,7 +206,7 @@ export default function DashboardPage() {
       const res = await fetch(`/api/v1/servers/${serverId}/change-loader`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ loader: newLoader, mcVersion: newMcVersion }),
+        body: JSON.stringify({ loader: newLoader, mcVersion: newMcVersion, name: server?.name }),
       }).then((r) => r.json());
 
       if (res.success && res.data) {

@@ -274,7 +274,8 @@ export class ServerManager {
   public async changeLoader(
     serverId: string,
     loader: ServerLoader,
-    mcVersion: string
+    mcVersion: string,
+    name?: string
   ): Promise<WardenServer> {
     const dir = this.getServerDir(serverId);
     if (!fs.existsSync(dir)) {
@@ -297,9 +298,19 @@ export class ServerManager {
       } catch {}
     }
 
+    // Preserve existing clean server name
+    let preservedName = name || currentMeta.name;
+    if (!preservedName || preservedName === serverId) {
+      const currentServer = await this.getServer(serverId);
+      if (currentServer && currentServer.name && currentServer.name !== serverId) {
+        preservedName = currentServer.name;
+      }
+    }
+    if (!preservedName) preservedName = serverId;
+
     // Install new server JAR
     const installPayload: CreateServerPayload = {
-      name: currentMeta.name || serverId,
+      name: preservedName,
       loader,
       mcVersion,
       port: currentMeta.port || 25565,
@@ -313,10 +324,13 @@ export class ServerManager {
     const updatedMeta = {
       ...currentMeta,
       id: serverId,
-      name: currentMeta.name || serverId,
+      name: preservedName,
       loader: installResult.loader,
       mcVersion: installResult.mcVersion,
       jarFile: installResult.jarFileName,
+      port: installPayload.port,
+      minMemory: installPayload.minMemory,
+      maxMemory: installPayload.maxMemory,
       updatedAt: new Date().toISOString(),
     };
     await fs.promises.writeFile(metaPath, JSON.stringify(updatedMeta, null, 2), 'utf8');
