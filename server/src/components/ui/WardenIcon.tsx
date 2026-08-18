@@ -52,7 +52,7 @@ export const WardenIcon: React.FC<WardenIconProps> = ({
       title={title}
       onClick={onClick}
       className={clsx(
-        'inline-block shrink-0 transition-colors',
+        'inline-block shrink-0 align-middle transition-colors',
         onClick && 'cursor-pointer',
         className
       )}

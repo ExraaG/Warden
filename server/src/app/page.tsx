@@ -1579,10 +1579,10 @@ export default function DashboardPage() {
                 setNewMcVersion(server.detection?.mcVersion || '1.21.1');
                 setShowChangeLoaderModal(true);
               }}
-              className="text-slate-400 hover:text-[var(--color-accent)] transition-colors p-1 rounded hover:bg-[var(--bg-card)] focus:outline-none ml-0.5"
+              className="inline-flex items-center justify-center w-5 h-5 text-slate-400 hover:text-[var(--color-accent)] transition-colors rounded hover:bg-[var(--bg-card)] focus:outline-none shrink-0"
               title="Change server modloader or Minecraft version"
             >
-              <WardenIcon name="edit" size={13} className="text-slate-400 hover:text-[var(--color-accent)]" />
+              <WardenIcon name="edit" size={13} className="text-slate-400 hover:text-[var(--color-accent)] shrink-0" />
             </button>
           </div>
         </div>
