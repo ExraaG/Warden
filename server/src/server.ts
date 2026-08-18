@@ -38,11 +38,12 @@ async function bootstrap() {
   // Start 4 AM update cron job runner
   updateJobRunner.initCron();
 
-  app.listen(config.port, () => {
+  app.listen(config.port, '0.0.0.0', () => {
     console.log(`=======================================================`);
-    console.log(`   WARDEN SERVER IS RUNNING ON PORT http://localhost:${config.port}`);
-    console.log(`   API Endpoint: http://localhost:${config.port}/api/v1`);
-    console.log(`   Health Check: http://localhost:${config.port}/api/health`);
+    console.log(`   WARDEN SERVER IS RUNNING (0.0.0.0:${config.port})`);
+    console.log(`   Web UI:       http://localhost:${config.port} / http://<YOUR-IP>:${config.port}`);
+    console.log(`   API Endpoint: http://0.0.0.0:${config.port}/api/v1`);
+    console.log(`   Health Check: http://0.0.0.0:${config.port}/api/health`);
     console.log(`   Timezone:     ${config.timezone}`);
     console.log(`=======================================================`);
   });
