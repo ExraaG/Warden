@@ -1,0 +1,9 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@warden/shared": ["../shared/src/index.ts"]
+    }
+  }
+}

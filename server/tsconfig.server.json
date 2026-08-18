@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist-server",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@warden/shared": ["../shared/dist/index.d.ts"]
+    }
+  },
+  "include": [
+    "src/server.ts",
+    "src/config.ts",
+    "src/db/**/*.ts",
+    "src/adapters/**/*.ts",
+    "src/detection/**/*.ts",
+    "src/jobs/**/*.ts",
+    "src/routes/**/*.ts"
+  ],
+  "exclude": ["node_modules", "src/app", "src/components"]
+}

@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "warden-mobile",
+    "slug": "warden-mobile",
+    "version": "1.0.0",
+    "sdkVersion": "51.0.0",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "android": {
+      "package": "com.warden.app"
+    }
+  }
+}

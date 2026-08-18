@@ -1,0 +1,15 @@
+node_modules
+.next
+dist
+dist-server
+.git
+.agents
+.gemini
+graphify-out
+scratch
+mobile
+data
+server/data
+*.log
+.env
+.env*.local

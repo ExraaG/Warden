@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+@font-face {
+  font-family: 'Minecraft';
+  src: url('/fonts/Minecraft.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Minecraft';
+  src: url('/fonts/Minecraft-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root, [data-theme="emerald"] {
+  --bg-main: #0d0e11;
+  --bg-surface: #13161c;
+  --bg-card: #191c24;
+  --color-border: #232733;
+  --color-accent: #1bd96a;
+  --color-accent-hover: #15b758;
+  --accent-dim: rgba(27, 217, 106, 0.12);
+  --accent-border: rgba(27, 217, 106, 0.35);
+  --accent: #1bd96a;
+  --header-spacing: 10px;
+  --header-title-size: 14px;
+}
+
+[data-theme="sculk"] {
+  --bg-main: #0d0e11;
+  --bg-surface: #13161c;
+  --bg-card: #191c24;
+  --color-border: #232733;
+  --color-accent: #1bd96a;
+  --color-accent-hover: #15b758;
+  --accent-dim: rgba(27, 217, 106, 0.12);
+  --accent-border: rgba(27, 217, 106, 0.35);
+  --accent: #1bd96a;
+  --header-spacing: 10px;
+  --header-title-size: 14px;
+}
+
+.section-header {
+  margin-bottom: 10px;
+}
+
+.section-title {
+  font-size: var(--header-title-size, 14px) !important;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: #f3f4f6;
+  font-family: 'Minecraft', 'JetBrains Mono', monospace;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  letter-spacing: 0.03em;
+  caret-color: transparent;
+}
+
+input, textarea, [contenteditable="true"] {
+  caret-color: auto;
+}
+
+*, button, input, select, textarea {
+  font-family: inherit;
+}
+
+.font-minecraft {
+  font-family: 'Minecraft', monospace;
+  letter-spacing: 0.05em;
+  line-height: 1.25;
+}
+
+/* Theme accent text and backgrounds */
+.text-accent {
+  color: var(--color-accent);
+}
+.bg-accent {
+  background-color: var(--color-accent);
+}
+.border-accent {
+  border-color: var(--color-accent);
+}
+.bg-accent-dim {
+  background-color: var(--accent-dim);
+}
+.border-accent-dim {
+  border-color: var(--accent-border);
+}
+
+/* Mask Logo Color Icon */
+.warden-logo-mask {
+  background-color: #f3f4f6;
+  mask: url('/logo.svg') no-repeat center / contain;
+  -webkit-mask: url('/logo.svg') no-repeat center / contain;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+.group:hover .warden-logo-mask {
+  background-color: var(--color-accent);
+}
+
+/* Hide scrollbars cleanly while maintaining full scrollability */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0;
+  height: 0;
+}
+
