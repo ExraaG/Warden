@@ -256,7 +256,7 @@ export class ServerManager {
   // 4. Server Process Lifecycle Controls
   public async startServer(
     serverId: string,
-    options?: { minMemory?: string; maxMemory?: string; jarFile?: string }
+    options?: { minMemory?: string; maxMemory?: string; jarFile?: string; javaPath?: string }
   ): Promise<void> {
     const dir = this.getServerDir(serverId);
     if (!fs.existsSync(dir)) {
@@ -266,6 +266,7 @@ export class ServerManager {
     let minMemory = options?.minMemory;
     let maxMemory = options?.maxMemory;
     let jarName = options?.jarFile;
+    let userJavaPath = options?.javaPath;
     let mcVersion: string | undefined;
 
     const metaPath = path.join(dir, 'warden.json');
@@ -275,6 +276,7 @@ export class ServerManager {
         if (!minMemory && meta.minMemory) minMemory = meta.minMemory;
         if (!maxMemory && meta.maxMemory) maxMemory = meta.maxMemory;
         if (!jarName && meta.jarFile) jarName = meta.jarFile;
+        if (!userJavaPath && meta.javaPath) userJavaPath = meta.javaPath;
         if (meta.mcVersion) mcVersion = meta.mcVersion;
       } catch {}
     }
@@ -295,7 +297,7 @@ export class ServerManager {
       }
     }
 
-    const javaPath = this.resolveJavaPath(mcVersion);
+    const javaPath = userJavaPath || this.resolveJavaPath(mcVersion);
 
     let proc = this.processes.get(serverId);
     if (!proc) {
