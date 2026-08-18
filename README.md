@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/next.js-14-000000?style=flat&logo=next.js&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/typescript-5.x-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/crafty-v4_ready-10B981?style=flat" alt="Crafty Controller" />
+  <img src="https://img.shields.io/badge/crafty-v4_ready-10B981?style=flat&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MjUgNDI1Ij48cGF0aCBmaWxsPSIjZmZmZmZmIiBkPSJtMTYyLjUgMTgyLjUgMzgtMTVxMC00MC00MC00MGgtOTVxLTQwIDAtNDAgNDB2OTBxMCA0MCA0MCA0MGg5NXE0MCAwIDQwLTQwbC0zOC0yMHYyOGgtMTAwdi0xMDhoMTAweiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Im0yNjIuNSAxODIuNS0zOC0xNXEwLTQwIDQwLTQwaDk1cTQwIDAgNDAgNDB2OTBxMCA0MC00MCA0MGgtOTVxLTQwIDAtNDAtNDBsMzgtMjB2MjhoMTAwdi0xMDhoLTEwMHoiLz48cGF0aCBmaWxsPSIjZmZmZmZmIiBkPSJNMTQyLjUgMTkxLjVxLTEwIDAtMTAgMTB2MTlxMCAxMCAxMCAxMGgxNDBxMTAgMCAxMC0xMHYtMTlxMC0xMC0xMC0xMHoiLz48L3N2Zz4%3D" alt="Crafty Controller" />
   <img src="https://img.shields.io/badge/modrinth-v2_api-00AF5C?style=flat&logo=modrinth&logoColor=white" alt="Modrinth" />
   <img src="https://img.shields.io/badge/license-GNUv3-blue.svg?style=flat" alt="GNUv3 License" />
 </p>
