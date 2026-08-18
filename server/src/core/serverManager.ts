@@ -46,28 +46,49 @@ export class ServerManager {
    * If version is unknown, defaults to the HIGHEST available Java runtime.
    */
   private resolveJavaPath(mcVersion?: string): string {
-    // Discover all available Java installations by scanning /usr/lib/jvm/
-    const jvmDir = '/usr/lib/jvm';
+    // 1. Check explicit environment variables
+    if (mcVersion && (/^26(\b|\.)/i.test(mcVersion) || /mc\.26/i.test(mcVersion))) {
+      if (process.env.JAVA_26_PATH && fs.existsSync(process.env.JAVA_26_PATH)) return process.env.JAVA_26_PATH;
+      if (process.env.JAVA_25_PATH && fs.existsSync(process.env.JAVA_25_PATH)) return process.env.JAVA_25_PATH;
+    }
+    if (mcVersion && (/^1\.2[1-9]/.test(mcVersion) || /^1\.20\.([5-9]|[1-9]\d)/.test(mcVersion))) {
+      if (process.env.JAVA_21_PATH && fs.existsSync(process.env.JAVA_21_PATH)) return process.env.JAVA_21_PATH;
+    }
+    if (mcVersion && /^1\.(1[6-9]|20\.[0-4]\b)/.test(mcVersion)) {
+      if (process.env.JAVA_17_PATH && fs.existsSync(process.env.JAVA_17_PATH)) return process.env.JAVA_17_PATH;
+    }
+
+    // Discover all available Java installations by scanning standard JVM locations
+    const searchDirs = ['/usr/lib/jvm', '/usr/lib64/jvm', '/usr/java', '/opt/jvm'];
     const availableJavas: { version: number; path: string }[] = [];
-    try {
-      if (fs.existsSync(jvmDir)) {
-        const entries = fs.readdirSync(jvmDir);
-        for (const entry of entries) {
-          const match = entry.match(/(?:java|openjdk)[-_]?(\d+)/i);
-          if (match) {
-            const javaPath = path.join(jvmDir, entry, 'bin', 'java');
-            if (fs.existsSync(javaPath)) {
-              availableJavas.push({ version: parseInt(match[1], 10), path: javaPath });
+
+    for (const jvmDir of searchDirs) {
+      try {
+        if (fs.existsSync(jvmDir)) {
+          const entries = fs.readdirSync(jvmDir);
+          for (const entry of entries) {
+            const match = entry.match(/(?:java|openjdk)[-_]?(\d+)/i);
+            if (match) {
+              const javaPath = path.join(jvmDir, entry, 'bin', 'java');
+              if (fs.existsSync(javaPath)) {
+                availableJavas.push({ version: parseInt(match[1], 10), path: javaPath });
+              }
             }
           }
         }
-        availableJavas.sort((a, b) => b.version - a.version); // Highest first
-      }
-    } catch {}
+      } catch {}
+    }
+
+    // Add env vars to available pool if present
+    if (process.env.JAVA_26_PATH && fs.existsSync(process.env.JAVA_26_PATH)) availableJavas.push({ version: 26, path: process.env.JAVA_26_PATH });
+    if (process.env.JAVA_25_PATH && fs.existsSync(process.env.JAVA_25_PATH)) availableJavas.push({ version: 25, path: process.env.JAVA_25_PATH });
+    if (process.env.JAVA_21_PATH && fs.existsSync(process.env.JAVA_21_PATH)) availableJavas.push({ version: 21, path: process.env.JAVA_21_PATH });
+    if (process.env.JAVA_17_PATH && fs.existsSync(process.env.JAVA_17_PATH)) availableJavas.push({ version: 17, path: process.env.JAVA_17_PATH });
+
+    availableJavas.sort((a, b) => b.version - a.version); // Highest first
 
     // Helper: find the best Java >= minVersion
     const findJava = (minVersion: number): string | null => {
-      // First try exact match, then closest >= minVersion
       const exact = availableJavas.find(j => j.version === minVersion);
       if (exact) return exact.path;
       const compatible = availableJavas.find(j => j.version >= minVersion);
@@ -107,6 +128,8 @@ export class ServerManager {
       console.log(`[Warden] Defaulting to highest available Java (${availableJavas[0].version}): ${availableJavas[0].path}`);
       return availableJavas[0].path;
     }
+
+    if (process.env.JAVA_PATH) return process.env.JAVA_PATH;
 
     console.log(`[Warden] No JVM found in /usr/lib/jvm, falling back to system 'java'`);
     return 'java';

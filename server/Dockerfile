@@ -5,14 +5,19 @@ FROM node:20-alpine AS base
 FROM base AS builder
 WORKDIR /app
 
-# Copy shared package and source
+# Copy scripts & version info first
+COPY scripts ./scripts
+COPY version.json ./version.json
+
+# Copy shared package and build
 COPY shared ./shared
 RUN cd shared && npm install && npm run build
 
-# Copy server package
+# Copy server package and build
 COPY server ./server
 WORKDIR /app/server
 RUN npm install
+RUN node ../scripts/stamp-version.js || true
 RUN npm run build
 
 # Stage 2: Production Runner
@@ -24,13 +29,15 @@ ENV PORT=22313
 ENV TZ=UTC
 ENV DATA_DIR=/data
 
-# Install curl for healthcheck & OpenJDK runtimes for Minecraft servers
-# Java 17 for MC 1.16.5–1.20.4, Java 21 for MC 1.20.5+, Java 25+/26 for MC 26.x snapshots
-# Dynamic resolver in serverManager.ts scans /usr/lib/jvm/ to find the best match
-RUN apk add --no-cache curl openjdk17-jre \
-    && (apk add --no-cache openjdk21-jre || true) \
-    && (apk add --no-cache openjdk26-jre || apk add --no-cache openjdk25-jre || true) \
-    && ln -sf /usr/lib/jvm/java-21-openjdk/bin/java /usr/local/bin/java 2>/dev/null || true
+# Install curl for healthcheck, git, & OpenJDK runtimes (17, 21, 25)
+RUN apk add --no-cache curl git openjdk17-jre openjdk21-jre openjdk25-jre
+
+# Java Environment Variables for Warden
+ENV JAVA_17_PATH=/usr/lib/jvm/java-17-openjdk/bin/java
+ENV JAVA_21_PATH=/usr/lib/jvm/java-21-openjdk/bin/java
+ENV JAVA_25_PATH=/usr/lib/jvm/java-25-openjdk/bin/java
+ENV JAVA_26_PATH=/usr/lib/jvm/java-26-openjdk/bin/java
+ENV JAVA_PATH=/usr/lib/jvm/java-25-openjdk/bin/java
 
 # Copy compiled shared library and server output
 COPY --from=builder /app/shared /app/shared
