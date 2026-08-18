@@ -6,12 +6,15 @@
 ## Screenshots
 
 **Dashboard — Server Overview with live stats and mods overview**
+
 ![Dashboard](docs/screenshots/dashboard.png)
 
 **Audit Logs — Step-by-step 4 AM update execution trail**
+
 ![Audit Logs](docs/screenshots/audit-logs.png)
 
 **Settings — Crafty API configuration and Warden API key management**
+
 ![Settings](docs/screenshots/settings.png)
 
 
