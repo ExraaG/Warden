@@ -7,8 +7,8 @@ export const BUILD_INFO: {
   buildTime: string;
 } = {
   version: '1.0.0',
-  commit: '046320f',
-  commitFull: '046320f093935eee3c3587fc418595e3124bfd00',
+  commit: '80b9fb5',
+  commitFull: '80b9fb514eb659fdead3869d31e5eff4859fae60',
   branch: 'main',
-  buildTime: '2026-08-18T18:06:46.530Z',
+  buildTime: '2026-08-18T18:13:12.722Z',
 };

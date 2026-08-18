@@ -59,7 +59,14 @@ export class ServerManager {
     }
 
     // Discover all available Java installations by scanning standard JVM locations
-    const searchDirs = ['/usr/lib/jvm', '/usr/lib64/jvm', '/usr/java', '/opt/jvm'];
+    const searchDirs = [
+      path.join(config.dataDir, 'java'),
+      '/data/java',
+      '/usr/lib/jvm',
+      '/usr/lib64/jvm',
+      '/usr/java',
+      '/opt/jvm',
+    ];
     const availableJavas: { version: number; path: string }[] = [];
 
     for (const jvmDir of searchDirs) {
