@@ -16,7 +16,12 @@
   <img src="https://img.shields.io/badge/license-GNUv3-blue.svg?style=flat" alt="GNUv3 License" />
 </p>
 
-https://ko-fi.com/exraa
+<p align="center">
+  <a href="https://ko-fi.com/exraa target="_blank">
+    <img src="https://storage.ko-fi.com/cdn/kofi3.png?v=3" height="42" alt="Buy Me A Coffee at ko-fi.com" />
+  </a>
+</p>
+
 
 
 
