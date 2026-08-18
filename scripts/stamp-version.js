@@ -31,13 +31,6 @@ function main() {
   }
 
   const gitInfo = getGitInfo();
-  const versionData = {
-    version,
-    commit: gitInfo.commit,
-    commitFull: gitInfo.commitFull,
-    branch: gitInfo.branch,
-    buildTime: new Date().toISOString(),
-  };
 
   const targets = [
     path.resolve(rootDir, 'version.json'),
@@ -46,8 +39,29 @@ function main() {
 
   for (const target of targets) {
     try {
+      let existingCommit = 'unknown';
+      let existingCommitFull = 'unknown';
+      if (fs.existsSync(target)) {
+        try {
+          const raw = JSON.parse(fs.readFileSync(target, 'utf8'));
+          if (raw.commit && raw.commit !== 'unknown') existingCommit = raw.commit;
+          if (raw.commitFull && raw.commitFull !== 'unknown') existingCommitFull = raw.commitFull;
+        } catch {}
+      }
+
+      const finalCommit = gitInfo.commit !== 'unknown' ? gitInfo.commit : existingCommit;
+      const finalCommitFull = gitInfo.commitFull !== 'unknown' ? gitInfo.commitFull : existingCommitFull;
+
+      const versionData = {
+        version,
+        commit: finalCommit,
+        commitFull: finalCommitFull,
+        branch: gitInfo.branch,
+        buildTime: new Date().toISOString(),
+      };
+
       fs.writeFileSync(target, JSON.stringify(versionData, null, 2) + '\n', 'utf8');
-      console.log(`[stamp-version] Updated ${target} -> commit ${gitInfo.commit}`);
+      console.log(`[stamp-version] Stamped ${target} -> commit ${finalCommit}`);
     } catch (err) {
       console.warn(`[stamp-version] Could not write ${target}:`, err.message);
     }

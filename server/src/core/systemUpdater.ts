@@ -26,7 +26,15 @@ export class SystemUpdater {
     let commit = 'unknown';
     let version = '1.0.0';
 
-    // 1. Check for version info file in multiple standard locations
+    // 1. Try local git first if working inside a git repository
+    try {
+      const { stdout } = await execPromise('git rev-parse HEAD', { timeout: 3000 });
+      if (stdout && stdout.trim()) {
+        commit = stdout.trim();
+      }
+    } catch {}
+
+    // 2. Check for version info file if git is not available (e.g. Docker container)
     const candidateFiles = [
       path.resolve(process.cwd(), 'version.json'),
       path.resolve(process.cwd(), '..', 'version.json'),
@@ -41,21 +49,13 @@ export class SystemUpdater {
         try {
           const raw = JSON.parse(await fs.promises.readFile(versionFile, 'utf8'));
           if (raw.version) version = raw.version;
-          if (raw.commit && raw.commit !== 'unknown') {
+          if (commit === 'unknown' && raw.commit && raw.commit !== 'unknown') {
             commit = raw.commitFull || raw.commit;
-            return { commit, version };
           }
+          if (commit !== 'unknown') break;
         } catch {}
       }
     }
-
-    // 2. Fallback to local git if .git directory exists
-    try {
-      const { stdout } = await execPromise('git rev-parse HEAD', { timeout: 3000 });
-      if (stdout && stdout.trim()) {
-        commit = stdout.trim();
-      }
-    } catch {}
 
     return { commit, version };
   }
@@ -90,22 +90,19 @@ export class SystemUpdater {
       const commitDate = data.commit?.committer?.date || new Date().toISOString();
       const author = data.commit?.author?.name || data.author?.login || 'Warden Team';
 
+      const cur7 = currentCommit.substring(0, 7).toLowerCase();
+      const lat7 = latestCommit.substring(0, 7).toLowerCase();
+
       let updateAvailable = false;
-      if (latestCommit) {
-        if (currentCommit === 'unknown') {
-          // If current commit is unknown (e.g. fresh/unversioned container), offer update to latest release
-          updateAvailable = true;
-        } else {
-          // Compare SHA prefix or full SHA
-          updateAvailable = !latestCommit.startsWith(currentCommit) && !currentCommit.startsWith(latestCommit);
-        }
+      if (cur7 !== 'unknown' && lat7 && lat7 !== 'unknown') {
+        updateAvailable = cur7 !== lat7;
       }
 
       const result: SystemUpdateStatus = {
         updateAvailable,
         version,
-        currentCommit: currentCommit.substring(0, 7),
-        latestCommit: latestCommit.substring(0, 7),
+        currentCommit: cur7,
+        latestCommit: lat7,
         commitMessage,
         commitDate,
         author,

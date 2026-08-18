@@ -34,45 +34,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [dismissedCommit, setDismissedCommit] = useState<string>('');
 
   const checkUpdates = () => {
-    // 1. Primary check via backend API with force=true
     fetch('/api/v1/system/update-status?force=true')
       .then((r) => r.json())
       .then((res) => {
         if (res.success && res.data) {
           console.log('[Warden] GitHub update check result:', res.data);
           setSystemUpdate(res.data);
-        } else {
-          fallbackClientGithubCheck();
         }
       })
-      .catch(() => fallbackClientGithubCheck());
-  };
-
-  const fallbackClientGithubCheck = () => {
-    // Direct client-side fetch to GitHub as fallback
-    fetch('https://api.github.com/repos/ExraaG/Warden/commits/main', {
-      headers: { Accept: 'application/vnd.github.v3+json' },
-    })
-      .then((r) => r.json())
-      .then((data: any) => {
-        if (data && data.sha) {
-          console.log('[Warden] Direct GitHub commit fetched:', data.sha);
-          setSystemUpdate((prev) => {
-            const currentCommit = prev?.currentCommit || 'unknown';
-            const latestCommit = data.sha.substring(0, 7);
-            const updateAvailable = currentCommit === 'unknown' || !data.sha.startsWith(currentCommit);
-            return {
-              updateAvailable,
-              currentCommit,
-              latestCommit,
-              commitMessage: data.commit?.message?.split('\n')[0] || 'Latest updates available on GitHub',
-              commitDate: data.commit?.committer?.date,
-              author: data.commit?.author?.name || 'Warden Team',
-            };
-          });
-        }
-      })
-      .catch((err) => console.warn('[Warden] Client fallback GitHub check failed:', err));
+      .catch((err) => console.warn('[Warden] Update check failed:', err));
   };
 
   const handlePerformSelfUpdate = async () => {
