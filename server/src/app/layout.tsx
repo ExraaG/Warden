@@ -363,9 +363,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex flex-col gap-4">
             <div className="bg-[var(--bg-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-slate-400">Target Commit / Release</span>
+                <span className="text-xs font-mono text-slate-400">Target Version</span>
                 <span className="text-xs font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40 font-bold">
-                  {systemUpdate?.latestCommit || 'latest'}
+                  {systemUpdate?.latestCommit || 'v2'}
                 </span>
               </div>
               {systemUpdate?.commitMessage && (

@@ -67,9 +67,9 @@ export default function SettingsPage() {
     try {
       const data = await fetchUpdateStatus(true);
       if (data?.updateAvailable) {
-        showToast(`Update available! Commit ${data.latestCommit}`, 'info');
+        showToast(`Update available! Version ${data.latestCommit}`, 'info');
       } else {
-        showToast('Warden is fully up to date with GitHub!', 'success');
+        showToast(`Warden is running the latest version (${data?.version || 'v2'})!`, 'success');
       }
     } finally {
       setCheckingUpdate(false);
@@ -266,7 +266,7 @@ export default function SettingsPage() {
               </p>
               {updateInfo?.latestCommit && (
                 <div className="text-[11px] font-mono text-slate-400 pt-1 flex items-center gap-2">
-                  <span>Latest GitHub Release:</span>
+                  <span>Latest GitHub Version:</span>
                   <span className="text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800/40 px-1.5 py-0.5 rounded">
                     {updateInfo.latestCommit}
                   </span>
