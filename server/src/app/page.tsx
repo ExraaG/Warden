@@ -131,6 +131,7 @@ export default function DashboardPage() {
         loadServerDetails(res.data.id);
         loadAllServers();
         // Auto-show EULA popup for first-time setup
+        setEulaAutoStart(!!createForm.autoStart);
         setShowEulaModal(true);
       } else {
         showToast(`Failed to create server: ${res.error}`, 'error');
@@ -1402,6 +1403,7 @@ export default function DashboardPage() {
         setTimeout(() => loadServerDetails(serverId), 5000);
       } else if (res.error === 'EULA_NOT_ACCEPTED') {
         // Show EULA acceptance popup
+        setEulaAutoStart(true);
         setShowEulaModal(true);
       } else {
         setActionMessage({ text: `Failed: ${res.error}`, type: 'error' });
@@ -1416,6 +1418,7 @@ export default function DashboardPage() {
   };
 
   const [showEulaModal, setShowEulaModal] = useState<boolean>(false);
+  const [eulaAutoStart, setEulaAutoStart] = useState<boolean>(false);
   const [acceptingEula, setAcceptingEula] = useState<boolean>(false);
 
   const handleAcceptEula = async () => {
@@ -1429,9 +1432,12 @@ export default function DashboardPage() {
 
       if (res.success) {
         setShowEulaModal(false);
-        showToast('Minecraft EULA accepted! Starting server...', 'success');
-        // Now try starting the server again
-        await handleAction('start');
+        if (eulaAutoStart) {
+          showToast('Minecraft EULA accepted! Starting server...', 'success');
+          await handleAction('start');
+        } else {
+          showToast('Minecraft EULA accepted! Server is ready to start.', 'success');
+        }
       } else {
         showToast(`Failed to accept EULA: ${res.error}`, 'error');
       }

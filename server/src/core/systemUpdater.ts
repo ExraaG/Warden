@@ -109,8 +109,12 @@ export class SystemUpdater {
       const lat7 = latestCommit.substring(0, 7).toLowerCase();
 
       let updateAvailable = false;
-      if (cur7 !== 'unknown' && lat7 && lat7 !== 'unknown') {
-        updateAvailable = cur7 !== lat7;
+      if (lat7 && lat7 !== 'unknown') {
+        if (cur7 === 'unknown') {
+          updateAvailable = true;
+        } else {
+          updateAvailable = cur7 !== lat7;
+        }
       }
 
       const result: SystemUpdateStatus = {
