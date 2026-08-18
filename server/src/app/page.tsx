@@ -25,9 +25,10 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('mods');
   const [liveUptime, setLiveUptime] = useState<number>(0);
 
-  // Create Server Modal State
+  // Create Server Modal State & Options
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [creatingServer, setCreatingServer] = useState<boolean>(false);
+  const [customVersionMode, setCustomVersionMode] = useState<boolean>(false);
   const [createForm, setCreateForm] = useState({
     name: 'My Minecraft Server',
     loader: 'paper' as ServerLoader,
@@ -37,6 +38,46 @@ export default function DashboardPage() {
     maxMemory: '4G',
     autoStart: true,
   });
+
+  const CREATE_LOADER_OPTIONS: DropdownOption[] = [
+    { id: 'paper', label: 'Paper', sublabel: 'High Performance Plugins' },
+    { id: 'fabric', label: 'Fabric', sublabel: 'Fast Modern Modloader' },
+    { id: 'purpur', label: 'Purpur', sublabel: 'High Performance Paper Fork' },
+    { id: 'quilt', label: 'Quilt', sublabel: 'Modular Modloader (Fabric Compatible)' },
+    { id: 'vanilla', label: 'Vanilla', sublabel: 'Official Mojang Game Server' },
+  ];
+
+  const CREATE_MC_VERSIONS: DropdownOption[] = [
+    { id: '1.21.1', label: '1.21.1', sublabel: 'Latest Release' },
+    { id: '1.21', label: '1.21', sublabel: 'Tricky Trials' },
+    { id: '1.20.6', label: '1.20.6', sublabel: 'Armored Paws' },
+    { id: '1.20.4', label: '1.20.4', sublabel: 'Popular Modding standard' },
+    { id: '1.20.2', label: '1.20.2', sublabel: 'Release' },
+    { id: '1.20.1', label: '1.20.1', sublabel: 'LTS Standard' },
+    { id: '1.19.4', label: '1.19.4', sublabel: 'Trails & Tales' },
+    { id: '1.19.2', label: '1.19.2', sublabel: 'The Wild Update' },
+    { id: '1.18.2', label: '1.18.2', sublabel: 'Caves & Cliffs II' },
+    { id: '1.16.5', label: '1.16.5', sublabel: 'Nether Update' },
+  ];
+
+  const CREATE_MIN_RAM_OPTIONS: DropdownOption[] = [
+    { id: '1G', label: '1 GB' },
+    { id: '2G', label: '2 GB' },
+    { id: '4G', label: '4 GB' },
+    { id: '6G', label: '6 GB' },
+    { id: '8G', label: '8 GB' },
+  ];
+
+  const CREATE_MAX_RAM_OPTIONS: DropdownOption[] = [
+    { id: '2G', label: '2 GB' },
+    { id: '4G', label: '4 GB' },
+    { id: '6G', label: '6 GB' },
+    { id: '8G', label: '8 GB' },
+    { id: '12G', label: '12 GB' },
+    { id: '16G', label: '16 GB' },
+    { id: '24G', label: '24 GB' },
+    { id: '32G', label: '32 GB' },
+  ];
 
   const handleCreateServer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1300,112 +1341,6 @@ export default function DashboardPage() {
             </a>
           </div>
         </Card>
-
-        {/* Create Server Modal (Rendered on empty state as well) */}
-        <Modal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          title="Create Minecraft Server"
-        >
-          <form onSubmit={handleCreateServer} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Name</label>
-              <input
-                type="text"
-                required
-                value={createForm.name}
-                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                placeholder="e.g. Survival SMP"
-                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Type</label>
-                <select
-                  value={createForm.loader}
-                  onChange={(e) => setCreateForm({ ...createForm, loader: e.target.value as ServerLoader })}
-                  className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
-                >
-                  <option value="paper">Paper (Optimized Plugins)</option>
-                  <option value="fabric">Fabric (Mods)</option>
-                  <option value="purpur">Purpur (High Performance)</option>
-                  <option value="quilt">Quilt (Mods)</option>
-                  <option value="vanilla">Vanilla (Official)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">MC Version</label>
-                <input
-                  type="text"
-                  required
-                  value={createForm.mcVersion}
-                  onChange={(e) => setCreateForm({ ...createForm, mcVersion: e.target.value })}
-                  placeholder="e.g. 1.21.1, 1.20.4"
-                  className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Port</label>
-                <input
-                  type="number"
-                  required
-                  value={createForm.port}
-                  onChange={(e) => setCreateForm({ ...createForm, port: parseInt(e.target.value, 10) || 25565 })}
-                  className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Min RAM</label>
-                <input
-                  type="text"
-                  value={createForm.minMemory}
-                  onChange={(e) => setCreateForm({ ...createForm, minMemory: e.target.value })}
-                  placeholder="2G"
-                  className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Max RAM</label>
-                <input
-                  type="text"
-                  value={createForm.maxMemory}
-                  onChange={(e) => setCreateForm({ ...createForm, maxMemory: e.target.value })}
-                  placeholder="4G"
-                  className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="checkbox"
-                id="autoStartCheck"
-                checked={createForm.autoStart}
-                onChange={(e) => setCreateForm({ ...createForm, autoStart: e.target.checked })}
-                className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-              />
-              <label htmlFor="autoStartCheck" className="text-xs text-slate-300">
-                Auto-start server immediately after installation
-              </label>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
-              <Button variant="outline" size="sm" type="button" onClick={() => setShowCreateModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" size="sm" type="submit" isLoading={creatingServer}>
-                <WardenIcon name="download" size={14} className="text-[#0d0e11]" />
-                Install & Create Server
-              </Button>
-            </div>
-          </form>
-        </Modal>
       </div>
     );
   }
@@ -4890,90 +4825,114 @@ export default function DashboardPage() {
       >
         <form onSubmit={handleCreateServer} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Name</label>
+            <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Server Name</label>
             <input
               type="text"
               required
               value={createForm.name}
               onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
               placeholder="e.g. Survival SMP"
-              className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+              className="w-full h-8 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 font-mono transition-colors"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Type</label>
-              <select
-                value={createForm.loader}
-                onChange={(e) => setCreateForm({ ...createForm, loader: e.target.value as ServerLoader })}
-                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
-              >
-                <option value="paper">Paper (Optimized Plugins)</option>
-                <option value="fabric">Fabric (Mods)</option>
-                <option value="purpur">Purpur (High Performance)</option>
-                <option value="quilt">Quilt (Mods)</option>
-                <option value="vanilla">Vanilla (Official)</option>
-              </select>
+              <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Server Type</label>
+              <Dropdown
+                options={CREATE_LOADER_OPTIONS}
+                selectedId={createForm.loader}
+                onSelect={(opt) => setCreateForm({ ...createForm, loader: opt.id as ServerLoader })}
+                title="Select Server Software"
+              />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">MC Version</label>
-              <input
-                type="text"
-                required
-                value={createForm.mcVersion}
-                onChange={(e) => setCreateForm({ ...createForm, mcVersion: e.target.value })}
-                placeholder="e.g. 1.21.1, 1.20.4"
-                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-semibold uppercase text-slate-400">
+                  {customVersionMode ? 'MC Version (Custom)' : 'MC Version'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setCustomVersionMode(!customVersionMode)}
+                  className="text-[10px] text-[var(--color-accent)] hover:underline font-mono"
+                >
+                  {customVersionMode ? 'Presets' : 'Custom'}
+                </button>
+              </div>
+
+              {customVersionMode ? (
+                <input
+                  type="text"
+                  required
+                  value={createForm.mcVersion}
+                  onChange={(e) => setCreateForm({ ...createForm, mcVersion: e.target.value })}
+                  placeholder="e.g. 1.21.1, 26.2, 25w06a"
+                  className="w-full h-8 bg-[var(--bg-main)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 font-mono"
+                />
+              ) : (
+                <Dropdown
+                  options={CREATE_MC_VERSIONS}
+                  selectedId={createForm.mcVersion}
+                  onSelect={(opt) => setCreateForm({ ...createForm, mcVersion: opt.id })}
+                  title="Select Minecraft Version"
+                />
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Port</label>
-              <input
-                type="number"
-                required
+              <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Server Port</label>
+              <NumberInput
                 value={createForm.port}
-                onChange={(e) => setCreateForm({ ...createForm, port: parseInt(e.target.value, 10) || 25565 })}
-                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+                onChange={(val) => setCreateForm({ ...createForm, port: parseInt(val, 10) || 25565 })}
+                min={1024}
+                max={65535}
+                step={1}
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Min RAM</label>
-              <input
-                type="text"
-                value={createForm.minMemory}
-                onChange={(e) => setCreateForm({ ...createForm, minMemory: e.target.value })}
-                placeholder="2G"
-                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+              <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Min RAM (Heap)</label>
+              <Dropdown
+                options={CREATE_MIN_RAM_OPTIONS}
+                selectedId={createForm.minMemory}
+                onSelect={(opt) => setCreateForm({ ...createForm, minMemory: opt.id })}
+                title="Minimum Heap (Xms)"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Max RAM</label>
-              <input
-                type="text"
-                value={createForm.maxMemory}
-                onChange={(e) => setCreateForm({ ...createForm, maxMemory: e.target.value })}
-                placeholder="4G"
-                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+              <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Max RAM (Heap)</label>
+              <Dropdown
+                options={CREATE_MAX_RAM_OPTIONS}
+                selectedId={createForm.maxMemory}
+                onSelect={(opt) => setCreateForm({ ...createForm, maxMemory: opt.id })}
+                title="Maximum Heap (Xmx)"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="checkbox"
-              id="autoStartCheckMain"
-              checked={createForm.autoStart}
-              onChange={(e) => setCreateForm({ ...createForm, autoStart: e.target.checked })}
-              className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-            />
-            <label htmlFor="autoStartCheckMain" className="text-xs text-slate-300">
+          {/* Custom Emerald Styled Checkbox */}
+          <div
+            onClick={() => setCreateForm((prev) => ({ ...prev, autoStart: !prev.autoStart }))}
+            className="flex items-center gap-2.5 pt-1.5 cursor-pointer select-none group"
+          >
+            <div
+              className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                createForm.autoStart
+                  ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]'
+                  : 'border-[var(--color-border)] bg-[var(--bg-main)] group-hover:border-[var(--color-accent)]/50'
+              }`}
+            >
+              {createForm.autoStart && (
+                <svg className="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            <span className="text-xs text-slate-300 group-hover:text-slate-100 transition-colors font-mono">
               Auto-start server immediately after installation
-            </label>
+            </span>
           </div>
 
           <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
