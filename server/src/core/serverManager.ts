@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import AdmZip from 'adm-zip';
 import { ServerProcess } from './serverProcess.js';
 import { ServerInstaller } from './serverInstaller.js';
 import { db } from '../db/storage.js';
@@ -699,6 +700,257 @@ export class ServerManager {
     }
 
     return installedMods;
+  }
+
+  /**
+   * Export a complete server instance as a .zip archive buffer and filename.
+   * Automatically flushes chunks via save-all if server is online.
+   */
+  public async exportServerZip(serverId: string): Promise<{ buffer: Buffer; filename: string }> {
+    const serverDir = this.getServerDir(serverId);
+    if (!fs.existsSync(serverDir)) {
+      throw new Error(`Server directory not found for ${serverId}`);
+    }
+
+    const server = await this.getServer(serverId);
+    const serverName = server?.name || serverId;
+    const safeName = serverName.replace(/[^a-zA-Z0-9_\-\.]/g, '_').toLowerCase();
+    const filename = `warden-server-${safeName}-${new Date().toISOString().slice(0, 10)}.zip`;
+
+    // If server is online, flush chunks before archiving
+    const proc = this.processes.get(serverId);
+    if (proc && proc.getStatus() === 'online') {
+      try {
+        proc.sendCommand('save-all flush');
+        await new Promise((r) => setTimeout(r, 600));
+      } catch {}
+    }
+
+    const zip = new AdmZip();
+    zip.addLocalFolder(serverDir);
+    const buffer = zip.toBuffer();
+
+    return { buffer, filename };
+  }
+
+  /**
+   * Import a server instance from an uploaded .zip archive (Crafty backup, Warden export, or generic zip).
+   */
+  public async importServerFromZip(
+    zipPath: string,
+    options: {
+      name?: string;
+      minMemory?: string;
+      maxMemory?: string;
+      autoStart?: boolean;
+    } = {}
+  ): Promise<WardenServer> {
+    const serverId = `server-${Date.now()}`;
+    const targetDir = this.getServerDir(serverId);
+    await fs.promises.mkdir(targetDir, { recursive: true });
+
+    try {
+      // 1. Extract zip to targetDir
+      const zip = new AdmZip(zipPath);
+      zip.extractAllTo(targetDir, true);
+
+      // 2. Detect nested folder wrappers (common in Crafty Controller or folder zips)
+      let files = await fs.promises.readdir(targetDir);
+      const isNestedSingleFolder =
+        files.length === 1 &&
+        (await fs.promises.stat(path.join(targetDir, files[0]))).isDirectory();
+
+      if (isNestedSingleFolder) {
+        const nestedDir = path.join(targetDir, files[0]);
+        const innerFiles = await fs.promises.readdir(nestedDir);
+        for (const f of innerFiles) {
+          const src = path.join(nestedDir, f);
+          const dest = path.join(targetDir, f);
+          await fs.promises.rename(src, dest);
+        }
+        await fs.promises.rmdir(nestedDir).catch(() => {});
+        files = await fs.promises.readdir(targetDir);
+      } else {
+        // If there are only a few directories and no server.properties / jar in root, check subdirectories
+        const hasRootJarOrProps = files.some(
+          (f) => f.endsWith('.jar') || f === 'server.properties' || f === 'warden.json'
+        );
+        if (!hasRootJarOrProps) {
+          for (const item of files) {
+            const subPath = path.join(targetDir, item);
+            const isDir = (await fs.promises.stat(subPath).catch(() => null))?.isDirectory();
+            if (isDir) {
+              const subFiles: string[] = await fs.promises.readdir(subPath).catch(() => [] as string[]);
+              if (subFiles.includes('server.properties') || subFiles.some((f) => f.endsWith('.jar'))) {
+                for (const sf of subFiles) {
+                  await fs.promises.rename(path.join(subPath, sf), path.join(targetDir, sf));
+                }
+                await fs.promises.rmdir(subPath).catch(() => {});
+                files = await fs.promises.readdir(targetDir);
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Inspect existing warden.json or detect server properties & executable JAR
+      let existingWardenJson: any = null;
+      const wardenJsonPath = path.join(targetDir, 'warden.json');
+      if (fs.existsSync(wardenJsonPath)) {
+        try {
+          existingWardenJson = JSON.parse(await fs.promises.readFile(wardenJsonPath, 'utf8'));
+        } catch {}
+      }
+
+      // Read server.properties if available
+      const props = await this.getServerProperties(serverId);
+      let motdName = '';
+      if (props['motd']) {
+        motdName = props['motd']
+          .replace(/\\u00a7[0-9a-fk-or]/gi, '')
+          .replace(/§[0-9a-fk-or]/gi, '')
+          .split('|')[0]
+          ?.trim();
+      }
+
+      const serverName =
+        options.name?.trim() ||
+        existingWardenJson?.name ||
+        motdName ||
+        `Imported Server`;
+
+      // 4. Detect Executable Server JAR
+      const allJars = files.filter((f) => f.endsWith('.jar') && !f.toLowerCase().includes('installer'));
+      let chosenJar = existingWardenJson?.jarFile || '';
+      if (!chosenJar || !fs.existsSync(path.join(targetDir, chosenJar))) {
+        // Priority order for executable server jar
+        const priorityOrder = [
+          (f: string) => /fabric-server-mc/i.test(f),
+          (f: string) => /paper/i.test(f),
+          (f: string) => /purpur/i.test(f),
+          (f: string) => /neoforge/i.test(f) || /forge/i.test(f),
+          (f: string) => /spigot/i.test(f),
+          (f: string) => /craftbukkit/i.test(f),
+          (f: string) => /^server\.jar$/i.test(f),
+          (f: string) => /server/i.test(f),
+        ];
+
+        for (const test of priorityOrder) {
+          const match = allJars.find(test);
+          if (match) {
+            chosenJar = match;
+            break;
+          }
+        }
+        if (!chosenJar && allJars.length > 0) {
+          chosenJar = allJars[0];
+        }
+        if (!chosenJar) {
+          chosenJar = 'server.jar';
+        }
+      }
+
+      // 5. Detect Loader & MC Version
+      let loader: ServerLoader = existingWardenJson?.loader || 'vanilla';
+      const jarLower = chosenJar.toLowerCase();
+      if (jarLower.includes('fabric')) loader = 'fabric';
+      else if (jarLower.includes('paper')) loader = 'paper';
+      else if (jarLower.includes('purpur')) loader = 'purpur';
+      else if (jarLower.includes('quilt')) loader = 'quilt';
+      else if (jarLower.includes('neoforge') || jarLower.includes('forge')) loader = 'forge';
+      else if (jarLower.includes('spigot') || jarLower.includes('craftbukkit')) loader = 'spigot';
+
+      let mcVersion = existingWardenJson?.mcVersion || '';
+      if (!mcVersion) {
+        const mcMatch = chosenJar.match(/(?:mc\.|-|v)?(\d+\.\d+(?:\.\d+)?)/i);
+        if (mcMatch) {
+          mcVersion = mcMatch[1];
+        } else {
+          mcVersion = '1.21.1';
+        }
+      }
+
+      // 6. Manage Server Port (prevent conflicts with existing servers)
+      const existingServers = await this.getServers();
+      const usedPorts = new Set<number>();
+      for (const s of existingServers) {
+        if (s.id === serverId) continue;
+        try {
+          const p = await this.getServerProperties(s.id);
+          if (p['server-port']) {
+            usedPorts.add(parseInt(p['server-port'], 10));
+          }
+        } catch {}
+      }
+
+      let port = parseInt(props['server-port'] || '25565', 10);
+      if (usedPorts.has(port)) {
+        let nextPort = 25565;
+        while (usedPorts.has(nextPort)) {
+          nextPort++;
+        }
+        port = nextPort;
+        await this.saveServerProperties(serverId, { 'server-port': String(port) } as any);
+      }
+
+      // 7. Write/Update warden.json
+      const meta = {
+        id: serverId,
+        name: serverName,
+        loader,
+        mcVersion,
+        jarFile: chosenJar,
+        port,
+        minMemory: options.minMemory || existingWardenJson?.minMemory || '2G',
+        maxMemory: options.maxMemory || existingWardenJson?.maxMemory || '4G',
+        javaPath: existingWardenJson?.javaPath,
+        createdAt: existingWardenJson?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await fs.promises.writeFile(
+        path.join(targetDir, 'warden.json'),
+        JSON.stringify(meta, null, 2),
+        'utf8'
+      );
+
+      // Save confirmed detection in db
+      db.setServerDetection(serverId, {
+        loader,
+        mcVersion,
+        isConfirmed: true,
+        source: 'manual_override',
+        detectedAt: new Date().toISOString(),
+      });
+
+      // Cleanup temp zip
+      try {
+        if (fs.existsSync(zipPath)) {
+          await fs.promises.unlink(zipPath);
+        }
+      } catch {}
+
+      // If autoStart requested, start the server
+      if (options.autoStart) {
+        await this.startServer(serverId).catch((err) =>
+          console.warn(`[Warden Import] Auto-start failed:`, err)
+        );
+      }
+
+      return (await this.getServer(serverId))!;
+    } catch (err: any) {
+      try {
+        if (fs.existsSync(targetDir)) {
+          await fs.promises.rm(targetDir, { recursive: true, force: true });
+        }
+      } catch {}
+      try {
+        if (fs.existsSync(zipPath)) {
+          await fs.promises.unlink(zipPath);
+        }
+      } catch {}
+      throw new Error(`Failed to import server: ${err.message}`);
+    }
   }
 }
 

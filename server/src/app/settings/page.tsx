@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { WardenSettings } from '@warden/shared';
+import { WardenSettings, WardenServer } from '@warden/shared';
 import { WardenIcon } from '../../components/ui/WardenIcon';
 import { showToast } from '../../components/ui/Toast';
 
@@ -21,6 +21,9 @@ export default function SettingsPage() {
     latestCommit?: string;
     commitMessage?: string;
   } | null>(null);
+  const [serversList, setServersList] = useState<WardenServer[]>([]);
+  const [selectedExportServer, setSelectedExportServer] = useState<string>('');
+  const [exportingServer, setExportingServer] = useState<boolean>(false);
 
   const fetchUpdateStatus = async (force = false) => {
     try {
@@ -35,6 +38,17 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchUpdateStatus();
+    fetch('/api/v1/servers')
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && res.data) {
+          setServersList(res.data);
+          if (res.data.length > 0) {
+            setSelectedExportServer(res.data[0].id);
+          }
+        }
+      })
+      .catch(() => {});
     fetch('/api/v1/settings')
       .then((r) => r.json())
       .then((res) => {
@@ -59,6 +73,43 @@ export default function SettingsPage() {
       }
     } finally {
       setCheckingUpdate(false);
+    }
+  };
+
+  const handleExportServer = async () => {
+    if (!selectedExportServer) {
+      showToast('Please select a server to export', 'error');
+      return;
+    }
+    setExportingServer(true);
+    try {
+      const target = serversList.find((s) => s.id === selectedExportServer);
+      showToast('Exporting server archive (saving chunks)...', 'info');
+      const res = await fetch(`/api/v1/servers/${selectedExportServer}/export`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Server export failed');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = res.headers.get('content-disposition');
+      let filename = `warden-${target?.name?.toLowerCase().replace(/[^a-z0-9_-]/g, '_') || selectedExportServer}.zip`;
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast('Server ZIP exported and downloaded successfully!', 'success');
+    } catch (err: any) {
+      showToast(`Export error: ${err.message}`, 'error');
+    } finally {
+      setExportingServer(false);
     }
   };
 
@@ -252,6 +303,48 @@ export default function SettingsPage() {
                 </Button>
               )}
             </div>
+          </div>
+        </Card>
+
+        {/* Server Export & Migration Card */}
+        <Card
+          header="Server Export & Migration"
+          badge={<WardenIcon name="download" size={16} className="text-[var(--color-accent)]" />}
+        >
+          <div className="space-y-3">
+            <p className="text-xs text-slate-400 font-mono leading-relaxed">
+              Export any of your Minecraft server instances as a standalone <code className="text-emerald-400">.zip</code> archive. This contains all worlds, configs, installed mods/plugins, and server properties.
+            </p>
+            {serversList.length > 0 ? (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
+                <select
+                  value={selectedExportServer}
+                  onChange={(e) => setSelectedExportServer(e.target.value)}
+                  className="flex-1 bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+                >
+                  {serversList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.detection?.loader || 'vanilla'} {s.detection?.mcVersion || ''})
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  isLoading={exportingServer}
+                  onClick={handleExportServer}
+                  className="px-5 font-minecraft text-xs shrink-0"
+                >
+                  <WardenIcon name="download" size={14} className="text-[#0d0e11]" />
+                  Download ZIP
+                </Button>
+              </div>
+            ) : (
+              <div className="text-xs font-mono text-slate-500 italic">
+                No servers currently installed to export.
+              </div>
+            )}
           </div>
         </Card>
 

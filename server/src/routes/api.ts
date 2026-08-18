@@ -545,3 +545,55 @@ apiRouter.post('/v1/system/self-update', authMiddleware, async (_req: Request, r
     res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
   }
 });
+
+// 25. Export Server as ZIP Archive
+apiRouter.get('/v1/servers/:id/export', authMiddleware, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const { buffer, filename } = await serverManager.exportServerZip(id);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } catch (err: any) {
+    console.error(`[Warden API] Server export failed for ${id}:`, err);
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 26. Import Server from ZIP Archive (Crafty Controller / Generic / Warden Backups)
+apiRouter.post('/v1/servers/import', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const name = req.query.name as string | undefined;
+    const minMemory = req.query.minMemory as string | undefined;
+    const maxMemory = req.query.maxMemory as string | undefined;
+    const autoStart = req.query.autoStart === 'true';
+
+    const tempZipPath = path.join(
+      config.dataDir,
+      `import-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.zip`
+    );
+    const fileWriteStream = fs.createWriteStream(tempZipPath);
+
+    await new Promise<void>((resolve, reject) => {
+      req.pipe(fileWriteStream);
+      fileWriteStream.on('finish', () => resolve());
+      fileWriteStream.on('error', (err) => reject(err));
+      req.on('error', (err) => reject(err));
+    });
+
+    console.log(`[Warden API] Importing server from uploaded zip: ${tempZipPath}...`);
+    const server = await serverManager.importServerFromZip(tempZipPath, {
+      name,
+      minMemory,
+      maxMemory,
+      autoStart,
+    });
+
+    res.json({ success: true, data: server } as ApiResponse<WardenServer>);
+  } catch (err: any) {
+    console.error('[Warden API] Server import failed:', err);
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+

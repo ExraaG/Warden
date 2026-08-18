@@ -39,6 +39,17 @@ export default function DashboardPage() {
     autoStart: true,
   });
 
+  // Import / Export Server State (.zip & Crafty Backups)
+  const [showImportModal, setShowImportModal] = useState<boolean>(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importName, setImportName] = useState<string>('');
+  const [importMinMemory, setImportMinMemory] = useState<string>('2G');
+  const [importMaxMemory, setImportMaxMemory] = useState<string>('4G');
+  const [importAutoStart, setImportAutoStart] = useState<boolean>(false);
+  const [importingServer, setImportingServer] = useState<boolean>(false);
+  const [importProgress, setImportProgress] = useState<string>('');
+  const [exportingServer, setExportingServer] = useState<boolean>(false);
+
   const CREATE_LOADER_OPTIONS: DropdownOption[] = [
     { id: 'paper', label: 'Paper', sublabel: 'High Performance Plugins' },
     { id: 'fabric', label: 'Fabric', sublabel: 'Fast Modern Modloader' },
@@ -107,8 +118,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const handleOpenCreate = () => setShowCreateModal(true);
+    const handleOpenImport = () => setShowImportModal(true);
     window.addEventListener('warden_open_create_server', handleOpenCreate);
-    return () => window.removeEventListener('warden_open_create_server', handleOpenCreate);
+    window.addEventListener('warden_open_import_server', handleOpenImport);
+    return () => {
+      window.removeEventListener('warden_open_create_server', handleOpenCreate);
+      window.removeEventListener('warden_open_import_server', handleOpenImport);
+    };
   }, []);
 
   const handleCreateServer = async (e: React.FormEvent) => {
@@ -139,6 +155,88 @@ export default function DashboardPage() {
       showToast(`Creation error: ${err.message}`, 'error');
     } finally {
       setCreatingServer(false);
+    }
+  };
+
+  const handleExportServer = async () => {
+    if (!server?.id) return;
+    setExportingServer(true);
+    try {
+      showToast('Exporting server archive (saving chunks)...', 'info');
+      const res = await fetch(`/api/v1/servers/${server.id}/export`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Server export failed');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = res.headers.get('content-disposition');
+      let filename = `warden-${server.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.zip`;
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast('Server ZIP exported and downloaded successfully!', 'success');
+    } catch (err: any) {
+      showToast(`Export error: ${err.message}`, 'error');
+    } finally {
+      setExportingServer(false);
+    }
+  };
+
+  const handleImportServer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importFile) {
+      showToast('Please select a .zip server backup archive', 'error');
+      return;
+    }
+    setImportingServer(true);
+    setImportProgress('Uploading server backup archive...');
+    try {
+      const q = new URLSearchParams();
+      if (importName.trim()) q.set('name', importName.trim());
+      if (importMinMemory) q.set('minMemory', importMinMemory);
+      if (importMaxMemory) q.set('maxMemory', importMaxMemory);
+      if (importAutoStart) q.set('autoStart', 'true');
+
+      setImportProgress('Extracting and configuring Minecraft server...');
+      const res = await fetch(`/api/v1/servers/import?${q.toString()}`, {
+        method: 'POST',
+        body: importFile,
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
+      });
+
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        throw new Error(data.error || 'Import failed');
+      }
+
+      showToast(`Server '${data.data.name}' imported successfully!`, 'success');
+      setShowImportModal(false);
+      setImportFile(null);
+      setImportName('');
+
+      // Switch to newly imported server
+      setServerId(data.data.id);
+      localStorage.setItem('warden_selected_server_id', data.data.id);
+      window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: data.data.id }));
+      window.dispatchEvent(new CustomEvent('warden_server_updated'));
+      loadServerDetails(data.data.id);
+      loadAllServers();
+    } catch (err: any) {
+      showToast(`Import error: ${err.message}`, 'error');
+    } finally {
+      setImportingServer(false);
+      setImportProgress('');
     }
   };
 
@@ -1522,10 +1620,14 @@ export default function DashboardPage() {
             <p className="text-slate-400 text-xs mb-6 leading-relaxed font-mono">
               Warden runs standalone with 1-click downloads for Paper, Fabric, Purpur, Quilt, and Vanilla.
             </p>
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-3 flex-wrap">
               <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)} className="px-5">
                 <WardenIcon name="plus" size={14} className="text-[#0d0e11]" />
                 Create New Server
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)} className="px-4">
+                <WardenIcon name="upload" size={14} className="text-slate-300" />
+                Import (.zip)
               </Button>
               <a href="/settings" className="inline-block">
                 <Button variant="outline" size="sm">
@@ -1654,6 +1756,31 @@ export default function DashboardPage() {
                 <WardenIcon name="refresh-cw" size={14} className="text-[var(--color-accent)]" />
                 <span className="hidden sm:inline">Run Mod Updates</span>
                 <span className="sm:hidden">Updates</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportServer}
+                isLoading={exportingServer}
+                title="Export complete server as a downloadable .zip backup"
+                className="flex-1 sm:flex-initial"
+              >
+                <WardenIcon name="download" size={14} className="text-slate-300" />
+                <span className="hidden sm:inline">Export ZIP</span>
+                <span className="sm:hidden">Export</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowImportModal(true)}
+                title="Import existing server from Crafty or .zip backup"
+                className="flex-1 sm:flex-initial"
+              >
+                <WardenIcon name="upload" size={14} className="text-slate-300" />
+                <span className="hidden sm:inline">Import ZIP</span>
+                <span className="sm:hidden">Import</span>
               </Button>
 
               <Button
@@ -5131,6 +5258,206 @@ export default function DashboardPage() {
             <Button variant="primary" size="sm" type="submit" isLoading={creatingServer}>
               <WardenIcon name="download" size={14} className="text-[#0d0e11]" />
               Install & Create Server
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Import Server Modal */}
+      <Modal
+        isOpen={showImportModal}
+        onClose={() => {
+          if (!importingServer) {
+            setShowImportModal(false);
+            setImportFile(null);
+            setImportName('');
+          }
+        }}
+        title="Import Minecraft Server (.zip)"
+      >
+        <form onSubmit={handleImportServer} className="space-y-4">
+          <div className="bg-[var(--bg-main)] p-3 rounded-lg border border-[var(--color-border)] text-xs text-slate-300 font-mono leading-relaxed flex items-start gap-2.5">
+            <WardenIcon name="upload" size={16} className="text-[var(--color-accent)] shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-slate-100">Crafty & Generic Zip Support:</span>
+              <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">
+                Upload any Minecraft server archive. Warden automatically unpacks nested directories, detects your modloader (Paper, Fabric, Purpur, Forge, Spigot), finds your executable JAR, and configures the port.
+              </p>
+            </div>
+          </div>
+
+          {/* Drag & Drop or File Select */}
+          <div>
+            <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
+              Server ZIP Archive
+            </label>
+            <div
+              onClick={() => {
+                const input = document.getElementById('warden-import-file-input');
+                if (input) input.click();
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                  const f = e.dataTransfer.files[0];
+                  if (f.name.endsWith('.zip')) {
+                    setImportFile(f);
+                    if (!importName) {
+                      setImportName(f.name.replace(/\.zip$/i, '').replace(/[-_]/g, ' '));
+                    }
+                  } else {
+                    showToast('Please drop a valid .zip file', 'error');
+                  }
+                }
+              }}
+              className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors ${
+                importFile
+                  ? 'border-[var(--color-accent)] bg-[var(--accent-dim)]/30'
+                  : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/60 bg-[var(--bg-main)]'
+              }`}
+            >
+              <input
+                id="warden-import-file-input"
+                type="file"
+                accept=".zip"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    const f = e.target.files[0];
+                    setImportFile(f);
+                    if (!importName) {
+                      setImportName(f.name.replace(/\.zip$/i, '').replace(/[-_]/g, ' '));
+                    }
+                  }
+                }}
+              />
+              {importFile ? (
+                <div className="flex items-center justify-between gap-3 px-2">
+                  <div className="flex items-center gap-2.5 text-left min-w-0">
+                    <WardenIcon name="box" size={20} className="text-[var(--color-accent)] shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-100 truncate font-mono">
+                        {importFile.name}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono">
+                        {(importFile.size / (1024 * 1024)).toFixed(2)} MB
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImportFile(null);
+                    }}
+                    className="text-slate-400 hover:text-red-400 transition-colors p-1"
+                  >
+                    <WardenIcon name="x" size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-1.5 py-2">
+                  <WardenIcon name="upload" size={24} className="text-slate-400 mx-auto" />
+                  <div className="text-xs font-mono text-slate-300">
+                    Click to browse or drag &amp; drop <code className="text-[var(--color-accent)]">.zip</code> archive
+                  </div>
+                  <div className="text-[10px] font-mono text-slate-500">
+                    Crafty Controller backups, Warden exports, or custom Minecraft zip files
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
+              Server Name (Optional)
+            </label>
+            <input
+              type="text"
+              value={importName}
+              onChange={(e) => setImportName(e.target.value)}
+              placeholder="e.g. Imported Crafty Server"
+              className="w-full h-8 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 font-mono transition-colors"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Min RAM (Heap)</label>
+              <Dropdown
+                options={CREATE_MIN_RAM_OPTIONS}
+                selectedId={importMinMemory}
+                onSelect={(opt) => setImportMinMemory(opt.id)}
+                title="Minimum Heap (Xms)"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Max RAM (Heap)</label>
+              <Dropdown
+                options={CREATE_MAX_RAM_OPTIONS}
+                selectedId={importMaxMemory}
+                onSelect={(opt) => setImportMaxMemory(opt.id)}
+                title="Maximum Heap (Xmx)"
+              />
+            </div>
+          </div>
+
+          <div
+            onClick={() => setImportAutoStart(!importAutoStart)}
+            className="flex items-center gap-2.5 pt-1.5 cursor-pointer select-none group"
+          >
+            <div
+              className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                importAutoStart
+                  ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]'
+                  : 'border-[var(--color-border)] bg-[var(--bg-main)] group-hover:border-[var(--color-accent)]/50'
+              }`}
+            >
+              {importAutoStart && (
+                <svg className="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            <span className="text-xs text-slate-300 group-hover:text-slate-100 transition-colors font-mono">
+              Auto-start server immediately after import
+            </span>
+          </div>
+
+          {importingServer && (
+            <div className="bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-md p-3 text-center space-y-1.5">
+              <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-5 h-5 rounded-full" />
+              <div className="text-xs font-mono text-[var(--color-accent)] font-semibold">
+                {importProgress || 'Importing server...'}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              disabled={importingServer}
+              onClick={() => {
+                setShowImportModal(false);
+                setImportFile(null);
+                setImportName('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              isLoading={importingServer}
+              disabled={!importFile || importingServer}
+            >
+              <WardenIcon name="upload" size={14} className="text-[#0d0e11]" />
+              Import Server
             </Button>
           </div>
         </form>
