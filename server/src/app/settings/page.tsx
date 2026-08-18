@@ -14,8 +14,27 @@ export default function SettingsPage() {
   const [autoUpdateTime, setAutoUpdateTime] = useState<string>('04:00');
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
+  const [checkingUpdate, setCheckingUpdate] = useState<boolean>(false);
+  const [updateInfo, setUpdateInfo] = useState<{
+    updateAvailable: boolean;
+    currentCommit?: string;
+    latestCommit?: string;
+    commitMessage?: string;
+  } | null>(null);
+
+  const fetchUpdateStatus = async (force = false) => {
+    try {
+      const res = await fetch(`/api/v1/system/update-status${force ? '?force=true' : ''}`).then((r) => r.json());
+      if (res.success && res.data) {
+        setUpdateInfo(res.data);
+        return res.data;
+      }
+    } catch {}
+    return null;
+  };
 
   useEffect(() => {
+    fetchUpdateStatus();
     fetch('/api/v1/settings')
       .then((r) => r.json())
       .then((res) => {
@@ -28,6 +47,20 @@ export default function SettingsPage() {
       })
       .catch((err) => console.error('Error loading settings:', err));
   }, []);
+
+  const handleManualCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    try {
+      const data = await fetchUpdateStatus(true);
+      if (data?.updateAvailable) {
+        showToast(`Update available! Commit ${data.latestCommit}`, 'info');
+      } else {
+        showToast('Warden is fully up to date with GitHub!', 'success');
+      }
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +190,68 @@ export default function SettingsPage() {
             <p className="text-[11px] text-slate-400 mt-2 font-mono">
               Pass this key in the <code className="text-[var(--color-accent)] bg-black/40 px-1 py-0.5 rounded">X-Warden-API-Key</code> header when calling REST endpoints.
             </p>
+          </div>
+        </Card>
+
+        {/* System Version & Updates Card */}
+        <Card
+          header="System Version & Updates"
+          badge={
+            <span className="bg-emerald-950 text-[var(--color-accent)] border border-emerald-800/60 px-2 py-0.5 rounded text-[10px] font-minecraft uppercase font-bold tracking-wider">
+              Auto-Checking GitHub
+            </span>
+          }
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="font-semibold text-xs text-slate-200 flex items-center gap-2">
+                <span>Warden System Orchestrator</span>
+                <span className="bg-[var(--bg-main)] border border-[var(--color-border)] text-slate-300 font-mono text-[10px] px-2 py-0.5 rounded font-bold">
+                  {updateInfo?.currentCommit ? `Commit: ${updateInfo.currentCommit}` : 'v1.0.0'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 font-mono leading-relaxed max-w-xl">
+                Warden checks GitHub (<code className="text-emerald-400">ExraaG/Warden</code>) on every website load. When updates are published, you can install them with 1 click while preserving all Minecraft server data.
+              </p>
+              {updateInfo?.latestCommit && (
+                <div className="text-[11px] font-mono text-slate-400 pt-1 flex items-center gap-2">
+                  <span>Latest GitHub Release:</span>
+                  <span className="text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800/40 px-1.5 py-0.5 rounded">
+                    {updateInfo.latestCommit}
+                  </span>
+                  {updateInfo.commitMessage && (
+                    <span className="text-slate-500 truncate max-w-md hidden md:inline">
+                      — &quot;{updateInfo.commitMessage}&quot;
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                isLoading={checkingUpdate}
+                onClick={handleManualCheckUpdate}
+                className="text-xs font-minecraft"
+              >
+                <WardenIcon name="refresh-cw" size={12} className={checkingUpdate ? 'animate-spin' : ''} />
+                Check Updates
+              </Button>
+              {updateInfo?.updateAvailable && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => window.dispatchEvent(new CustomEvent('warden_open_update_modal'))}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-minecraft text-xs"
+                >
+                  <WardenIcon name="download" size={13} className="text-black" />
+                  Install Update
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
 

@@ -91,9 +91,14 @@ export class SystemUpdater {
       const author = data.commit?.author?.name || data.author?.login || 'Warden Team';
 
       let updateAvailable = false;
-      if (currentCommit !== 'unknown' && latestCommit) {
-        // Compare SHA prefix or full SHA
-        updateAvailable = !latestCommit.startsWith(currentCommit) && !currentCommit.startsWith(latestCommit);
+      if (latestCommit) {
+        if (currentCommit === 'unknown') {
+          // If current commit is unknown (e.g. fresh/unversioned container), offer update to latest release
+          updateAvailable = true;
+        } else {
+          // Compare SHA prefix or full SHA
+          updateAvailable = !latestCommit.startsWith(currentCommit) && !currentCommit.startsWith(latestCommit);
+        }
       }
 
       const result: SystemUpdateStatus = {
