@@ -137,6 +137,41 @@ apiRouter.post('/v1/servers/:id/action', authMiddleware, async (req: Request, re
   }
 });
 
+// 4.1 Delete Server Permanently
+apiRouter.delete('/v1/servers/:id', authMiddleware, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    console.log(`[Warden API] Permanently deleting server '${id}'...`);
+    await serverManager.deleteServer(id);
+    res.json({ success: true, data: { deletedId: id } } as ApiResponse<any>);
+  } catch (err: any) {
+    console.error(`[Warden API] Failed to delete server '${id}':`, err);
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 4.2 Change Server Modloader / Software
+apiRouter.post('/v1/servers/:id/change-loader', authMiddleware, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { loader, mcVersion } = req.body;
+
+  if (!loader || !mcVersion) {
+    return res.status(400).json({
+      success: false,
+      error: 'Missing required parameters: loader, mcVersion',
+    } as ApiResponse<null>);
+  }
+
+  try {
+    console.log(`[Warden API] Changing loader for '${id}' to ${loader} (${mcVersion})...`);
+    const updated = await serverManager.changeLoader(id, loader, mcVersion);
+    res.json({ success: true, data: updated } as ApiResponse<WardenServer>);
+  } catch (err: any) {
+    console.error(`[Warden API] Failed to change loader for '${id}':`, err);
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
 // 5. Manual Confirm Server Loader & MC Version
 apiRouter.post('/v1/servers/:id/confirm-loader', authMiddleware, async (req: Request, res: Response) => {
   const { id } = req.params;

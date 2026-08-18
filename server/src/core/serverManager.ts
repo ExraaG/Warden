@@ -253,6 +253,88 @@ export class ServerManager {
     }
   }
 
+  public async deleteServer(serverId: string): Promise<void> {
+    const proc = this.processes.get(serverId);
+    if (proc) {
+      try {
+        proc.kill();
+      } catch {}
+      this.processes.delete(serverId);
+    }
+
+    const dir = this.getServerDir(serverId);
+    if (fs.existsSync(dir)) {
+      await fs.promises.rm(dir, { recursive: true, force: true });
+    }
+
+    // Clean up stored detection
+    db.removeServerDetection(serverId);
+  }
+
+  public async changeLoader(
+    serverId: string,
+    loader: ServerLoader,
+    mcVersion: string
+  ): Promise<WardenServer> {
+    const dir = this.getServerDir(serverId);
+    if (!fs.existsSync(dir)) {
+      throw new Error(`Server directory ${serverId} does not exist`);
+    }
+
+    // Stop process if currently running
+    const proc = this.processes.get(serverId);
+    if (proc && proc.getStatus() !== 'offline') {
+      await proc.stop();
+    }
+    this.processes.delete(serverId);
+
+    // Read existing meta
+    let currentMeta: any = {};
+    const metaPath = path.join(dir, 'warden.json');
+    if (fs.existsSync(metaPath)) {
+      try {
+        currentMeta = JSON.parse(await fs.promises.readFile(metaPath, 'utf8'));
+      } catch {}
+    }
+
+    // Install new server JAR
+    const installPayload: CreateServerPayload = {
+      name: currentMeta.name || serverId,
+      loader,
+      mcVersion,
+      port: currentMeta.port || 25565,
+      minMemory: currentMeta.minMemory || '2G',
+      maxMemory: currentMeta.maxMemory || '4G',
+    };
+
+    const installResult = await ServerInstaller.installServer(dir, installPayload);
+
+    // Update warden.json
+    const updatedMeta = {
+      ...currentMeta,
+      id: serverId,
+      name: currentMeta.name || serverId,
+      loader: installResult.loader,
+      mcVersion: installResult.mcVersion,
+      jarFile: installResult.jarFileName,
+      updatedAt: new Date().toISOString(),
+    };
+    await fs.promises.writeFile(metaPath, JSON.stringify(updatedMeta, null, 2), 'utf8');
+
+    // Update detection
+    db.setServerDetection(serverId, {
+      loader: installResult.loader,
+      mcVersion: installResult.mcVersion,
+      isConfirmed: true,
+      source: 'manual_override',
+      detectedAt: new Date().toISOString(),
+    });
+
+    const updated = await this.getServer(serverId);
+    if (!updated) throw new Error('Failed to retrieve server after loader switch');
+    return updated;
+  }
+
   public sendCommand(serverId: string, command: string): boolean {
     const proc = this.processes.get(serverId);
     if (proc) {

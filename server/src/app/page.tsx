@@ -166,9 +166,98 @@ export default function DashboardPage() {
     });
   };
 
-  // Loader & Version Confirmation State
+  // Loader & Version Confirmation & Change Loader State
   const [manualLoader, setManualLoader] = useState<ServerLoader>('fabric');
   const [manualVersion, setManualVersion] = useState<string>('1.21.1');
+  const [showChangeLoaderModal, setShowChangeLoaderModal] = useState<boolean>(false);
+  const [changingLoader, setChangingLoader] = useState<boolean>(false);
+  const [newLoader, setNewLoader] = useState<ServerLoader>('paper');
+  const [newMcVersion, setNewMcVersion] = useState<string>('1.21.1');
+  const [changeLoaderVersions, setChangeLoaderVersions] = useState<DropdownOption[]>(CREATE_MC_VERSIONS);
+  const [loadingChangeVersions, setLoadingChangeVersions] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!showChangeLoaderModal) return;
+    setLoadingChangeVersions(true);
+    fetch(`/api/v1/meta/versions?loader=${newLoader}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          const mapped: DropdownOption[] = data.data.map((v: any) => ({
+            id: v.id,
+            label: v.label,
+            sublabel: v.sublabel,
+          }));
+          setChangeLoaderVersions(mapped);
+          if (!mapped.find((m) => m.id === newMcVersion)) {
+            setNewMcVersion(mapped[0].id);
+          }
+        }
+      })
+      .catch((err) => console.warn(err))
+      .finally(() => setLoadingChangeVersions(false));
+  }, [showChangeLoaderModal, newLoader]);
+
+  const handleChangeLoader = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!serverId) return;
+    setChangingLoader(true);
+    try {
+      const res = await fetch(`/api/v1/servers/${serverId}/change-loader`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loader: newLoader, mcVersion: newMcVersion }),
+      }).then((r) => r.json());
+
+      if (res.success && res.data) {
+        showToast(`Server software switched to ${newLoader.toUpperCase()} (${newMcVersion})!`, 'success');
+        setShowChangeLoaderModal(false);
+        loadServerDetails(serverId);
+        loadAllServers();
+        window.dispatchEvent(new CustomEvent('warden_server_updated'));
+      } else {
+        showToast(`Loader switch failed: ${res.error}`, 'error');
+      }
+    } catch (err: any) {
+      showToast(`Switch error: ${err.message}`, 'error');
+    } finally {
+      setChangingLoader(false);
+    }
+  };
+
+  const handleDeleteServer = (id: string, name: string) => {
+    promptConfirm({
+      title: 'Delete Minecraft Server',
+      description: `Are you sure you want to permanently delete "${name}"? All worlds, player data, plugins, mods, and configurations will be permanently destroyed. This action CANNOT be undone.`,
+      confirmText: 'Delete Server',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/v1/servers/${id}`, { method: 'DELETE' }).then((r) => r.json());
+          if (res.success) {
+            showToast(`Server '${name}' deleted permanently.`, 'info');
+            const remaining = allServers.filter((s) => s.id !== id);
+            if (remaining.length > 0) {
+              setServerId(remaining[0].id);
+              localStorage.setItem('warden_selected_server_id', remaining[0].id);
+              window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: remaining[0].id }));
+              window.dispatchEvent(new CustomEvent('warden_server_updated'));
+              loadServerDetails(remaining[0].id);
+            } else {
+              setServerId('');
+              setServer(null);
+              localStorage.removeItem('warden_selected_server_id');
+            }
+            loadAllServers();
+          } else {
+            showToast(`Delete failed: ${res.error}`, 'error');
+          }
+        } catch (err: any) {
+          showToast(`Delete error: ${err.message}`, 'error');
+        }
+      },
+    });
+  };
 
   // Dev Mode State (Custom Loader & MC Version Override for search/install)
   const [devMode, setDevMode] = useState<boolean>(false);
@@ -1483,15 +1572,23 @@ export default function DashboardPage() {
               </span>
             )}
 
-            {isConfirmed && (
-              <span className="text-slate-500 font-mono text-[10px] flex items-center gap-1 ml-0.5">
-                <WardenIcon name="check" size={11} className="text-[var(--color-accent)]" /> confirmed
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                setNewLoader((server.detection?.loader as ServerLoader) || 'paper');
+                setNewMcVersion(server.detection?.mcVersion || '1.21.1');
+                setShowChangeLoaderModal(true);
+              }}
+              className="text-[10px] text-[var(--color-accent)] hover:underline font-mono ml-1 flex items-center gap-1 bg-[var(--accent-dim)]/50 px-1.5 py-0.5 rounded border border-[var(--accent-border)]/50 hover:bg-[var(--accent-dim)]"
+              title="Change server modloader or Minecraft version"
+            >
+              <WardenIcon name="edit" size={10} className="text-[var(--color-accent)]" />
+              Change Loader
+            </button>
           </div>
         </div>
 
-        {/* RIGHT: Server action controls + mod update */}
+        {/* RIGHT: Server action controls + mod update + delete */}
         <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-between sm:justify-end">
           <div className="flex items-center gap-2 flex-1 sm:flex-initial">
             {isOnline ? (
@@ -1536,6 +1633,16 @@ export default function DashboardPage() {
             <WardenIcon name="plus" size={14} className="text-slate-300" />
             <span className="hidden sm:inline">New Server</span>
             <span className="sm:hidden">+ New</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDeleteServer(server.id, server.name)}
+            title="Delete this Minecraft server permanently"
+            className="text-red-400 hover:text-red-300 hover:bg-red-950/40 border border-transparent hover:border-red-800/40 p-1.5"
+          >
+            <WardenIcon name="trash" size={14} className="text-red-400" />
           </Button>
         </div>
       </div>
@@ -4991,6 +5098,53 @@ export default function DashboardPage() {
             <Button variant="primary" size="sm" type="submit" isLoading={creatingServer}>
               <WardenIcon name="download" size={14} className="text-[#0d0e11]" />
               Install & Create Server
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Change Server Loader Modal */}
+      <Modal
+        isOpen={showChangeLoaderModal}
+        onClose={() => setShowChangeLoaderModal(false)}
+        title="Change Server Software & Loader"
+      >
+        <form onSubmit={handleChangeLoader} className="space-y-4">
+          <div className="bg-[var(--bg-main)] p-3 rounded-lg border border-[var(--color-border)] text-xs text-slate-300 font-mono leading-relaxed">
+            Switching modloaders will download the new server JAR and update your server configuration. If the server is currently running, it will be automatically stopped.
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1 font-mono">New Software</label>
+              <Dropdown
+                options={CREATE_LOADER_OPTIONS}
+                selectedId={newLoader}
+                onSelect={(opt) => setNewLoader(opt.id as ServerLoader)}
+                title="Select Modloader / Software"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1 font-mono">Minecraft Version</label>
+              <Dropdown
+                options={changeLoaderVersions}
+                selectedId={newMcVersion}
+                onSelect={(opt) => setNewMcVersion(opt.id)}
+                title={loadingChangeVersions ? 'Fetching live versions...' : 'Select Minecraft Version'}
+                placeholder={loadingChangeVersions ? 'Loading...' : 'Select Version'}
+                searchable={true}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
+            <Button variant="outline" size="sm" type="button" onClick={() => setShowChangeLoaderModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" type="submit" isLoading={changingLoader}>
+              <WardenIcon name="download" size={14} className="text-[#0d0e11]" />
+              Switch & Install Software
             </Button>
           </div>
         </form>

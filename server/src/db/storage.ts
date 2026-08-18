@@ -102,6 +102,11 @@ export class Storage {
     this.save();
   }
 
+  public removeServerDetection(serverId: string): void {
+    delete this.data.serverDetections[serverId];
+    this.save();
+  }
+
   public getAllServerDetections(): Record<string, DetectionState> {
     return { ...this.data.serverDetections };
   }
