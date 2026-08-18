@@ -2,23 +2,17 @@
 
 **Warden** is an opinionated, flat-designed self-hosted tool built to manage Minecraft servers running on Crafty Controller v4, automate safe daily 4 AM Modrinth mod updates with atomic rollback protection, and provide both web and mobile thin-client interfaces.
 
----
 
 ## Screenshots
 
-**Dashboard — Server Overview with live stats**
+**Dashboard — Server Overview with live stats and mods overview**
 ![Dashboard](docs/screenshots/dashboard.png)
-
-**Mods tab — Installed mods with Modrinth update detection**
-![Mods](docs/screenshots/mods.png)
 
 **Audit Logs — Step-by-step 4 AM update execution trail**
 ![Audit Logs](docs/screenshots/audit-logs.png)
 
 **Settings — Crafty API configuration and Warden API key management**
 ![Settings](docs/screenshots/settings.png)
-
----
 
 
 ## Key Features
@@ -45,7 +39,6 @@
 - **React Native Mobile Thin Client (`/mobile`)**:
   - Pure thin client communicating strictly with Warden API using `X-Warden-API-Key`. Zero direct contact with Crafty or Modrinth.
 
----
 
 ## Repo Structure
 
@@ -91,7 +84,6 @@ Warden/
         └── screens/         # Onboarding, Dashboard, Mods, Audit Logs, Settings
 ```
 
----
 
 ## Quick Start (Docker Deployment)
 
@@ -135,7 +127,6 @@ docker compose ps
 
 Access the Warden web interface at `http://localhost:3000`.
 
----
 
 ## Cloudflare Tunnel Ingress Setup (Outbound-Only)
 
@@ -156,7 +147,6 @@ ingress:
   - service: http_status:404
 ```
 
----
 
 ## Mobile App Setup (`/mobile`)
 
@@ -170,7 +160,6 @@ ingress:
    - **Warden Server Tunnel URL**: `https://warden.yourdomain.com`
    - **Warden API Key**: Value of `WARDEN_API_KEY` set in your `.env`.
 
----
 
 ## Operational Tasks
 
@@ -186,7 +175,6 @@ If a server has conflicting or missing loader metadata, Warden flags it with a *
 - **Manual Trigger**: Click **UPDATE NOW** on the Dashboard or send `POST /api/v1/servers/:id/update-now`.
 - **View Step Execution & Rollback History**: Navigate to the **AUDIT LOGS** tab to view step-by-step execution logs (`modrinth_hash_batch`, `download_verify`, `backup`, `stop_server`, `swap_files`, `verify_directory`, `start_server`, `rollback_action`).
 
----
 
 ## Disclaimer & Attribution
 
