@@ -1,7 +1,6 @@
 {
-  "version": "1.0.0",
-  "commit": "30b776b",
-  "commitFull": "30b776beac71b4be1b2e0b011e6ea5d845735209",
-  "branch": "main",
-  "buildTime": "2026-08-18T18:27:01.319Z"
+  "version": "v1",
+  "versionNumber": 1,
+  "releaseTitle": "v1 - Initial Release",
+  "releaseDate": "2026-08-18"
 }

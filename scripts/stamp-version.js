@@ -1,109 +1,60 @@
 #!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
-
-function getGitInfo() {
-  try {
-    const commitFull = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-    const commit = commitFull.substring(0, 7);
-    let branch = 'main';
-    try {
-      branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
-    } catch {}
-    return { commit, commitFull, branch };
-  } catch (err) {
-    return { commit: 'unknown', commitFull: 'unknown', branch: 'main' };
-  }
-}
 
 function main() {
   const rootDir = path.resolve(__dirname, '..');
   const serverDir = path.resolve(rootDir, 'server');
-  const packageJsonPath = path.resolve(serverDir, 'package.json');
+  const rootVersionJson = path.resolve(rootDir, 'version.json');
+  const serverVersionJson = path.resolve(serverDir, 'version.json');
+  const tsVersionPath = path.resolve(serverDir, 'src', 'version.ts');
 
-  let version = '1.0.0';
-  if (fs.existsSync(packageJsonPath)) {
+  let version = 'v1';
+  let versionNumber = 1;
+  let releaseTitle = 'v1 - Initial Release';
+  let releaseDate = new Date().toISOString();
+
+  // Read existing version.json if present
+  if (fs.existsSync(rootVersionJson)) {
     try {
-      const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      if (pkg.version) version = pkg.version;
+      const raw = JSON.parse(fs.readFileSync(rootVersionJson, 'utf8'));
+      if (raw.version) version = raw.version;
+      if (raw.versionNumber) versionNumber = raw.versionNumber;
+      if (raw.releaseTitle) releaseTitle = raw.releaseTitle;
+      if (raw.releaseDate) releaseDate = raw.releaseDate;
     } catch {}
   }
 
-  const gitInfo = getGitInfo();
+  const versionData = {
+    version,
+    versionNumber,
+    releaseTitle,
+    releaseDate,
+  };
 
-  const targets = [
-    path.resolve(rootDir, 'version.json'),
-    path.resolve(serverDir, 'version.json'),
-  ];
-
-  for (const target of targets) {
-    try {
-      let existingCommit = 'unknown';
-      let existingCommitFull = 'unknown';
-      if (fs.existsSync(target)) {
-        try {
-          const raw = JSON.parse(fs.readFileSync(target, 'utf8'));
-          if (raw.commit && raw.commit !== 'unknown') existingCommit = raw.commit;
-          if (raw.commitFull && raw.commitFull !== 'unknown') existingCommitFull = raw.commitFull;
-        } catch {}
-      }
-
-      const finalCommit = gitInfo.commit !== 'unknown' ? gitInfo.commit : existingCommit;
-      const finalCommitFull = gitInfo.commitFull !== 'unknown' ? gitInfo.commitFull : existingCommitFull;
-
-      const versionData = {
-        version,
-        commit: finalCommit,
-        commitFull: finalCommitFull,
-        branch: gitInfo.branch,
-        buildTime: new Date().toISOString(),
-      };
-
-      fs.writeFileSync(target, JSON.stringify(versionData, null, 2) + '\n', 'utf8');
-      console.log(`[stamp-version] Stamped ${target} -> commit ${finalCommit}`);
-    } catch (err) {
-      console.warn(`[stamp-version] Could not write ${target}:`, err.message);
-    }
+  const jsonStr = JSON.stringify(versionData, null, 2) + '\n';
+  try {
+    fs.writeFileSync(rootVersionJson, jsonStr, 'utf8');
+    fs.writeFileSync(serverVersionJson, jsonStr, 'utf8');
+    console.log(`[stamp-version] Synced version.json -> ${version} (#${versionNumber})`);
+  } catch (err) {
+    console.warn('[stamp-version] Could not sync version.json:', err.message);
   }
 
-  // Also bake hardcoded TypeScript constant into server/src/version.ts
-  const tsVersionPath = path.resolve(serverDir, 'src', 'version.ts');
-  try {
-    let existingCommit = 'unknown';
-    let existingCommitFull = 'unknown';
-    const jsonTarget = path.resolve(serverDir, 'version.json');
-    if (fs.existsSync(jsonTarget)) {
-      try {
-        const raw = JSON.parse(fs.readFileSync(jsonTarget, 'utf8'));
-        if (raw.commit) existingCommit = raw.commit;
-        if (raw.commitFull) existingCommitFull = raw.commitFull;
-      } catch {}
-    }
-
-    const finalCommit = gitInfo.commit !== 'unknown' ? gitInfo.commit : existingCommit;
-    const finalCommitFull = gitInfo.commitFull !== 'unknown' ? gitInfo.commitFull : existingCommitFull;
-
-    const tsContent = `// Auto-generated at build time by scripts/stamp-version.js
-export const BUILD_INFO: {
-  version: string;
-  commit: string;
-  commitFull: string;
-  branch: string;
-  buildTime: string;
-} = {
-  version: '${version}',
-  commit: '${finalCommit}',
-  commitFull: '${finalCommitFull}',
-  branch: '${gitInfo.branch}',
-  buildTime: '${new Date().toISOString()}',
-};
+  const tsContent = `// Hardcoded application version (v1, v2, v3, ...)
+export const WARDEN_VERSION = '${version}';
+export const WARDEN_VERSION_NUMBER = ${versionNumber};
+export const WARDEN_RELEASE_TITLE = ${JSON.stringify(releaseTitle)};
+export const WARDEN_BUILD_TIME = '${new Date().toISOString()}';
 `;
+
+  try {
     fs.writeFileSync(tsVersionPath, tsContent, 'utf8');
-    console.log(`[stamp-version] Baked hardcoded version into ${tsVersionPath} -> ${finalCommit}`);
+    console.log(`[stamp-version] Baked version constant into ${tsVersionPath} -> ${version}`);
   } catch (err) {
     console.warn(`[stamp-version] Could not write ${tsVersionPath}:`, err.message);
   }
 }
 
 main();
+

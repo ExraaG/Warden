@@ -7,7 +7,8 @@
     "dev": "npm run stamp-version && rm -rf .next && tsx watch src/server.ts",
     "build:next": "next build",
     "build:server": "tsc -p tsconfig.server.json",
-    "build": "npm run stamp-version && npm run build:next && npm run build:server",
+    "build:fast": "rm -rf .next && NEXT_TELEMETRY_DISABLED=1 next build --no-lint && npm run build:server",
+    "build": "npm run stamp-version && npm run build:fast",
     "start": "NODE_ENV=production node dist-server/server.js"
   },
   "dependencies": {

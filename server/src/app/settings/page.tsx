@@ -207,7 +207,7 @@ export default function SettingsPage() {
               <div className="font-semibold text-xs text-slate-200 flex items-center gap-2">
                 <span>Warden System Orchestrator</span>
                 <span className="bg-[var(--bg-main)] border border-[var(--color-border)] text-slate-300 font-mono text-[10px] px-2 py-0.5 rounded font-bold">
-                  {updateInfo?.currentCommit ? `Commit: ${updateInfo.currentCommit}` : 'v1.0.0'}
+                  {updateInfo?.currentCommit ? `Version: ${updateInfo.currentCommit}` : 'Version: v1'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-mono leading-relaxed max-w-xl">

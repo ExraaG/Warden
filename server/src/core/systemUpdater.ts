@@ -4,15 +4,17 @@ import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
 import { serverManager } from './serverManager.js';
-import { BUILD_INFO } from '../version.js';
+import { WARDEN_VERSION, WARDEN_VERSION_NUMBER, WARDEN_RELEASE_TITLE } from '../version.js';
 
 const execPromise = util.promisify(exec);
 
 export interface SystemUpdateStatus {
   updateAvailable: boolean;
-  version?: string;
+  version: string;
   currentCommit: string;
   latestCommit: string;
+  currentVersionNumber?: number;
+  latestVersionNumber?: number;
   commitMessage?: string;
   commitDate?: string;
   author?: string;
@@ -44,55 +46,17 @@ export class SystemUpdater {
     return this.progressState;
   }
 
-  public static async getVersionInfo(): Promise<{ commit: string; version: string }> {
-    let commit = 'unknown';
-    let version = '1.0.0';
-
-    // 1. Try local git first if working inside a git repository
-    try {
-      const { stdout } = await execPromise('git rev-parse HEAD', { timeout: 3000 });
-      if (stdout && stdout.trim()) {
-        commit = stdout.trim();
-      }
-    } catch {}
-
-    // 2. Fall back to hardcoded BUILD_INFO if git not available
-    if (commit === 'unknown') {
-      commit = BUILD_INFO.commit || 'unknown';
-      version = BUILD_INFO.version || '1.0.0';
-    }
-
-    // 3. Fall back to version.json files
-    if (commit === 'unknown') {
-      const candidateFiles = [
-        path.resolve(process.cwd(), 'version.json'),
-        path.resolve(process.cwd(), '..', 'version.json'),
-        path.resolve(__dirname, '..', '..', 'version.json'),
-        path.resolve(__dirname, '..', 'version.json'),
-        path.resolve('/app/version.json'),
-        path.resolve('/app/server/version.json'),
-      ];
-
-      for (const versionFile of candidateFiles) {
-        if (fs.existsSync(versionFile)) {
-          try {
-            const raw = JSON.parse(await fs.promises.readFile(versionFile, 'utf8'));
-            if (raw.version) version = raw.version;
-            if (raw.commit && raw.commit !== 'unknown') {
-              commit = raw.commitFull || raw.commit;
-              break;
-            }
-          } catch {}
-        }
-      }
-    }
-
-    return { commit, version };
+  public static async getVersionInfo(): Promise<{ version: string; versionNumber: number; releaseTitle: string; commit: string }> {
+    return {
+      version: WARDEN_VERSION,
+      versionNumber: WARDEN_VERSION_NUMBER,
+      releaseTitle: WARDEN_RELEASE_TITLE,
+      commit: WARDEN_VERSION,
+    };
   }
 
   public static async getCurrentCommit(): Promise<string> {
-    const info = await this.getVersionInfo();
-    return info.commit;
+    return WARDEN_VERSION;
   }
 
   public static async checkUpdate(force = false): Promise<SystemUpdateStatus> {
@@ -100,54 +64,42 @@ export class SystemUpdater {
       return this.cachedStatus.data;
     }
 
-    const { commit: currentCommit, version } = await this.getVersionInfo();
+    const currentVer = WARDEN_VERSION;
+    const currentVerNum = WARDEN_VERSION_NUMBER;
 
     try {
-      const res = await fetch('https://api.github.com/repos/ExraaG/Warden/commits?per_page=10', {
+      // Fetch latest version metadata directly from GitHub repository raw source
+      const res = await fetch(`https://raw.githubusercontent.com/ExraaG/Warden/main/version.json?t=${Date.now()}`, {
         headers: {
           'User-Agent': 'Warden-Server-Update-Checker',
-          Accept: 'application/vnd.github.v3+json',
         },
       });
 
       if (!res.ok) {
-        throw new Error(`GitHub API returned status ${res.status}`);
+        throw new Error(`GitHub version.json returned HTTP ${res.status}`);
       }
 
-      const commits: any = await res.json();
-      if (!Array.isArray(commits) || commits.length === 0) {
-        throw new Error('No commits returned from GitHub API');
-      }
+      const remoteData: any = await res.json();
+      const latestVer = remoteData.version || 'v1';
+      const latestVerNum = typeof remoteData.versionNumber === 'number' 
+        ? remoteData.versionNumber 
+        : parseInt(String(latestVer).replace(/\D/g, ''), 10) || 1;
+      const releaseTitle = remoteData.releaseTitle || `Warden ${latestVer} Release`;
+      const releaseDate = remoteData.releaseDate || new Date().toISOString();
 
-      const latest = commits[0];
-      const latestCommit = latest.sha || '';
-      const commitMessage = latest.commit?.message?.split('\n')[0] || 'Latest updates and bugfixes';
-      const commitDate = latest.commit?.committer?.date || new Date().toISOString();
-      const author = latest.commit?.author?.name || latest.author?.login || 'Warden Team';
-
-      const cur7 = currentCommit.substring(0, 7).toLowerCase();
-      const lat7 = latestCommit.substring(0, 7).toLowerCase();
-      const curFull = currentCommit.toLowerCase();
-
-      let updateAvailable = false;
-      if (cur7 !== 'unknown' && lat7 && lat7 !== 'unknown') {
-        const isLatest = cur7 === lat7 || curFull === latestCommit.toLowerCase();
-        if (isLatest) {
-          updateAvailable = false;
-        } else {
-          // If current commit is different from latest, an update is available
-          updateAvailable = true;
-        }
-      }
+      // Simple, deterministic numeric comparison: update available only if remote version > installed version
+      const updateAvailable = latestVerNum > currentVerNum;
 
       const result: SystemUpdateStatus = {
         updateAvailable,
-        version,
-        currentCommit: cur7,
-        latestCommit: lat7,
-        commitMessage,
-        commitDate,
-        author,
+        version: currentVer,
+        currentCommit: currentVer,
+        latestCommit: latestVer,
+        currentVersionNumber: currentVerNum,
+        latestVersionNumber: latestVerNum,
+        commitMessage: releaseTitle,
+        commitDate: releaseDate,
+        author: 'Warden Team',
       };
 
       this.cachedStatus = { timestamp: Date.now(), data: result };
@@ -156,9 +108,11 @@ export class SystemUpdater {
       console.warn('[SystemUpdater] Failed to check for updates from GitHub:', err.message);
       const fallback: SystemUpdateStatus = {
         updateAvailable: false,
-        version,
-        currentCommit: currentCommit.substring(0, 7),
-        latestCommit: 'unknown',
+        version: currentVer,
+        currentCommit: currentVer,
+        latestCommit: currentVer,
+        currentVersionNumber: currentVerNum,
+        latestVersionNumber: currentVerNum,
         error: err.message,
       };
       return fallback;
@@ -189,7 +143,7 @@ export class SystemUpdater {
       console.warn('[SystemUpdater] Error stopping servers:', err);
     }
 
-    // 2. Perform git pull and rebuild in background
+    // 2. Perform git pull and fast rebuild in background
     setTimeout(async () => {
       try {
         SystemUpdater.progressState = {
@@ -207,13 +161,14 @@ export class SystemUpdater {
           status: 'building',
           step: 3,
           totalSteps: 4,
-          stepName: 'Compiling packages and building production bundle (npm run build)...',
+          stepName: 'Compiling packages and building production bundle...',
           percent: 75,
-          details: 'This may take 30-60 seconds. Please keep this window open.',
+          details: 'Building with fast optimization. Please wait...',
         };
 
-        await execPromise('npm run build', { timeout: 180000 });
-        console.log('[SystemUpdater] Build completed successfully.');
+        // Fast build skipping unnecessary linter/telemetry steps
+        await execPromise('npm run build:fast || npm run build', { timeout: 180000 });
+        console.log('[SystemUpdater] Fast build completed successfully.');
 
         SystemUpdater.progressState = {
           status: 'restarting',
@@ -247,3 +202,4 @@ export class SystemUpdater {
     };
   }
 }
+
