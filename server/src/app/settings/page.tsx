@@ -274,8 +274,8 @@ export default function SettingsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-main)] border border-[var(--color-border)] text-xs text-slate-300 font-mono">
-                <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-main)] border border-[var(--color-border)] text-xs text-slate-300 font-mono font-medium">
+                <WardenIcon name="cpu" size={13} className="text-[var(--color-accent)] shrink-0" />
                 In Development
               </span>
             </div>

@@ -63,7 +63,6 @@ export const Modal: React.FC<ModalProps> = ({
       >
         <div className="px-4 sm:px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--bg-card)] shrink-0">
           <h3 className="text-xs sm:text-sm font-bold tracking-tight text-slate-100 flex items-center gap-2 truncate">
-            <span className="w-1.5 h-3.5 rounded-full bg-[var(--color-accent)] shrink-0" />
             <span className="truncate">{title}</span>
           </h3>
           <Button variant="ghost" size="sm" onClick={onClose} className="p-1 border-none text-slate-400 hover:text-white shrink-0">

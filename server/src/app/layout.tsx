@@ -45,32 +45,99 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       .catch((err) => console.warn('[Warden] Update check failed:', err));
   };
 
+  const [updateProgress, setUpdateProgress] = useState<{
+    status: string;
+    step: number;
+    totalSteps: number;
+    stepName: string;
+    percent: number;
+    details?: string;
+    error?: string;
+  }>({
+    status: 'idle',
+    step: 0,
+    totalSteps: 4,
+    stepName: 'Ready',
+    percent: 0,
+  });
+
   const handlePerformSelfUpdate = async () => {
     setInstallingUpdate(true);
-    setUpdateProgressMsg('Safely stopping Minecraft servers and saving world data...');
+    setUpdateProgress({
+      status: 'stopping_servers',
+      step: 1,
+      totalSteps: 4,
+      stepName: 'Flushing chunk saves & stopping Minecraft servers...',
+      percent: 15,
+      details: 'Preserving all world directories, player inventories, and server configurations.',
+    });
+
     try {
-      const res = await fetch('/api/v1/system/self-update', { method: 'POST' }).then((r) => r.json());
-      if (res.success) {
-        setUpdateProgressMsg('Update initiated! Rebuilding application and restarting in 15 seconds...');
-        showToast('Warden update initiated. Reloading shortly...', 'success');
-        let count = 15;
-        const interval = setInterval(() => {
-          count -= 1;
-          if (count <= 0) {
-            clearInterval(interval);
-            window.location.reload();
-          } else {
-            setUpdateProgressMsg(`Rebuilding Warden... Reconnecting in ${count}s...`);
+      await fetch('/api/v1/system/self-update', { method: 'POST' });
+    } catch {}
+
+    // Start progress polling loop
+    let isReconnecting = false;
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/v1/system/update-progress').then((r) => r.json());
+        if (res.success && res.data) {
+          const p = res.data;
+          setUpdateProgress(p);
+
+          if (p.status === 'error') {
+            clearInterval(pollInterval);
+            showToast(`Update failed: ${p.error || 'Unknown error'}`, 'error');
+            setInstallingUpdate(false);
+            return;
           }
-        }, 1000);
-      } else {
-        showToast(`Update error: ${res.error}`, 'error');
-        setInstallingUpdate(false);
+
+          if (p.status === 'restarting') {
+            isReconnecting = true;
+          }
+        }
+      } catch {
+        // Server might be compiling or restarting
+        if (!isReconnecting) {
+          setUpdateProgress((prev) => ({
+            ...prev,
+            status: 'building',
+            step: 3,
+            stepName: 'Compiling packages and rebuilding Next.js production bundle...',
+            percent: Math.min(85, Math.max(50, prev.percent + 5)),
+            details: 'The build is underway in the background. Please wait...',
+          }));
+        } else {
+          setUpdateProgress({
+            status: 'restarting',
+            step: 4,
+            totalSteps: 4,
+            stepName: 'Restarting Warden service and reconnecting...',
+            percent: 95,
+            details: 'Waiting for the web application to come back online...',
+          });
+
+          // Check if server came back online
+          try {
+            const health = await fetch('/api/v1/system/update-status').then((r) => r.json());
+            if (health.success) {
+              clearInterval(pollInterval);
+              setUpdateProgress({
+                status: 'completed',
+                step: 4,
+                totalSteps: 4,
+                stepName: 'Update completed successfully! Reloading page...',
+                percent: 100,
+              });
+              showToast('Warden successfully updated!', 'success');
+              setTimeout(() => {
+                window.location.reload();
+              }, 1200);
+            }
+          } catch {}
+        }
       }
-    } catch (err: any) {
-      setUpdateProgressMsg('Warden restarting. Reconnecting in 10 seconds...');
-      setTimeout(() => window.location.reload(), 10000);
-    }
+    }, 1500);
   };
 
   const loadServers = () => {
@@ -139,7 +206,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     {
       id: '__create_new__',
       label: '+ Create New Server',
-      sublabel: '1-Click Server Installer',
+      sublabel: 'Install Vanilla, Fabric, or Paper',
     },
   ];
 
@@ -152,7 +219,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark" data-theme="emerald" suppressHydrationWarning>
       <head>
-        <title>Warden - Minecraft Server & Mod Ops</title>
+        <title>Warden - Minecraft Server &amp; Mod Ops</title>
         <meta name="description" content="Self-hosted Minecraft server and mod management tool" />
         <link rel="icon" href="/logo.svg" type="image/svg+xml" />
         <script
@@ -171,10 +238,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {systemUpdate?.updateAvailable && dismissedCommit !== systemUpdate.latestCommit && (
           <div className="bg-gradient-to-r from-emerald-950/95 via-slate-900/95 to-emerald-950/95 border-b border-emerald-500/40 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50 shadow-lg shadow-emerald-950/30">
             <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto">
-              <span className="flex h-2.5 w-2.5 relative shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
+              <WardenIcon name="download" size={15} className="text-emerald-400 shrink-0" />
               <span className="font-minecraft text-xs font-bold text-emerald-300 tracking-wide shrink-0">
                 NEW UPDATE AVAILABLE
               </span>
@@ -258,10 +322,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {systemUpdate?.updateAvailable && (
                 <button
                   onClick={() => setShowUpdateModal(true)}
-                  className="bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-500 hover:text-black font-minecraft text-[10px] sm:text-xs px-2 sm:px-2.5 py-1.5 rounded-md flex items-center gap-1.5 transition-all shrink-0 animate-pulse"
+                  className="bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-500 hover:text-black font-minecraft text-[10px] sm:text-xs px-2 sm:px-2.5 py-1.5 rounded-md flex items-center gap-1.5 transition-all shrink-0"
                   title="New update available on GitHub"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <WardenIcon name="download" size={11} className="text-emerald-400 shrink-0" />
                   <span>UPDATE</span>
                 </button>
               )}
@@ -335,11 +399,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
 
             {installingUpdate && (
-              <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 flex items-center gap-3 animate-pulse">
-                <WardenIcon name="refresh-cw" size={16} className="text-emerald-400 animate-spin shrink-0" />
-                <span className="text-xs text-emerald-300 font-mono">
-                  {updateProgressMsg || 'Saving server worlds, pulling release, and rebuilding...'}
-                </span>
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 flex flex-col gap-3 shadow-inner">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-emerald-400">
+                    <WardenIcon name="refresh-cw" size={14} className="animate-spin text-emerald-400 shrink-0" />
+                    <span>
+                      {updateProgress.step > 0 && `Step ${updateProgress.step} of ${updateProgress.totalSteps}: `}
+                      {updateProgress.stepName || 'Updating Warden...'}
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950 border border-emerald-800/60 px-2 py-0.5 rounded">
+                    {updateProgress.percent}%
+                  </span>
+                </div>
+
+                {/* Animated Progress Bar */}
+                <div className="w-full bg-slate-950 rounded-full h-3.5 overflow-hidden border border-slate-800 p-0.5">
+                  <div
+                    className="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 h-full rounded-full transition-all duration-500 shadow-sm shadow-emerald-500/50"
+                    style={{ width: `${Math.max(5, updateProgress.percent)}%` }}
+                  />
+                </div>
+
+                {updateProgress.details && (
+                  <p className="text-[11px] font-mono text-slate-400 leading-relaxed">
+                    {updateProgress.details}
+                  </p>
+                )}
               </div>
             )}
 

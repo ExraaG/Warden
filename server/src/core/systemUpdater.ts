@@ -18,9 +18,30 @@ export interface SystemUpdateStatus {
   error?: string;
 }
 
+export interface UpdateProgressState {
+  status: 'idle' | 'stopping_servers' | 'pulling' | 'building' | 'restarting' | 'completed' | 'error';
+  step: number;
+  totalSteps: number;
+  stepName: string;
+  percent: number;
+  details?: string;
+  error?: string;
+}
+
 export class SystemUpdater {
   private static cachedStatus: { timestamp: number; data: SystemUpdateStatus } | null = null;
   private static CACHE_TTL_MS = 60 * 1000; // 1 minute cache
+  private static progressState: UpdateProgressState = {
+    status: 'idle',
+    step: 0,
+    totalSteps: 4,
+    stepName: 'Ready',
+    percent: 0,
+  };
+
+  public static getProgress(): UpdateProgressState {
+    return this.progressState;
+  }
 
   public static async getVersionInfo(): Promise<{ commit: string; version: string }> {
     let commit = 'unknown';
@@ -126,6 +147,14 @@ export class SystemUpdater {
   public static async performSelfUpdate(): Promise<{ success: boolean; message: string }> {
     console.log('[SystemUpdater] Initiating system update sequence...');
 
+    this.progressState = {
+      status: 'stopping_servers',
+      step: 1,
+      totalSteps: 4,
+      stepName: 'Flushing chunk saves and stopping active Minecraft servers...',
+      percent: 20,
+    };
+
     // 1. Gracefully stop all active Minecraft servers to flush world saves
     try {
       const servers = await serverManager.getServers();
@@ -139,41 +168,61 @@ export class SystemUpdater {
       console.warn('[SystemUpdater] Error stopping servers:', err);
     }
 
-    // 2. Perform git pull and rebuild if environment allows
-    try {
-      // Check if git is available
-      const { stdout: pullOut } = await execPromise('git pull origin main', { timeout: 30000 });
-      console.log('[SystemUpdater] Git pull completed:', pullOut);
+    // 2. Perform git pull and rebuild in background
+    setTimeout(async () => {
+      try {
+        SystemUpdater.progressState = {
+          status: 'pulling',
+          step: 2,
+          totalSteps: 4,
+          stepName: 'Pulling latest release from GitHub (git pull origin main)...',
+          percent: 45,
+        };
 
-      // Trigger rebuild in background and restart
-      setTimeout(async () => {
-        try {
-          console.log('[SystemUpdater] Running post-update build...');
-          await execPromise('npm run build', { timeout: 120000 });
-          console.log('[SystemUpdater] Build complete, restarting process...');
-          process.exit(0); // Process manager / Docker will automatically restart the container
-        } catch (e) {
-          console.error('[SystemUpdater] Rebuild failed, restarting anyway:', e);
+        const { stdout: pullOut } = await execPromise('git pull origin main', { timeout: 30000 });
+        console.log('[SystemUpdater] Git pull completed:', pullOut);
+
+        SystemUpdater.progressState = {
+          status: 'building',
+          step: 3,
+          totalSteps: 4,
+          stepName: 'Compiling packages and building production bundle (npm run build)...',
+          percent: 75,
+          details: 'This may take 30-60 seconds. Please keep this window open.',
+        };
+
+        await execPromise('npm run build', { timeout: 180000 });
+        console.log('[SystemUpdater] Build completed successfully.');
+
+        SystemUpdater.progressState = {
+          status: 'restarting',
+          step: 4,
+          totalSteps: 4,
+          stepName: 'Restarting Warden services and reloading application...',
+          percent: 95,
+        };
+
+        setTimeout(() => {
           process.exit(0);
-        }
-      }, 1000);
+        }, 1500);
+      } catch (err: any) {
+        console.error('[SystemUpdater] Build/pull step failed:', err);
+        SystemUpdater.progressState = {
+          status: 'error',
+          step: 4,
+          totalSteps: 4,
+          stepName: 'Update failed',
+          percent: 100,
+          error: err.message,
+        };
+        // Restart after failure to recover clean state
+        setTimeout(() => process.exit(0), 4000);
+      }
+    }, 500);
 
-      return {
-        success: true,
-        message: 'Update downloaded. All worlds saved and server is restarting now.',
-      };
-    } catch (err: any) {
-      console.warn('[SystemUpdater] Automatic git pull failed (possibly standalone container):', err.message);
-      
-      // Still trigger restart so Docker can pick up new volumes or updated images if managed externally
-      setTimeout(() => {
-        process.exit(0);
-      }, 2000);
-
-      return {
-        success: true,
-        message: 'All servers stopped and worlds saved. Restarting application container...',
-      };
-    }
+    return {
+      success: true,
+      message: 'Update sequence started. Server worlds saved.',
+    };
   }
 }

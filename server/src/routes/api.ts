@@ -532,6 +532,11 @@ apiRouter.get('/v1/system/update-status', async (req: Request, res: Response) =>
   }
 });
 
+apiRouter.get('/v1/system/update-progress', async (_req: Request, res: Response) => {
+  const progress = SystemUpdater.getProgress();
+  res.json({ success: true, data: progress } as ApiResponse<any>);
+});
+
 apiRouter.post('/v1/system/self-update', authMiddleware, async (_req: Request, res: Response) => {
   try {
     const result = await SystemUpdater.performSelfUpdate();

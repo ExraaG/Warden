@@ -1541,7 +1541,7 @@ export default function DashboardPage() {
       {!isConfirmed && (
         <div className="bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-start sm:items-center gap-2.5">
-            <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] shrink-0 mt-1 sm:mt-0" />
+            <WardenIcon name="server" size={16} className="text-[var(--color-accent)] shrink-0 mt-0.5 sm:mt-0" />
             <div>
               <span className="font-bold text-slate-100 font-minecraft uppercase">
                 Detected: {currentLoaderName} • MC {currentVersionNum}
@@ -3724,8 +3724,8 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-main)] border border-[var(--color-border)] text-xs text-slate-300 font-mono">
-                  <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-main)] border border-[var(--color-border)] text-xs text-slate-300 font-mono font-medium">
+                  <WardenIcon name="cpu" size={13} className="text-[var(--color-accent)] shrink-0" />
                   In Development
                 </span>
               </div>
