@@ -45,9 +45,24 @@ export class SystemUpdater {
   }
 
   public static async getVersionInfo(): Promise<{ commit: string; version: string }> {
-    let commit: string = BUILD_INFO.commit || 'unknown';
-    let version: string = BUILD_INFO.version || '1.0.0';
+    let commit = 'unknown';
+    let version = '1.0.0';
 
+    // 1. Try local git first if working inside a git repository
+    try {
+      const { stdout } = await execPromise('git rev-parse HEAD', { timeout: 3000 });
+      if (stdout && stdout.trim()) {
+        commit = stdout.trim();
+      }
+    } catch {}
+
+    // 2. Fall back to hardcoded BUILD_INFO if git not available
+    if (commit === 'unknown') {
+      commit = BUILD_INFO.commit || 'unknown';
+      version = BUILD_INFO.version || '1.0.0';
+    }
+
+    // 3. Fall back to version.json files
     if (commit === 'unknown') {
       const candidateFiles = [
         path.resolve(process.cwd(), 'version.json'),
@@ -67,7 +82,7 @@ export class SystemUpdater {
               commit = raw.commitFull || raw.commit;
               break;
             }
-          } catch { }
+          } catch {}
         }
       }
     }
@@ -88,7 +103,7 @@ export class SystemUpdater {
     const { commit: currentCommit, version } = await this.getVersionInfo();
 
     try {
-      const res = await fetch('https://api.github.com/repos/ExraaG/Warden/commits/main', {
+      const res = await fetch('https://api.github.com/repos/ExraaG/Warden/commits?per_page=10', {
         headers: {
           'User-Agent': 'Warden-Server-Update-Checker',
           Accept: 'application/vnd.github.v3+json',
@@ -99,18 +114,30 @@ export class SystemUpdater {
         throw new Error(`GitHub API returned status ${res.status}`);
       }
 
-      const data: any = await res.json();
-      const latestCommit = data.sha || '';
-      const commitMessage = data.commit?.message?.split('\n')[0] || 'Latest updates and bugfixes';
-      const commitDate = data.commit?.committer?.date || new Date().toISOString();
-      const author = data.commit?.author?.name || data.author?.login || 'Warden Team';
+      const commits: any = await res.json();
+      if (!Array.isArray(commits) || commits.length === 0) {
+        throw new Error('No commits returned from GitHub API');
+      }
+
+      const latest = commits[0];
+      const latestCommit = latest.sha || '';
+      const commitMessage = latest.commit?.message?.split('\n')[0] || 'Latest updates and bugfixes';
+      const commitDate = latest.commit?.committer?.date || new Date().toISOString();
+      const author = latest.commit?.author?.name || latest.author?.login || 'Warden Team';
 
       const cur7 = currentCommit.substring(0, 7).toLowerCase();
       const lat7 = latestCommit.substring(0, 7).toLowerCase();
+      const curFull = currentCommit.toLowerCase();
 
       let updateAvailable = false;
       if (cur7 !== 'unknown' && lat7 && lat7 !== 'unknown') {
-        updateAvailable = cur7 !== lat7;
+        const isLatest = cur7 === lat7 || curFull === latestCommit.toLowerCase();
+        if (isLatest) {
+          updateAvailable = false;
+        } else {
+          // If current commit is different from latest, an update is available
+          updateAvailable = true;
+        }
       }
 
       const result: SystemUpdateStatus = {
