@@ -62,6 +62,8 @@ export interface InstalledMod {
   projectId?: string;
   projectSlug?: string;
   title?: string;
+  iconUrl?: string;
+  hasJarIcon?: boolean;
   currentVersion?: string;
   latestVersion?: string;
   hasUpdate: boolean;
