@@ -66,6 +66,44 @@ function main() {
       console.warn(`[stamp-version] Could not write ${target}:`, err.message);
     }
   }
+
+  // Also bake hardcoded TypeScript constant into server/src/version.ts
+  const tsVersionPath = path.resolve(serverDir, 'src', 'version.ts');
+  try {
+    let existingCommit = 'unknown';
+    let existingCommitFull = 'unknown';
+    const jsonTarget = path.resolve(serverDir, 'version.json');
+    if (fs.existsSync(jsonTarget)) {
+      try {
+        const raw = JSON.parse(fs.readFileSync(jsonTarget, 'utf8'));
+        if (raw.commit) existingCommit = raw.commit;
+        if (raw.commitFull) existingCommitFull = raw.commitFull;
+      } catch {}
+    }
+
+    const finalCommit = gitInfo.commit !== 'unknown' ? gitInfo.commit : existingCommit;
+    const finalCommitFull = gitInfo.commitFull !== 'unknown' ? gitInfo.commitFull : existingCommitFull;
+
+    const tsContent = `// Auto-generated at build time by scripts/stamp-version.js
+export const BUILD_INFO: {
+  version: string;
+  commit: string;
+  commitFull: string;
+  branch: string;
+  buildTime: string;
+} = {
+  version: '${version}',
+  commit: '${finalCommit}',
+  commitFull: '${finalCommitFull}',
+  branch: '${gitInfo.branch}',
+  buildTime: '${new Date().toISOString()}',
+};
+`;
+    fs.writeFileSync(tsVersionPath, tsContent, 'utf8');
+    console.log(`[stamp-version] Baked hardcoded version into ${tsVersionPath} -> ${finalCommit}`);
+  } catch (err) {
+    console.warn(`[stamp-version] Could not write ${tsVersionPath}:`, err.message);
+  }
 }
 
 main();

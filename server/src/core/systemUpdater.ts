@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
 import { serverManager } from './serverManager.js';
+import { BUILD_INFO } from '../version.js';
 
 const execPromise = util.promisify(exec);
 
@@ -44,37 +45,30 @@ export class SystemUpdater {
   }
 
   public static async getVersionInfo(): Promise<{ commit: string; version: string }> {
-    let commit = 'unknown';
-    let version = '1.0.0';
+    let commit: string = BUILD_INFO.commit || 'unknown';
+    let version: string = BUILD_INFO.version || '1.0.0';
 
-    // 1. Try local git first if working inside a git repository
-    try {
-      const { stdout } = await execPromise('git rev-parse HEAD', { timeout: 3000 });
-      if (stdout && stdout.trim()) {
-        commit = stdout.trim();
-      }
-    } catch {}
+    if (commit === 'unknown') {
+      const candidateFiles = [
+        path.resolve(process.cwd(), 'version.json'),
+        path.resolve(process.cwd(), '..', 'version.json'),
+        path.resolve(__dirname, '..', '..', 'version.json'),
+        path.resolve(__dirname, '..', 'version.json'),
+        path.resolve('/app/version.json'),
+        path.resolve('/app/server/version.json'),
+      ];
 
-    // 2. Check for version info file if git is not available (e.g. Docker container)
-    const candidateFiles = [
-      path.resolve(process.cwd(), 'version.json'),
-      path.resolve(process.cwd(), '..', 'version.json'),
-      path.resolve(__dirname, '..', '..', 'version.json'),
-      path.resolve(__dirname, '..', 'version.json'),
-      path.resolve('/app/version.json'),
-      path.resolve('/app/server/version.json'),
-    ];
-
-    for (const versionFile of candidateFiles) {
-      if (fs.existsSync(versionFile)) {
-        try {
-          const raw = JSON.parse(await fs.promises.readFile(versionFile, 'utf8'));
-          if (raw.version) version = raw.version;
-          if (commit === 'unknown' && raw.commit && raw.commit !== 'unknown') {
-            commit = raw.commitFull || raw.commit;
-          }
-          if (commit !== 'unknown') break;
-        } catch {}
+      for (const versionFile of candidateFiles) {
+        if (fs.existsSync(versionFile)) {
+          try {
+            const raw = JSON.parse(await fs.promises.readFile(versionFile, 'utf8'));
+            if (raw.version) version = raw.version;
+            if (raw.commit && raw.commit !== 'unknown') {
+              commit = raw.commitFull || raw.commit;
+              break;
+            }
+          } catch {}
+        }
       }
     }
 
