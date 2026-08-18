@@ -35,6 +35,8 @@ export interface InstalledMod {
     projectId?: string;
     projectSlug?: string;
     title?: string;
+    iconUrl?: string;
+    hasJarIcon?: boolean;
     currentVersion?: string;
     latestVersion?: string;
     hasUpdate: boolean;
@@ -183,5 +185,15 @@ export interface InstallModPayload {
     projectId: string;
     versionId: string;
     includeDependencies?: boolean;
+}
+export interface CreateServerPayload {
+    name: string;
+    loader: ServerLoader;
+    mcVersion: string;
+    loaderVersion?: string;
+    minMemory?: string;
+    maxMemory?: string;
+    port?: number;
+    autoStart?: boolean;
 }
 //# sourceMappingURL=types.d.ts.map

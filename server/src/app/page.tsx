@@ -25,6 +25,48 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('mods');
   const [liveUptime, setLiveUptime] = useState<number>(0);
 
+  // Create Server Modal State
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [creatingServer, setCreatingServer] = useState<boolean>(false);
+  const [createForm, setCreateForm] = useState({
+    name: 'My Minecraft Server',
+    loader: 'paper' as ServerLoader,
+    mcVersion: '1.21.1',
+    port: 25565,
+    minMemory: '2G',
+    maxMemory: '4G',
+    autoStart: true,
+  });
+
+  const handleCreateServer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingServer(true);
+    try {
+      const res = await fetch('/api/v1/servers/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createForm),
+      }).then((r) => r.json());
+
+      if (res.success && res.data) {
+        showToast(`Server '${createForm.name}' created successfully!`, 'success');
+        setShowCreateModal(false);
+        setServerId(res.data.id);
+        localStorage.setItem('warden_selected_server_id', res.data.id);
+        window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: res.data.id }));
+        window.dispatchEvent(new CustomEvent('warden_server_updated'));
+        loadServerDetails(res.data.id);
+        loadAllServers();
+      } else {
+        showToast(`Failed to create server: ${res.error}`, 'error');
+      }
+    } catch (err: any) {
+      showToast(`Creation error: ${err.message}`, 'error');
+    } finally {
+      setCreatingServer(false);
+    }
+  };
+
   // Custom Confirm Modal State
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -1237,25 +1279,134 @@ export default function DashboardPage() {
 
   if (!server) {
     return (
-      <Card className="bg-[var(--bg-surface)] border-[var(--color-border)] p-6 sm:p-8 text-center max-w-md mx-auto my-12">
-        <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto mb-4 font-bold text-xl">
-          !
-        </div>
-        <h3 className="font-bold text-slate-200 text-base mb-1">No Active Server Connected</h3>
-        <p className="text-slate-400 text-xs mb-6 font-mono">
-          Unable to reach Crafty Controller or no Minecraft servers detected. Check your connection or API key.
-        </p>
-        <div className="flex items-center justify-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-            Retry
-          </Button>
-          <a href="/settings" className="inline-block">
-            <Button variant="primary" size="sm">
-              Configure Settings
+      <div className="space-y-6">
+        <Card className="bg-[var(--bg-surface)] border-[var(--color-border)] p-6 sm:p-10 text-center max-w-lg mx-auto my-12">
+          <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] text-[var(--color-accent)] border border-[var(--accent-border)] flex items-center justify-center mx-auto mb-4 font-minecraft text-xl font-bold">
+            +
+          </div>
+          <h3 className="font-minecraft font-bold text-slate-100 text-lg mb-2">No Minecraft Server Found</h3>
+          <p className="text-slate-400 text-xs mb-6 leading-relaxed font-mono">
+            Warden runs standalone with 1-click downloads for Paper, Fabric, Purpur, Quilt, and Vanilla.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)} className="px-5">
+              <WardenIcon name="plus" size={14} className="text-[#0d0e11]" />
+              Create New Server
             </Button>
-          </a>
-        </div>
-      </Card>
+            <a href="/settings" className="inline-block">
+              <Button variant="outline" size="sm">
+                Settings
+              </Button>
+            </a>
+          </div>
+        </Card>
+
+        {/* Create Server Modal (Rendered on empty state as well) */}
+        <Modal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          title="Create Minecraft Server"
+        >
+          <form onSubmit={handleCreateServer} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Name</label>
+              <input
+                type="text"
+                required
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                placeholder="e.g. Survival SMP"
+                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Type</label>
+                <select
+                  value={createForm.loader}
+                  onChange={(e) => setCreateForm({ ...createForm, loader: e.target.value as ServerLoader })}
+                  className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+                >
+                  <option value="paper">Paper (Optimized Plugins)</option>
+                  <option value="fabric">Fabric (Mods)</option>
+                  <option value="purpur">Purpur (High Performance)</option>
+                  <option value="quilt">Quilt (Mods)</option>
+                  <option value="vanilla">Vanilla (Official)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">MC Version</label>
+                <input
+                  type="text"
+                  required
+                  value={createForm.mcVersion}
+                  onChange={(e) => setCreateForm({ ...createForm, mcVersion: e.target.value })}
+                  placeholder="e.g. 1.21.1, 1.20.4"
+                  className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Port</label>
+                <input
+                  type="number"
+                  required
+                  value={createForm.port}
+                  onChange={(e) => setCreateForm({ ...createForm, port: parseInt(e.target.value, 10) || 25565 })}
+                  className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Min RAM</label>
+                <input
+                  type="text"
+                  value={createForm.minMemory}
+                  onChange={(e) => setCreateForm({ ...createForm, minMemory: e.target.value })}
+                  placeholder="2G"
+                  className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Max RAM</label>
+                <input
+                  type="text"
+                  value={createForm.maxMemory}
+                  onChange={(e) => setCreateForm({ ...createForm, maxMemory: e.target.value })}
+                  placeholder="4G"
+                  className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="autoStartCheck"
+                checked={createForm.autoStart}
+                onChange={(e) => setCreateForm({ ...createForm, autoStart: e.target.checked })}
+                className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+              />
+              <label htmlFor="autoStartCheck" className="text-xs text-slate-300">
+                Auto-start server immediately after installation
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
+              <Button variant="outline" size="sm" type="button" onClick={() => setShowCreateModal(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" type="submit" isLoading={creatingServer}>
+                <WardenIcon name="download" size={14} className="text-[#0d0e11]" />
+                Install & Create Server
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      </div>
     );
   }
 
@@ -1401,6 +1552,18 @@ export default function DashboardPage() {
             <WardenIcon name="refresh-cw" size={14} className="text-[var(--color-accent)]" />
             <span className="hidden sm:inline">Run Mod Updates</span>
             <span className="sm:hidden">Updates</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCreateModal(true)}
+            title="Create a new Minecraft server"
+            className="flex-1 sm:flex-initial"
+          >
+            <WardenIcon name="plus" size={14} className="text-slate-300" />
+            <span className="hidden sm:inline">New Server</span>
+            <span className="sm:hidden">+ New</span>
           </Button>
         </div>
       </div>
@@ -4717,6 +4880,112 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Create Server Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create Minecraft Server"
+      >
+        <form onSubmit={handleCreateServer} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Name</label>
+            <input
+              type="text"
+              required
+              value={createForm.name}
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              placeholder="e.g. Survival SMP"
+              className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Type</label>
+              <select
+                value={createForm.loader}
+                onChange={(e) => setCreateForm({ ...createForm, loader: e.target.value as ServerLoader })}
+                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+              >
+                <option value="paper">Paper (Optimized Plugins)</option>
+                <option value="fabric">Fabric (Mods)</option>
+                <option value="purpur">Purpur (High Performance)</option>
+                <option value="quilt">Quilt (Mods)</option>
+                <option value="vanilla">Vanilla (Official)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">MC Version</label>
+              <input
+                type="text"
+                required
+                value={createForm.mcVersion}
+                onChange={(e) => setCreateForm({ ...createForm, mcVersion: e.target.value })}
+                placeholder="e.g. 1.21.1, 1.20.4"
+                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Server Port</label>
+              <input
+                type="number"
+                required
+                value={createForm.port}
+                onChange={(e) => setCreateForm({ ...createForm, port: parseInt(e.target.value, 10) || 25565 })}
+                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Min RAM</label>
+              <input
+                type="text"
+                value={createForm.minMemory}
+                onChange={(e) => setCreateForm({ ...createForm, minMemory: e.target.value })}
+                placeholder="2G"
+                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Max RAM</label>
+              <input
+                type="text"
+                value={createForm.maxMemory}
+                onChange={(e) => setCreateForm({ ...createForm, maxMemory: e.target.value })}
+                placeholder="4G"
+                className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="autoStartCheckMain"
+              checked={createForm.autoStart}
+              onChange={(e) => setCreateForm({ ...createForm, autoStart: e.target.checked })}
+              className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+            />
+            <label htmlFor="autoStartCheckMain" className="text-xs text-slate-300">
+              Auto-start server immediately after installation
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
+            <Button variant="outline" size="sm" type="button" onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" type="submit" isLoading={creatingServer}>
+              <WardenIcon name="download" size={14} className="text-[#0d0e11]" />
+              Install & Create Server
+            </Button>
+          </div>
+        </form>
       </Modal>
 
     </div>

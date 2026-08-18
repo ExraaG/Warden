@@ -4,7 +4,6 @@ import { parse } from 'url';
 import next from 'next';
 import { config } from './config.js';
 import { apiRouter } from './routes/api.js';
-import { craftyAdapter } from './adapters/crafty.js';
 import { updateJobRunner } from './jobs/cron.js';
 
 const appDir = typeof __dirname !== 'undefined' ? path.resolve(__dirname, '..') : path.resolve(process.cwd(), 'server');
@@ -34,11 +33,6 @@ async function bootstrap() {
   // Serve Next.js web application for all routes
   app.all('*', (req, res) => {
     return nextHandler(req, res);
-  });
-
-  // Perform startup Crafty OpenAPI schema check
-  craftyAdapter.validateOpenApiSchema().catch((err) => {
-    console.warn('[Server] Startup Crafty OpenAPI validation warning:', err.message);
   });
 
   // Start 4 AM update cron job runner

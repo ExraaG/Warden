@@ -2,7 +2,8 @@ import yauzl from 'yauzl';
 import fetch from 'node-fetch';
 import crypto from 'crypto';
 import path from 'path';
-import { craftyAdapter } from './crafty.js';
+import fs from 'fs';
+import { serverManager } from '../core/serverManager.js';
 import { db } from '../db/storage.js';
 import { ServerLoader } from '@warden/shared';
 
@@ -394,17 +395,18 @@ export class MrPackAdapter {
 
     const mcVersion = deps['minecraft'] || '1.21.1';
 
-    // Pre-create standard Minecraft server directories so uploads never fail
-    await craftyAdapter.ensureDirectory(serverId, 'mods').catch(() => {});
+    // Pre-create standard Minecraft server directories natively
+    const srvDir = serverManager.getServerDir(serverId);
+    await fs.promises.mkdir(path.join(srvDir, 'mods'), { recursive: true }).catch(() => {});
     if (includeDatapacks) {
-      await craftyAdapter.ensureDirectory(serverId, 'world/datapacks').catch(() => {});
-      await craftyAdapter.ensureDirectory(serverId, 'datapacks').catch(() => {});
+      await fs.promises.mkdir(path.join(srvDir, 'world', 'datapacks'), { recursive: true }).catch(() => {});
+      await fs.promises.mkdir(path.join(srvDir, 'datapacks'), { recursive: true }).catch(() => {});
     }
     if (includeResourcePacks) {
-      await craftyAdapter.ensureDirectory(serverId, 'resourcepacks').catch(() => {});
+      await fs.promises.mkdir(path.join(srvDir, 'resourcepacks'), { recursive: true }).catch(() => {});
     }
     if (includeShaderPacks) {
-      await craftyAdapter.ensureDirectory(serverId, 'shaderpacks').catch(() => {});
+      await fs.promises.mkdir(path.join(srvDir, 'shaderpacks'), { recursive: true }).catch(() => {});
     }
 
     // Filter eligible files based on user category checkboxes and excluded mod list
@@ -557,18 +559,19 @@ export class MrPackAdapter {
           });
         }
 
-        await craftyAdapter.ensureDirectory(serverId, targetDir).catch(() => {});
-        const uploaded = await craftyAdapter.uploadFile(serverId, targetDir, fileBuffer, filename);
-        if (!uploaded) {
-          throw new Error(`Folder '${targetDir}' is not initialized in Crafty. If running Vanilla, switch server jar to Fabric/Forge in Crafty.`);
-        }
+        const srvDir = serverManager.getServerDir(serverId);
+        const destinationDir = path.join(srvDir, targetDir);
+        await fs.promises.mkdir(destinationDir, { recursive: true });
+        await fs.promises.writeFile(path.join(destinationDir, filename), fileBuffer);
 
         if (targetDir === 'world/datapacks') {
-          await craftyAdapter.uploadFile(serverId, 'datapacks', fileBuffer, filename).catch(() => {});
+          const altDatapacksDir = path.join(srvDir, 'datapacks');
+          await fs.promises.mkdir(altDatapacksDir, { recursive: true });
+          await fs.promises.writeFile(path.join(altDatapacksDir, filename), fileBuffer).catch(() => {});
         }
 
         installedMods.push(filename);
-        await new Promise((r) => setTimeout(r, 20));
+        await new Promise((r) => setTimeout(r, 10));
       } catch (err: any) {
         console.error(`[MrPack] Failed to install ${file.path}:`, err.message);
         failedFiles.push({ path: file.path, error: err.message });
@@ -612,13 +615,11 @@ export class MrPackAdapter {
           });
         }
 
-        if (targetDir) {
-          await craftyAdapter.ensureDirectory(serverId, targetDir).catch(() => {});
-        }
-        const uploaded = await craftyAdapter.uploadFile(serverId, targetDir, override.buffer, filename);
-        if (!uploaded) {
-          throw new Error(`Folder '${targetDir || 'root'}' upload failed.`);
-        }
+        const srvDir = serverManager.getServerDir(serverId);
+        const destinationDir = targetDir ? path.join(srvDir, targetDir) : srvDir;
+        await fs.promises.mkdir(destinationDir, { recursive: true });
+        await fs.promises.writeFile(path.join(destinationDir, filename), override.buffer);
+
         installedOverrides.push(override.path);
       } catch (err: any) {
         console.error(`[MrPack] Failed to install override ${override.path}:`, err.message);

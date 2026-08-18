@@ -214,6 +214,100 @@ export class ModrinthAdapter {
   }
 
   /**
+   * Get single version details by versionId
+   */
+  public async getVersion(versionId: string): Promise<ModrinthVersion | null> {
+    try {
+      const v: any = await this.request(`/version/${versionId}`);
+      if (!v) return null;
+      const primaryFile = v.files.find((f: any) => f.primary) || v.files[0] || {};
+      const dependencies: ModrinthDependency[] = (v.dependencies || []).map((dep: any) => ({
+        projectId: dep.project_id || null,
+        versionId: dep.version_id || null,
+        dependencyType: dep.dependency_type || 'required',
+      }));
+
+      return {
+        id: v.id,
+        projectId: v.project_id,
+        name: v.name,
+        versionNumber: v.version_number,
+        downloadUrl: primaryFile.url || '',
+        filename: primaryFile.filename || `${v.name}.jar`,
+        sha512: primaryFile.hashes?.sha512 || '',
+        dependencies,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Batch lookup multiple version files by SHA512 hashes
+   */
+  public async getVersionFiles(hashes: string[]): Promise<Record<string, any>> {
+    if (hashes.length === 0) return {};
+    try {
+      return await this.request<Record<string, any>>('/version_files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hashes, algorithm: 'sha512' }),
+      });
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Batch lookup multiple projects by IDs/slugs
+   */
+  public async getProjects(projectIds: string[]): Promise<Record<string, any>> {
+    if (projectIds.length === 0) return {};
+    try {
+      const res: any[] = await this.request(`/projects?ids=${encodeURIComponent(JSON.stringify(projectIds))}`);
+      const map: Record<string, any> = {};
+      if (Array.isArray(res)) {
+        for (const p of res) {
+          map[p.id] = p;
+          if (p.slug) map[p.slug] = p;
+        }
+      }
+      return map;
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Download mod file (alias for downloadAndVerifyFile)
+   */
+  public async downloadModFile(downloadUrl: string, expectedSha512?: string): Promise<Buffer> {
+    return this.downloadAndVerifyFile(downloadUrl, expectedSha512 || '');
+  }
+
+  /**
+   * Alias for resolveRequiredDependencies
+   */
+  public async resolveDependencies(
+    initialVersion: ModrinthVersion,
+    loaders: ServerLoader[] = ['fabric'],
+    mcVersions: string[] = ['1.21.1']
+  ): Promise<ModrinthVersion[]> {
+    return this.resolveRequiredDependencies(initialVersion, loaders[0] || 'fabric', mcVersions[0] || '1.21.1');
+  }
+
+  /**
+   * Alias for checkVersionFilesUpdate
+   */
+  public async checkVersionUpdates(
+    hashes: string[],
+    loaders: ServerLoader[] = ['fabric'],
+    mcVersions: string[] = ['1.21.1']
+  ): Promise<Record<string, ModrinthVersion>> {
+    return this.checkVersionFilesUpdate(hashes, loaders[0] || 'fabric', mcVersions[0] || '1.21.1');
+  }
+
+  /**
    * Download a mod file and verify its sha512 hash before writing to server
    */
   public async downloadAndVerifyFile(downloadUrl: string, expectedSha512: string): Promise<Buffer> {
@@ -242,3 +336,4 @@ export class ModrinthAdapter {
 }
 
 export const modrinthAdapter = new ModrinthAdapter();
+

@@ -10,11 +10,10 @@ services:
       - "host.docker.internal:host-gateway"
     ports:
       - "${PORT:-3000}:3000"
+      - "25565:25565"
     environment:
       - PORT=3000
       - TZ=${TZ:-Europe/Vienna}
-      - CRAFTY_URL=${CRAFTY_URL:-https://host.docker.internal:8443}
-      - CRAFTY_API_KEY=${CRAFTY_API_KEY:-}
       - WARDEN_API_KEY=${WARDEN_API_KEY:-warden_secret_key_change_me}
       - DATA_DIR=/data
       - DEV_FIXTURE_MODE=${DEV_FIXTURE_MODE:-false}

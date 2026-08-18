@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { craftyAdapter } from '../adapters/crafty.js';
+import { serverManager } from '../core/serverManager.js';
 import { modrinthAdapter } from '../adapters/modrinth.js';
 import { db } from '../db/storage.js';
 import { loaderDetector } from '../detection/loader.js';
@@ -51,13 +51,12 @@ export class UpdateJobRunner {
       console.log('[Cron] Automated mod updates are disabled.');
     }
 
-    // 2. Custom User Tasks (e.g. "Restart server daily at 05:00", etc.)
+    // 2. Custom User Tasks
     const customTasks = db.getCustomTasks();
     for (const task of customTasks) {
       if (!task.enabled) continue;
 
       if (task.triggerType === 'on_mod_update') {
-        // Handled reactively when mods update, not on cron timer
         continue;
       }
 
@@ -68,42 +67,23 @@ export class UpdateJobRunner {
       }
 
       if (expr && cron.validate(expr)) {
-        const scheduled = cron.schedule(
+        const ct = cron.schedule(
           expr,
           async () => {
-            console.log(`[Cron] Running custom task: '${task.name}' (${task.action})...`);
+            console.log(`[Cron] Executing scheduled task '${task.name}' (${expr})...`);
             await this.executeCustomTask(task);
           },
           { timezone: tz }
         );
-        this.cronTasks.push(scheduled);
-        console.log(`[Cron] Custom task '${task.name}' scheduled: '${expr}' (${tz}).`);
-      }
-    }
-  }
-
-  public async triggerModUpdateTasks(serverId: string, updatedModNames: string[]): Promise<void> {
-    if (!updatedModNames || updatedModNames.length === 0) return;
-    const tasks = db.getCustomTasks().filter((t) => t.enabled && t.triggerType === 'on_mod_update');
-    for (const task of tasks) {
-      if (task.serverId && task.serverId !== 'all' && task.serverId !== serverId) continue;
-
-      const targetMod = (task.targetMod || '').toLowerCase().trim();
-      let matches = true;
-      if (targetMod && targetMod !== 'all' && targetMod !== 'any') {
-        matches = updatedModNames.some((m) => m.toLowerCase().includes(targetMod));
-      }
-
-      if (matches) {
-        console.log(`[Task Trigger][${task.name}] Running event task on mod update (${updatedModNames.join(', ')})...`);
-        await this.executeCustomTask(task);
+        this.cronTasks.push(ct);
+        console.log(`[Cron] Custom task '${task.name}' scheduled: '${expr}'.`);
       }
     }
   }
 
   public async executeCustomTask(task: ScheduledTask): Promise<boolean> {
     try {
-      const servers = await craftyAdapter.getServers();
+      const servers = await serverManager.getServers();
       const targetServers = task.serverId && task.serverId !== 'all'
         ? servers.filter((s) => s.id === task.serverId)
         : servers;
@@ -111,19 +91,19 @@ export class UpdateJobRunner {
       for (const server of targetServers) {
         if (task.action === 'restart_server') {
           console.log(`[Cron Task][${task.name}] Restarting server ${server.name} (${server.id})...`);
-          await craftyAdapter.restartServer(server.id);
+          await serverManager.restartServer(server.id);
         } else if (task.action === 'stop_server') {
           console.log(`[Cron Task][${task.name}] Stopping server ${server.name} (${server.id})...`);
-          await craftyAdapter.stopServer(server.id);
+          await serverManager.stopServer(server.id);
         } else if (task.action === 'start_server') {
           console.log(`[Cron Task][${task.name}] Starting server ${server.name} (${server.id})...`);
-          await craftyAdapter.startServer(server.id);
+          await serverManager.startServer(server.id);
         } else if (task.action === 'run_mod_updates') {
           console.log(`[Cron Task][${task.name}] Running mod updates for ${server.name} (${server.id})...`);
           await this.runUpdateJob('scheduled_4am', server.id);
         } else if (task.action === 'console_command' && task.command) {
           console.log(`[Cron Task][${task.name}] Sending command '${task.command}' to ${server.name}...`);
-          await craftyAdapter.sendConsoleCommand(server.id, task.command);
+          serverManager.sendCommand(server.id, task.command);
         }
       }
 
@@ -142,11 +122,26 @@ export class UpdateJobRunner {
     }
   }
 
-
+  public async triggerModUpdateTasks(serverId: string, updatedModFilenames: string[]): Promise<void> {
+    const customTasks = db.getCustomTasks().filter((t) => t.enabled && t.triggerType === 'on_mod_update');
+    for (const task of customTasks) {
+      if (task.serverId && task.serverId !== 'all' && task.serverId !== serverId) {
+        continue;
+      }
+      if (task.targetMod) {
+        const matchesMod = updatedModFilenames.some((fn) =>
+          fn.toLowerCase().includes(task.targetMod!.toLowerCase())
+        );
+        if (!matchesMod) continue;
+      }
+      console.log(`[Event Trigger] Mod update event fired for task '${task.name}' on server ${serverId}...`);
+      await this.executeCustomTask(task);
+    }
+  }
 
   public async runUpdateJob(trigger: JobTrigger, targetServerId?: string): Promise<JobLog[]> {
     if (this.isRunning) {
-      console.warn('[Cron] An update job is already in progress. Skipping request.');
+      console.log('[Cron] Update job is already running, skipping trigger.');
       return [];
     }
 
@@ -154,18 +149,18 @@ export class UpdateJobRunner {
     const logs: JobLog[] = [];
 
     try {
-      const servers = await craftyAdapter.getServers();
-      const filtered = targetServerId
+      const servers = await serverManager.getServers();
+      const candidates = targetServerId
         ? servers.filter((s) => s.id === targetServerId)
         : servers;
 
-      for (const server of filtered) {
-        const jobLog = await this.processServerUpdate(server, trigger);
-        db.addJobLog(jobLog);
-        logs.push(jobLog);
+      for (const server of candidates) {
+        const log = await this.updateServerMods(server, trigger);
+        logs.push(log);
+        db.addJobLog(log);
       }
     } catch (err: any) {
-      console.error('[Cron] Fatal error during update job execution:', err);
+      console.error('[Cron] Fatal error running update job:', err);
     } finally {
       this.isRunning = false;
     }
@@ -173,34 +168,25 @@ export class UpdateJobRunner {
     return logs;
   }
 
-  private async processServerUpdate(server: WardenServer, trigger: JobTrigger): Promise<JobLog> {
+  private async updateServerMods(server: WardenServer, trigger: JobTrigger): Promise<JobLog> {
     const timestamp = new Date().toISOString();
     const steps: JobStep[] = [];
     let modsUpdatedCount = 0;
 
     const logStep = (step: string, level: JobStep['level'], message: string) => {
-      steps.push({
-        timestamp: new Date().toISOString(),
-        step,
-        level,
-        message,
-      });
-      console.log(`[Job][${server.name}][${level.toUpperCase()}] ${step}: ${message}`);
+      steps.push({ timestamp: new Date().toISOString(), step, level, message });
+      console.log(`[Job][${server.name}][${step}] ${message}`);
     };
 
-    logStep('init', 'info', `Beginning mod update check for server '${server.name}' (${server.id}).`);
+    logStep('start', 'info', `Beginning update job (${trigger}) for server ${server.name}...`);
 
-    // Check loader confirmation state
-    let detection = db.getServerDetection(server.id);
-    if (!detection || !detection.isConfirmed) {
-      detection = await loaderDetector.detectServerLoader(server.id);
-    }
-
-    if (!detection.isConfirmed || !detection.mcVersion || detection.loader === 'unknown') {
+    // Verify Loader and MC Version confirmation
+    const detection = db.getServerDetection(server.id) || server.detection;
+    if (!detection || !detection.isConfirmed || !detection.mcVersion) {
       logStep(
-        'check_confirmation',
+        'detection_check',
         'warn',
-        'Skipped: Server loader or MC version is unconfirmed. Please confirm in Warden UI before automated updates.'
+        `Server loader/MC version not confirmed. Skipping automated update.`
       );
       return {
         id: `job-${Date.now()}-${server.id}`,
@@ -211,12 +197,12 @@ export class UpdateJobRunner {
         status: 'skipped',
         steps,
         modsUpdated: 0,
-        summary: 'Skipped: Unconfirmed loader or MC version.',
+        summary: 'Skipped: Loader / Minecraft version unconfirmed by operator.',
       };
     }
 
     logStep(
-      'detection_confirmed',
+      'detection_check',
       'info',
       `Confirmed loader '${detection.loader}' with Minecraft ${detection.mcVersion}.`
     );
@@ -224,7 +210,7 @@ export class UpdateJobRunner {
     // List installed mod files
     let remoteFiles: any[] = [];
     try {
-      remoteFiles = await craftyAdapter.listFiles(server.id, 'mods');
+      remoteFiles = await serverManager.listFiles(server.id, 'mods');
     } catch (err: any) {
       logStep('list_mods', 'error', `Failed to list mods folder: ${err.message}`);
       return {
@@ -240,7 +226,7 @@ export class UpdateJobRunner {
       };
     }
 
-    const jarFiles = remoteFiles.filter((f) => !f.is_dir && (f.name || '').endsWith('.jar'));
+    const jarFiles = remoteFiles.filter((f) => !f.isDir && (f.name || '').endsWith('.jar'));
     if (jarFiles.length === 0) {
       logStep('hash_batch', 'info', 'Skipped: No .jar mod files found in server mods folder.');
       return {
@@ -256,44 +242,25 @@ export class UpdateJobRunner {
       };
     }
 
-    // In dev fixture mode, simulate hashes if remote hashes aren't provided
+    const srvDir = serverManager.getServerDir(server.id);
+    const modsDir = path.join(srvDir, 'mods');
     const hashesToQuery: string[] = [];
-    const hashFilenameMap = new Map<string, string>();
+    const hashToFileMap = new Map<string, string>();
 
-    for (const jar of jarFiles) {
-      // Create sha512 hash identifier from filename/metadata or fixture
-      const pseudoHash = crypto
-        .createHash('sha512')
-        .update(`${jar.name}-${jar.size || 1000}`)
-        .digest('hex');
-      hashesToQuery.push(pseudoHash);
-      hashFilenameMap.set(pseudoHash, jar.name);
-    }
-
-    // Check version updates via Modrinth hash batch API
-    logStep('modrinth_hash_batch', 'info', `Querying Modrinth for updates across ${jarFiles.length} installed mods...`);
-
-    let updateMap: Record<string, ModrinthVersion> = {};
-    try {
-      updateMap = await modrinthAdapter.checkVersionFilesUpdate(
-        hashesToQuery,
-        detection.loader,
-        detection.mcVersion
-      );
-    } catch (err: any) {
-      logStep('modrinth_hash_batch', 'warn', `Modrinth hash batch lookup failed: ${err.message}. Proceeding safely.`);
-    }
-
-    const updatesToApply: { oldFilename: string; newVersion: ModrinthVersion }[] = [];
-    for (const [hash, newVer] of Object.entries(updateMap)) {
-      const oldFilename = hashFilenameMap.get(hash);
-      if (oldFilename && newVer.filename !== oldFilename) {
-        updatesToApply.push({ oldFilename, newVersion: newVer });
+    for (const f of jarFiles) {
+      const fullPath = path.join(modsDir, f.name);
+      try {
+        const buf = await fs.promises.readFile(fullPath);
+        const hash = crypto.createHash('sha512').update(buf).digest('hex');
+        hashesToQuery.push(hash);
+        hashToFileMap.set(hash, f.name);
+      } catch (err: any) {
+        logStep('hash_compute', 'warn', `Failed to compute hash for ${f.name}: ${err.message}`);
       }
     }
 
-    if (updatesToApply.length === 0) {
-      logStep('check_updates', 'info', 'All installed mods are currently up to date.');
+    if (hashesToQuery.length === 0) {
+      logStep('hash_batch', 'warn', 'No mod hashes computed. Skipping update.');
       return {
         id: `job-${Date.now()}-${server.id}`,
         timestamp,
@@ -303,52 +270,115 @@ export class UpdateJobRunner {
         status: 'skipped',
         steps,
         modsUpdated: 0,
-        summary: 'All mods up to date.',
+        summary: 'No valid mod files could be hashed.',
       };
     }
 
-    logStep('found_updates', 'info', `Found ${updatesToApply.length} mod updates to download and stage.`);
+    logStep('modrinth_hash_batch', 'info', `Querying Modrinth for ${hashesToQuery.length} installed mod hashes...`);
+    let updateMap: Record<string, ModrinthVersion> = {};
+    try {
+      updateMap = await modrinthAdapter.checkVersionUpdates(
+        hashesToQuery,
+        [detection.loader],
+        [detection.mcVersion]
+      );
+    } catch (err: any) {
+      logStep('modrinth_hash_batch', 'error', `Modrinth API query failed: ${err.message}`);
+      return {
+        id: `job-${Date.now()}-${server.id}`,
+        timestamp,
+        serverId: server.id,
+        serverName: server.name,
+        trigger,
+        status: 'failed',
+        steps,
+        modsUpdated: 0,
+        summary: `Modrinth update query failed: ${err.message}`,
+      };
+    }
 
-    // Download & SHA512 Verify stage
-    const stagedFiles: { filename: string; buffer: Buffer; oldFilename: string }[] = [];
-    for (const item of updatesToApply) {
-      try {
-        logStep('download_verify', 'info', `Downloading ${item.newVersion.filename}...`);
-        const buffer = await modrinthAdapter.downloadAndVerifyFile(
-          item.newVersion.downloadUrl,
-          item.newVersion.sha512
-        );
-        stagedFiles.push({
-          filename: item.newVersion.filename,
-          buffer,
-          oldFilename: item.oldFilename,
-        });
-        logStep('download_verify', 'success', `Verified SHA512 for ${item.newVersion.filename}.`);
-      } catch (err: any) {
-        logStep('download_verify', 'error', `Verification failed for ${item.newVersion.filename}: ${err.message}`);
-        return {
-          id: `job-${Date.now()}-${server.id}`,
-          timestamp,
-          serverId: server.id,
-          serverName: server.name,
-          trigger,
-          status: 'failed',
-          steps,
-          modsUpdated: 0,
-          summary: `Failed to download or verify sha512 for ${item.newVersion.filename}.`,
-        };
+    const pendingUpdates: Array<{ oldFilename: string; newVersion: ModrinthVersion }> = [];
+    for (const [hash, newVer] of Object.entries(updateMap)) {
+      const oldFilename = hashToFileMap.get(hash);
+      if (oldFilename && newVer) {
+        pendingUpdates.push({ oldFilename, newVersion: newVer });
       }
     }
 
-    // Backup stage
+    if (pendingUpdates.length === 0) {
+      logStep('modrinth_hash_batch', 'info', 'All installed mods are up to date! Nothing to update.');
+      return {
+        id: `job-${Date.now()}-${server.id}`,
+        timestamp,
+        serverId: server.id,
+        serverName: server.name,
+        trigger,
+        status: 'skipped',
+        steps,
+        modsUpdated: 0,
+        summary: 'All mods are currently up to date.',
+      };
+    }
+
+    logStep('modrinth_hash_batch', 'info', `Found ${pendingUpdates.length} mod updates available.`);
+
+    // Download & verify stage
+    const stagedFiles: Array<{ filename: string; buffer: Buffer; oldFilename?: string }> = [];
+    for (const update of pendingUpdates) {
+      const fileInfo =
+        update.newVersion.dependencies && update.newVersion.downloadUrl
+          ? { url: update.newVersion.downloadUrl, filename: update.newVersion.filename, sha512: update.newVersion.sha512 }
+          : null;
+
+      if (!fileInfo || !fileInfo.url) {
+        logStep('download_verify', 'warn', `No download URL for version ${update.newVersion.name}, skipping.`);
+        continue;
+      }
+
+      logStep('download_verify', 'info', `Downloading ${fileInfo.filename}...`);
+      try {
+        const buf = await modrinthAdapter.downloadModFile(fileInfo.url, fileInfo.sha512);
+        stagedFiles.push({ filename: fileInfo.filename, buffer: buf, oldFilename: update.oldFilename });
+        logStep('download_verify', 'success', `Verified checksum for ${fileInfo.filename}.`);
+      } catch (err: any) {
+        logStep('download_verify', 'error', `Failed download/verification of ${fileInfo.filename}: ${err.message}`);
+      }
+    }
+
+    if (stagedFiles.length === 0) {
+      logStep('download_verify', 'warn', 'No files could be downloaded and verified. Aborting update.');
+      return {
+        id: `job-${Date.now()}-${server.id}`,
+        timestamp,
+        serverId: server.id,
+        serverName: server.name,
+        trigger,
+        status: 'failed',
+        steps,
+        modsUpdated: 0,
+        summary: 'All mod downloads failed checksum verification.',
+      };
+    }
+
+    // Safety backup of mods folder
     logStep('backup', 'info', 'Creating safety backup of current mods folder...');
     const backupDir = path.join(db.getBackupsDir(), server.id, Date.now().toString());
-    fs.mkdirSync(backupDir, { recursive: true });
+    await fs.promises.mkdir(backupDir, { recursive: true });
+
+    try {
+      const existingMods = await fs.promises.readdir(modsDir);
+      for (const m of existingMods) {
+        await fs.promises.copyFile(path.join(modsDir, m), path.join(backupDir, m));
+      }
+      logStep('backup', 'success', `Backup complete in ${backupDir}.`);
+    } catch (err: any) {
+      logStep('backup', 'warn', `Backup warning: ${err.message}`);
+    }
 
     // Stop server before swapping files
     logStep('stop_server', 'info', 'Stopping server prior to mod replacement...');
     try {
-      await craftyAdapter.stopServer(server.id);
+      await serverManager.stopServer(server.id);
       await this.waitForStatus(server.id, 'offline', 30);
       logStep('stop_server', 'success', 'Server stopped successfully.');
     } catch (err: any) {
@@ -371,9 +401,10 @@ export class UpdateJobRunner {
     for (const staged of stagedFiles) {
       try {
         if (staged.oldFilename) {
-          await craftyAdapter.deleteFile(server.id, `mods/${staged.oldFilename}`);
+          const oldPath = path.join(modsDir, staged.oldFilename);
+          if (fs.existsSync(oldPath)) await fs.promises.unlink(oldPath);
         }
-        await craftyAdapter.uploadFile(server.id, 'mods', staged.buffer, staged.filename);
+        await fs.promises.writeFile(path.join(modsDir, staged.filename), staged.buffer);
         modsUpdatedCount++;
       } catch (err: any) {
         logStep('swap_files', 'error', `Error swapping file ${staged.filename}: ${err.message}`);
@@ -383,7 +414,7 @@ export class UpdateJobRunner {
     // Verify directory contents
     logStep('verify_directory', 'info', 'Verifying server mods directory contents...');
     try {
-      const currentMods = await craftyAdapter.listFiles(server.id, 'mods');
+      const currentMods = await serverManager.listFiles(server.id, 'mods');
       logStep('verify_directory', 'success', `Mods folder verified. ${currentMods.length} items present.`);
     } catch (err: any) {
       logStep('verify_directory', 'warn', `Could not verify directory contents: ${err.message}`);
@@ -392,8 +423,8 @@ export class UpdateJobRunner {
     // Start server & poll health
     logStep('start_server', 'info', 'Starting server and monitoring launch status...');
     try {
-      await craftyAdapter.startServer(server.id);
-      const started = await this.waitForStatus(server.id, 'online', 180); // 3 minutes timeout
+      await serverManager.startServer(server.id);
+      const started = await this.waitForStatus(server.id, 'online', 180);
 
       if (!started) {
         throw new Error('Server failed to reach online status within 3 minutes of launch.');
@@ -401,7 +432,6 @@ export class UpdateJobRunner {
 
       logStep('start_server', 'success', `Server started successfully and passed health checks! Updated ${modsUpdatedCount} mods.`);
 
-      // Trigger any custom event tasks listening for mod updates
       this.triggerModUpdateTasks(server.id, stagedFiles.map((s) => s.filename)).catch((err) => {
         console.error('[Cron] Error executing mod update tasks:', err);
       });
@@ -419,18 +449,24 @@ export class UpdateJobRunner {
       };
 
     } catch (err: any) {
-      // AUTOMATIC ROLLBACK TRIGGERED!
+      // AUTOMATIC ROLLBACK TRIGGERED
       logStep('rollback_trigger', 'error', `AUTOMATIC ROLLBACK TRIGGERED! Reason: ${err.message}`);
       logStep('rollback_action', 'info', 'Restoring original mod files and restarting server...');
 
       try {
-        await craftyAdapter.stopServer(server.id);
+        await serverManager.stopServer(server.id);
         // Remove newly staged files
         for (const staged of stagedFiles) {
-          await craftyAdapter.deleteFile(server.id, `mods/${staged.filename}`).catch(() => {});
+          const p = path.join(modsDir, staged.filename);
+          if (fs.existsSync(p)) await fs.promises.unlink(p);
         }
-        await craftyAdapter.startServer(server.id);
-        logStep('rollback_action', 'success', 'Automatic rollback completed. Server restarted with original mods.');
+        // Restore from backup
+        const backupFiles = await fs.promises.readdir(backupDir);
+        for (const bf of backupFiles) {
+          await fs.promises.copyFile(path.join(backupDir, bf), path.join(modsDir, bf));
+        }
+        await serverManager.startServer(server.id);
+        logStep('rollback_action', 'success', 'Automatic rollback completed. Server restored with original mods.');
       } catch (rollbackErr: any) {
         logStep('rollback_action', 'error', `Critical error during rollback: ${rollbackErr.message}`);
       }
@@ -453,12 +489,12 @@ export class UpdateJobRunner {
     const start = Date.now();
     while ((Date.now() - start) / 1000 < timeoutSec) {
       try {
-        const stats = await craftyAdapter.getServerStats(serverId);
+        const stats = serverManager.getServerStats(serverId);
         if (targetStatus === 'online' && stats.uptimeSeconds > 0) return true;
         if (targetStatus === 'offline' && stats.uptimeSeconds === 0) return true;
       } catch (err) {}
       if (config.devFixtureMode) return true;
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
     return false;
   }

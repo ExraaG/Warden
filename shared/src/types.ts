@@ -239,4 +239,16 @@ export interface InstallModPayload {
   includeDependencies?: boolean;
 }
 
+export interface CreateServerPayload {
+  name: string;
+  loader: ServerLoader;
+  mcVersion: string;
+  loaderVersion?: string;
+  minMemory?: string;
+  maxMemory?: string;
+  port?: number;
+  autoStart?: boolean;
+}
+
+
 

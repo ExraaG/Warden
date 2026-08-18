@@ -11,14 +11,14 @@ interface StorageData {
 }
 
 const DEFAULT_SETTINGS: WardenSettings = {
-  craftyUrl: config.craftyUrl,
-  craftyApiKeySet: Boolean(config.craftyApiKey),
+  craftyUrl: '',
+  craftyApiKeySet: false,
   wardenApiKeySet: Boolean(config.wardenApiKey),
   timezone: config.timezone,
   autoUpdateEnabled: true,
   autoUpdateTime: '04:00',
   autoUpdateCron: '0 4 * * *',
-  schemaValidated: false,
+  schemaValidated: true,
   customTasks: [],
 };
 
@@ -50,9 +50,6 @@ export class Storage {
         const raw = fs.readFileSync(this.filePath, 'utf-8');
         const parsed = JSON.parse(raw);
         const loadedSettings = { ...DEFAULT_SETTINGS, ...parsed.settings };
-        if (!loadedSettings.craftyUrl) {
-          loadedSettings.craftyUrl = config.craftyUrl;
-        }
         return {
           settings: loadedSettings,
           serverDetections: parsed.serverDetections || {},

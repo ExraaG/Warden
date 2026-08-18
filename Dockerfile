@@ -24,8 +24,8 @@ ENV PORT=3000
 ENV TZ=UTC
 ENV DATA_DIR=/data
 
-# Install curl for healthcheck
-RUN apk add --no-cache curl
+# Install curl for healthcheck & OpenJDK runtime for Minecraft servers
+RUN apk add --no-cache curl openjdk21-jre openjdk17-jre
 
 # Copy compiled shared library and server output
 COPY --from=builder /app/shared /app/shared
@@ -38,7 +38,8 @@ COPY --from=builder /app/server/public ./public
 # Ensure persistent data directory exists
 RUN mkdir -p /data
 
-EXPOSE 3000
+# Expose Warden Web UI (3000) and Minecraft Game Port (25565)
+EXPOSE 3000 25565
 
 # Docker Healthcheck
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
