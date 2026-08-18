@@ -83,26 +83,45 @@ export class ServerManager {
       uptimeSeconds: 0,
     };
 
-    // Determine loader and version
-    const props = await this.getServerProperties(serverId);
-    const name = props['motd']?.replace(/§[0-9a-fk-or]/gi, '').split('|')[0]?.trim() || serverId;
+    // Determine server name & metadata from warden.json or server.properties
+    let name = serverId;
+    const metaPath = path.join(dir, 'warden.json');
+    let savedMeta: any = null;
+    if (fs.existsSync(metaPath)) {
+      try {
+        savedMeta = JSON.parse(await fs.promises.readFile(metaPath, 'utf8'));
+        if (savedMeta.name) name = savedMeta.name;
+      } catch {}
+    }
+
+    if (!savedMeta) {
+      const props = await this.getServerProperties(serverId);
+      if (props['motd']) {
+        name = props['motd']
+          .replace(/\\u00a7[0-9a-fk-or]/gi, '')
+          .replace(/§[0-9a-fk-or]/gi, '')
+          .split('|')[0]?.trim() || serverId;
+      }
+    }
 
     // Detect server jar if not explicitly saved
-    let jarName = 'server.jar';
+    let jarName = savedMeta?.jarFile || 'server.jar';
     const files = await fs.promises.readdir(dir).catch(() => []);
     const foundJar = files.find(f => f.endsWith('.jar') && !f.startsWith('installer'));
     if (foundJar) jarName = foundJar;
 
-    let detectedLoader: ServerLoader = 'vanilla';
-    if (jarName.includes('fabric')) detectedLoader = 'fabric';
-    else if (jarName.includes('paper')) detectedLoader = 'paper';
-    else if (jarName.includes('purpur')) detectedLoader = 'purpur';
-    else if (jarName.includes('quilt')) detectedLoader = 'quilt';
-    else if (jarName.includes('forge') || jarName.includes('neoforge')) detectedLoader = 'forge';
+    let detectedLoader: ServerLoader = savedMeta?.loader || 'vanilla';
+    if (!savedMeta) {
+      if (jarName.includes('fabric')) detectedLoader = 'fabric';
+      else if (jarName.includes('paper')) detectedLoader = 'paper';
+      else if (jarName.includes('purpur')) detectedLoader = 'purpur';
+      else if (jarName.includes('quilt')) detectedLoader = 'quilt';
+      else if (jarName.includes('forge') || jarName.includes('neoforge')) detectedLoader = 'forge';
+    }
 
     const detection = savedDetection || {
       loader: detectedLoader,
-      mcVersion: '1.21.1',
+      mcVersion: savedMeta?.mcVersion || '1.21.1',
       isConfirmed: true,
       source: 'executable_filename',
       detectedAt: new Date().toISOString(),
@@ -129,6 +148,21 @@ export class ServerManager {
 
     const installResult = await ServerInstaller.installServer(targetDir, payload);
 
+    // Save persistent metadata
+    const meta = {
+      id: serverId,
+      name: payload.name,
+      loader: installResult.loader,
+      mcVersion: installResult.mcVersion,
+      jarFile: installResult.jarFileName,
+      port: payload.port || 25565,
+      minMemory: payload.minMemory || '2G',
+      maxMemory: payload.maxMemory || '4G',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await fs.promises.writeFile(path.join(targetDir, 'warden.json'), JSON.stringify(meta, null, 2), 'utf8');
+
     // Save initial detection state
     db.setServerDetection(serverId, {
       loader: installResult.loader,
@@ -140,8 +174,8 @@ export class ServerManager {
 
     if (payload.autoStart) {
       await this.startServer(serverId, {
-        minMemory: payload.minMemory,
-        maxMemory: payload.maxMemory,
+        minMemory: payload.minMemory || '2G',
+        maxMemory: payload.maxMemory || '4G',
         jarFile: installResult.jarFileName,
       });
     }
@@ -161,19 +195,34 @@ export class ServerManager {
       throw new Error(`Server directory ${serverId} does not exist`);
     }
 
+    let minMemory = options?.minMemory;
+    let maxMemory = options?.maxMemory;
+    let jarName = options?.jarFile;
+
+    const metaPath = path.join(dir, 'warden.json');
+    if (fs.existsSync(metaPath)) {
+      try {
+        const meta = JSON.parse(await fs.promises.readFile(metaPath, 'utf8'));
+        if (!minMemory && meta.minMemory) minMemory = meta.minMemory;
+        if (!maxMemory && meta.maxMemory) maxMemory = meta.maxMemory;
+        if (!jarName && meta.jarFile) jarName = meta.jarFile;
+      } catch {}
+    }
+
     let proc = this.processes.get(serverId);
     if (!proc) {
-      let jarName = options?.jarFile || 'server.jar';
-      const files = await fs.promises.readdir(dir).catch(() => []);
-      const foundJar = files.find(f => f.endsWith('.jar') && !f.startsWith('installer'));
-      if (foundJar) jarName = foundJar;
+      if (!jarName) {
+        const files = await fs.promises.readdir(dir).catch(() => []);
+        const foundJar = files.find(f => f.endsWith('.jar') && !f.startsWith('installer'));
+        jarName = foundJar || 'server.jar';
+      }
 
       proc = new ServerProcess({
         serverId,
         serverDir: dir,
         jarFile: jarName,
-        minMemory: options?.minMemory || '2G',
-        maxMemory: options?.maxMemory || '4G',
+        minMemory: minMemory || '2G',
+        maxMemory: maxMemory || '4G',
       });
       this.processes.set(serverId, proc);
     }
@@ -246,16 +295,23 @@ export class ServerManager {
       return [];
     }
 
+    const stat = await fs.promises.stat(targetDir).catch(() => null);
+    if (!stat || !stat.isDirectory()) {
+      return [];
+    }
+
     const entries = await fs.promises.readdir(targetDir, { withFileTypes: true });
     return Promise.all(
       entries.map(async (entry) => {
         const fullPath = path.join(targetDir, entry.name);
         const stats = await fs.promises.stat(fullPath).catch(() => null);
+        const isDirectory = entry.isDirectory();
         return {
           name: entry.name,
           path: path.relative(rootDir, fullPath),
-          isDir: entry.isDirectory(),
-          size: stats?.size || 0,
+          is_dir: isDirectory,
+          isDir: isDirectory,
+          size: isDirectory ? 0 : (stats?.size || 0),
           modified: stats?.mtime?.toISOString() || new Date().toISOString(),
         };
       })

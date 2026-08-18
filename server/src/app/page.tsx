@@ -314,6 +314,7 @@ export default function DashboardPage() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
   const [originalContent, setOriginalContent] = useState<string>('');
+  const [loadingFileContent, setLoadingFileContent] = useState<boolean>(false);
   const [savingFile, setSavingFile] = useState<boolean>(false);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
   const [fileSavedToast, setFileSavedToast] = useState<boolean>(false);
@@ -1039,16 +1040,26 @@ export default function DashboardPage() {
   const handleOpenFile = (filename: string) => {
     const fullPath = currentPath ? `${currentPath}/${filename}` : filename;
     setSelectedFile(fullPath);
+    setLoadingFileContent(true);
     setFileContent('');
     setOriginalContent('');
     setFileSavedToast(false);
     fetch(`/api/v1/servers/${serverId}/files/content?path=${encodeURIComponent(fullPath)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && data.data) {
-          setFileContent(data.data.content || '');
-          setOriginalContent(data.data.content || '');
+        if (data.success && data.data !== undefined) {
+          const content = typeof data.data === 'string' ? data.data : (data.data?.content || '');
+          setFileContent(content);
+          setOriginalContent(content);
+        } else {
+          showToast(`Could not open file: ${data.error || 'Unknown error'}`, 'error');
         }
+      })
+      .catch((err) => {
+        showToast(`Error reading file: ${err.message}`, 'error');
+      })
+      .finally(() => {
+        setLoadingFileContent(false);
       });
   };
 
@@ -2739,17 +2750,20 @@ export default function DashboardPage() {
               ) : (
                 files
                   .sort((a, b) => {
-                    if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
+                    const aIsDir = Boolean(a.is_dir || a.isDir);
+                    const bIsDir = Boolean(b.is_dir || b.isDir);
+                    if (aIsDir !== bIsDir) return aIsDir ? -1 : 1;
                     return a.name.localeCompare(b.name);
                   })
                   .map((file) => {
+                    const isDirectory = Boolean(file.is_dir || file.isDir);
                     const fullPath = currentPath ? `${currentPath}/${file.name}` : file.name;
                     const isSelected = selectedFile === fullPath;
 
                     return (
                       <div
                         key={file.name}
-                        onClick={() => file.is_dir ? navigateInto(file.name) : handleOpenFile(file.name)}
+                        onClick={() => isDirectory ? navigateInto(file.name) : handleOpenFile(file.name)}
                         className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all border ${
                           isSelected
                             ? 'bg-[var(--accent-dim)] border-[var(--accent-border)] text-[var(--color-accent)]'
@@ -2757,7 +2771,7 @@ export default function DashboardPage() {
                         }`}
                       >
                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                          {file.is_dir ? (
+                          {isDirectory ? (
                             <WardenIcon name="folder" size={14} className="text-[var(--color-accent)] shrink-0" />
                           ) : (
                             <WardenIcon name="code" size={14} className="text-slate-400 shrink-0" />
@@ -2765,11 +2779,11 @@ export default function DashboardPage() {
                           <span className="text-xs font-mono truncate font-medium">
                             {file.name}
                           </span>
-                          {file.is_dir && <span className="text-slate-600 text-xs font-mono">/</span>}
+                          {isDirectory && <span className="text-slate-600 text-xs font-mono">/</span>}
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          {!file.is_dir && file.size > 0 && (
+                          {!isDirectory && file.size > 0 && (
                             <span className="text-[10px] text-slate-500 font-mono">
                               {formatBytes(file.size)}
                             </span>
@@ -2777,10 +2791,10 @@ export default function DashboardPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteFile(file.name, file.is_dir);
+                              handleDeleteFile(file.name, isDirectory);
                             }}
                             className="text-slate-500 hover:text-red-400 transition-colors p-1 rounded hover:bg-[var(--bg-surface)]"
-                            title="Delete file"
+                            title={isDirectory ? "Delete directory" : "Delete file"}
                           >
                             {deletingFile === file.name ? (
                               <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
@@ -2809,7 +2823,7 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {selectedFile && (
+                {selectedFile && !loadingFileContent && (
                   <Button
                     variant="primary"
                     size="sm"
@@ -2824,15 +2838,22 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              <textarea
-                value={fileContent}
-                onChange={(e) => setFileContent(e.target.value)}
-                rows={20}
-                readOnly={!selectedFile}
-                className="w-full bg-[var(--bg-main)] text-slate-100 font-mono text-xs p-4 rounded-lg border border-[var(--color-border)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 resize-none leading-relaxed"
-                placeholder={selectedFile ? 'Loading file content...' : 'Click any file on the left to open and edit.'}
-                spellCheck={false}
-              />
+              {loadingFileContent ? (
+                <div className="w-full h-80 bg-[var(--bg-main)] rounded-lg border border-[var(--color-border)] flex flex-col items-center justify-center text-slate-400 gap-2">
+                  <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-5 h-5 rounded-full" />
+                  <span className="text-xs font-mono">Loading file contents...</span>
+                </div>
+              ) : (
+                <textarea
+                  value={fileContent}
+                  onChange={(e) => setFileContent(e.target.value)}
+                  rows={20}
+                  readOnly={!selectedFile}
+                  className="w-full bg-[var(--bg-main)] text-slate-100 font-mono text-xs p-4 rounded-lg border border-[var(--color-border)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 resize-none leading-relaxed"
+                  placeholder={selectedFile ? 'File is empty.' : 'Click any file on the left to open and edit.'}
+                  spellCheck={false}
+                />
+              )}
             </div>
           </div>
         </Card>

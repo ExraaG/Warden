@@ -357,7 +357,7 @@ apiRouter.get('/v1/servers/:id/files/content', authMiddleware, async (req: Reque
 });
 
 // 19. Filesystem (Write Content)
-apiRouter.put('/v1/servers/:id/files/content', authMiddleware, async (req: Request, res: Response) => {
+const handleWriteFile = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { path: filePath, content } = req.body;
   if (!filePath || content === undefined) {
@@ -370,7 +370,9 @@ apiRouter.put('/v1/servers/:id/files/content', authMiddleware, async (req: Reque
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
   }
-});
+};
+apiRouter.put('/v1/servers/:id/files/content', authMiddleware, handleWriteFile);
+apiRouter.post('/v1/servers/:id/files/content', authMiddleware, handleWriteFile);
 
 // 20. Filesystem (Delete File)
 apiRouter.delete('/v1/servers/:id/files', authMiddleware, async (req: Request, res: Response) => {
