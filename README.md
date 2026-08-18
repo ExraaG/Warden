@@ -104,11 +104,18 @@ Warden/
 
 ## Quick Start (Docker Deployment)
 
-### 1. Configure Environment Variables
-Copy `.env.example` to `.env` and fill in your Crafty Controller URL and API credentials:
+### 1. Clone Repository & Setup Environment
 
 ```bash
+# Clone the repository
+git clone https://github.com/ExraaG/Warden.git
+cd Warden
+
+# Copy the environment file template
 cp .env.example .env
+
+# Edit configuration with your Crafty Controller URL & API key
+nano .env
 ```
 
 #### How to Get Your Crafty API Key:
@@ -119,7 +126,7 @@ cp .env.example .env
 5. Click **Create Key** / **New API Key**.
 6. Check the **Full Access** checkbox (required for server controls, console, and mod uploads).
 7. Click **Generate / Save**, then click **Get Token** and copy the full token string.
-8. Paste the copied token into your `.env` (`CRAFTY_API_KEY=...`) or into Warden's **Settings** page (`/settings`).
+8. Paste the copied token into your `.env` (`CRAFTY_API_KEY=...`) or configure it directly in Warden's **Settings** page (`/settings`).
 
 Example `.env`:
 ```env
@@ -131,18 +138,16 @@ TZ=America/New_York
 ```
 
 ### 2. Deploy Container
-Run `docker compose` to build and start Warden:
+
+Run Docker Compose to build and start Warden in the background:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-Check the health status:
-```bash
-docker compose ps
-```
-
-Access the Warden web interface at `http://localhost:3000`.
+- Access the Warden dashboard at `http://<YOUR-SERVER-IP>:3000`
+- View live application logs: `docker compose logs -f`
+- Stop the container: `docker compose down`
 
 
 ## Cloudflare Tunnel Ingress Setup (Outbound-Only)
