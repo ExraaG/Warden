@@ -29,8 +29,8 @@ ENV PORT=22313
 ENV TZ=UTC
 ENV DATA_DIR=/data
 
-# Install curl for healthcheck, git, & OpenJDK runtimes (17, 21, 25)
-RUN apk add --no-cache curl git openjdk17-jre openjdk21-jre openjdk25-jre
+# Install curl for healthcheck, git, & headless OpenJDK runtimes (17, 21, 25)
+RUN apk add --no-cache curl git openjdk17-jre-headless openjdk21-jre-headless openjdk25-jre-headless
 
 # Java Environment Variables for Warden
 ENV JAVA_17_PATH=/usr/lib/jvm/java-17-openjdk/bin/java
