@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/typescript-5.x-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/crafty-v4_ready-10B981?style=flat" alt="Crafty Controller" />
   <img src="https://img.shields.io/badge/modrinth-v2_api-00AF5C?style=flat&logo=modrinth&logoColor=white" alt="Modrinth" />
-  <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat" alt="MIT License" />
+  <img src="https://img.shields.io/badge/license-GNUv3-blue.svg?style=flat" alt="GNUv3 License" />
 </p>
 
 
