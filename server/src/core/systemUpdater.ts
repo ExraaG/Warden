@@ -119,86 +119,122 @@ export class SystemUpdater {
     }
   }
 
+  private static isUpdating = false;
+
   public static async performSelfUpdate(): Promise<{ success: boolean; message: string }> {
-    console.log('[SystemUpdater] Initiating system update sequence...');
+    if (this.isUpdating) {
+      return { success: true, message: 'Update already in progress' };
+    }
+    this.isUpdating = true;
+    console.log('[SystemUpdater] Initiating system update sequence in background...');
 
     this.progressState = {
       status: 'stopping_servers',
       step: 1,
       totalSteps: 4,
-      stepName: 'Flushing chunk saves and stopping active Minecraft servers...',
+      stepName: 'Flushing chunk saves & stopping Minecraft servers...',
       percent: 20,
+      details: 'Preserving world directories, player data, and configurations.',
     };
 
-    // 1. Gracefully stop all active Minecraft servers to flush world saves
-    try {
-      const servers = await serverManager.getServers();
-      for (const s of servers) {
-        if (s.status !== 'offline') {
-          console.log(`[SystemUpdater] Gracefully stopping server '${s.name}' (${s.id}) to preserve world data...`);
-          await serverManager.stopServer(s.id).catch((e) => console.warn(`Error stopping ${s.id}:`, e));
-        }
-      }
-    } catch (err) {
-      console.warn('[SystemUpdater] Error stopping servers:', err);
-    }
-
-    // 2. Perform git pull and fast rebuild in background
-    setTimeout(async () => {
+    // Run update sequence asynchronously so HTTP response returns immediately
+    setImmediate(async () => {
       try {
-        SystemUpdater.progressState = {
+        // 1. Gracefully stop all active Minecraft servers to flush world saves
+        try {
+          const servers = await serverManager.getServers();
+          for (const s of servers) {
+            if (s.status !== 'offline') {
+              console.log(`[SystemUpdater] Stopping server '${s.name}' (${s.id}) to preserve world data...`);
+              await Promise.race([
+                serverManager.stopServer(s.id),
+                new Promise((resolve) => setTimeout(resolve, 10000)),
+              ]).catch(() => {});
+            }
+          }
+        } catch (err: any) {
+          console.warn('[SystemUpdater] Server stop warning:', err.message);
+        }
+
+        // 2. Pull or download latest release from GitHub
+        this.progressState = {
           status: 'pulling',
           step: 2,
           totalSteps: 4,
-          stepName: 'Pulling latest release from GitHub (git pull origin main)...',
-          percent: 45,
+          stepName: 'Pulling latest release from GitHub (main)...',
+          percent: 50,
+          details: 'Fetching updated source code and version metadata.',
         };
 
-        const { stdout: pullOut } = await execPromise('git pull origin main', { timeout: 30000 });
-        console.log('[SystemUpdater] Git pull completed:', pullOut);
+        const rootDir = path.resolve(process.cwd());
+        const hasGit = fs.existsSync(path.join(rootDir, '.git')) || fs.existsSync(path.join(rootDir, '..', '.git'));
 
-        SystemUpdater.progressState = {
+        if (hasGit) {
+          console.log('[SystemUpdater] Running git pull origin main...');
+          await execPromise('git pull origin main', { timeout: 45000 });
+        } else {
+          console.log('[SystemUpdater] Running in container/archive mode. Fetching latest release...');
+          try {
+            await execPromise(
+              'git clone --depth 1 https://github.com/ExraaG/Warden.git /tmp/warden-update && cp -r /tmp/warden-update/* ./ && rm -rf /tmp/warden-update',
+              { timeout: 60000 }
+            );
+          } catch {
+            await execPromise(
+              'curl -sL https://github.com/ExraaG/Warden/archive/refs/heads/main.tar.gz | tar -xz -C /tmp && cp -r /tmp/Warden-main/* ./ && rm -rf /tmp/Warden-main',
+              { timeout: 60000 }
+            );
+          }
+        }
+
+        // 3. Fast build
+        this.progressState = {
           status: 'building',
           step: 3,
           totalSteps: 4,
           stepName: 'Compiling packages and building production bundle...',
-          percent: 75,
-          details: 'Building with fast optimization. Please wait...',
+          percent: 80,
+          details: 'Building optimized Next.js bundle and TypeScript backend...',
         };
 
-        // Fast build skipping unnecessary linter/telemetry steps
-        await execPromise('npm run build:fast || npm run build', { timeout: 180000 });
-        console.log('[SystemUpdater] Fast build completed successfully.');
+        console.log('[SystemUpdater] Building updated application...');
+        await execPromise('cd server && NEXT_TELEMETRY_DISABLED=1 npx next build --no-lint && npm run build:server', {
+          timeout: 180000,
+        }).catch(async () => {
+          await execPromise('npm run build:fast || npm run build', { timeout: 180000 });
+        });
 
-        SystemUpdater.progressState = {
+        // 4. Restarting
+        this.progressState = {
           status: 'restarting',
           step: 4,
           totalSteps: 4,
           stepName: 'Restarting Warden services and reloading application...',
-          percent: 95,
+          percent: 100,
+          details: 'Application restarted successfully. Reconnecting...',
         };
 
+        console.log('[SystemUpdater] Update built successfully. Restarting process in 2 seconds...');
         setTimeout(() => {
           process.exit(0);
-        }, 1500);
+        }, 2000);
       } catch (err: any) {
-        console.error('[SystemUpdater] Build/pull step failed:', err);
-        SystemUpdater.progressState = {
+        console.error('[SystemUpdater] Self-update failed:', err);
+        this.isUpdating = false;
+        this.progressState = {
           status: 'error',
           step: 4,
           totalSteps: 4,
-          stepName: 'Update failed',
+          stepName: 'Update failed: ' + (err.message || 'Unknown error'),
           percent: 100,
           error: err.message,
         };
-        // Restart after failure to recover clean state
-        setTimeout(() => process.exit(0), 4000);
       }
-    }, 500);
+    });
 
     return {
       success: true,
-      message: 'Update sequence started. Server worlds saved.',
+      message: 'Update sequence started in background. Servers are being saved.',
     };
   }
 }

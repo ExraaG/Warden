@@ -78,49 +78,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
     // Start progress polling loop
     let isReconnecting = false;
+    let pollCount = 0;
+
     const pollInterval = setInterval(async () => {
+      pollCount++;
       try {
         const res = await fetch('/api/v1/system/update-progress').then((r) => r.json());
         if (res.success && res.data) {
           const p = res.data;
-          setUpdateProgress(p);
 
-          if (p.status === 'error') {
-            clearInterval(pollInterval);
-            showToast(`Update failed: ${p.error || 'Unknown error'}`, 'error');
-            setInstallingUpdate(false);
-            return;
-          }
-
-          if (p.status === 'restarting') {
-            isReconnecting = true;
-          }
-        }
-      } catch {
-        // Server might be compiling or restarting
-        if (!isReconnecting) {
-          setUpdateProgress((prev) => ({
-            ...prev,
-            status: 'building',
-            step: 3,
-            stepName: 'Compiling packages and rebuilding Next.js production bundle...',
-            percent: Math.min(85, Math.max(50, prev.percent + 5)),
-            details: 'The build is underway in the background. Please wait...',
-          }));
-        } else {
-          setUpdateProgress({
-            status: 'restarting',
-            step: 4,
-            totalSteps: 4,
-            stepName: 'Restarting Warden service and reconnecting...',
-            percent: 95,
-            details: 'Waiting for the web application to come back online...',
-          });
-
-          // Check if server came back online
-          try {
-            const health = await fetch('/api/v1/system/update-status').then((r) => r.json());
-            if (health.success) {
+          // If server was restarting or building and now progress returned to idle, check if update completed
+          if (p.status === 'idle' && (isReconnecting || pollCount > 8)) {
+            const statusRes = await fetch('/api/v1/system/update-status?force=true').then((r) => r.json()).catch(() => null);
+            if (statusRes && statusRes.success) {
               clearInterval(pollInterval);
               setUpdateProgress({
                 status: 'completed',
@@ -133,9 +103,56 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               setTimeout(() => {
                 window.location.reload();
               }, 1200);
+              return;
             }
-          } catch {}
+          }
+
+          if (p.status !== 'idle') {
+            setUpdateProgress(p);
+          }
+
+          if (p.status === 'error') {
+            clearInterval(pollInterval);
+            showToast(`Update failed: ${p.error || 'Unknown error'}`, 'error');
+            setInstallingUpdate(false);
+            return;
+          }
+
+          if (p.status === 'restarting' || p.status === 'completed') {
+            isReconnecting = true;
+          }
         }
+      } catch {
+        // Server is offline (restarting or compiling)
+        isReconnecting = true;
+        setUpdateProgress((prev) => ({
+          ...prev,
+          status: 'restarting',
+          step: 4,
+          totalSteps: 4,
+          stepName: 'Restarting Warden service and reconnecting...',
+          percent: 95,
+          details: 'Waiting for the updated web application to come back online...',
+        }));
+
+        // Check if server came back online
+        try {
+          const health = await fetch('/api/v1/system/update-status?force=true').then((r) => r.json());
+          if (health && health.success) {
+            clearInterval(pollInterval);
+            setUpdateProgress({
+              status: 'completed',
+              step: 4,
+              totalSteps: 4,
+              stepName: 'Update completed successfully! Reloading page...',
+              percent: 100,
+            });
+            showToast('Warden successfully updated!', 'success');
+            setTimeout(() => {
+              window.location.reload();
+            }, 1200);
+          }
+        } catch {}
       }
     }, 1500);
   };
@@ -393,9 +410,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <strong>Servers Gracefully Stopped:</strong> Any currently active Minecraft servers will be safely stopped before updating to flush world chunk saves and avoid any corrupted save states.
                 </li>
                 <li>
-                  <strong>Rebuild Sequence:</strong> Warden will pull the latest release from GitHub, build the application, and restart the service automatically.
+                  <strong>Rebuild Sequence:</strong> Warden pulls the latest release from GitHub, builds the application, and restarts automatically.
                 </li>
               </ul>
+            </div>
+
+            <div className="bg-[var(--bg-main)] border border-[var(--color-border)] rounded-lg p-3 text-xs font-mono text-slate-400">
+              <div className="text-[11px] text-slate-300 font-semibold mb-1">Terminal / Docker Update Alternative:</div>
+              <code className="text-emerald-400 select-all block bg-black/40 p-2 rounded border border-white/5 overflow-x-auto text-[11px]">
+                git pull origin main &amp;&amp; docker compose build &amp;&amp; docker compose up -d
+              </code>
             </div>
 
             {installingUpdate && (

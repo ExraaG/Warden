@@ -1,6 +1,15 @@
 #!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
+
+function getGitShortHash() {
+  try {
+    return execSync('git rev-parse --short HEAD', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+  } catch {
+    return 'latest';
+  }
+}
 
 function main() {
   const rootDir = path.resolve(__dirname, '..');
@@ -9,25 +18,40 @@ function main() {
   const serverVersionJson = path.resolve(serverDir, 'version.json');
   const tsVersionPath = path.resolve(serverDir, 'src', 'version.ts');
 
-  let version = 'v1';
-  let versionNumber = 1;
-  let releaseTitle = 'v1 - Initial Release';
+  const isBump = process.argv.includes('--bump') || process.env.AUTO_BUMP === 'true';
+  const gitHash = getGitShortHash();
+
+  let versionNumber = 2;
+  let releaseTitle = 'Warden Release';
   let releaseDate = new Date().toISOString();
 
   // Read existing version.json if present
   if (fs.existsSync(rootVersionJson)) {
     try {
       const raw = JSON.parse(fs.readFileSync(rootVersionJson, 'utf8'));
-      if (raw.version) version = raw.version;
-      if (raw.versionNumber) versionNumber = raw.versionNumber;
+      if (typeof raw.versionNumber === 'number') {
+        versionNumber = raw.versionNumber;
+      } else if (raw.version) {
+        const match = String(raw.version).match(/v(\d+)/i);
+        if (match) versionNumber = parseInt(match[1], 10);
+      }
       if (raw.releaseTitle) releaseTitle = raw.releaseTitle;
-      if (raw.releaseDate) releaseDate = raw.releaseDate;
     } catch {}
   }
+
+  if (isBump) {
+    versionNumber += 1;
+    releaseTitle = `v${versionNumber} (${gitHash})`;
+    releaseDate = new Date().toISOString();
+  }
+
+  // Format: v3-74d8db4
+  const version = `v${versionNumber}-${gitHash}`;
 
   const versionData = {
     version,
     versionNumber,
+    gitHash,
     releaseTitle,
     releaseDate,
   };
@@ -36,14 +60,15 @@ function main() {
   try {
     fs.writeFileSync(rootVersionJson, jsonStr, 'utf8');
     fs.writeFileSync(serverVersionJson, jsonStr, 'utf8');
-    console.log(`[stamp-version] Synced version.json -> ${version} (#${versionNumber})`);
+    console.log(`[stamp-version] Synced version.json -> ${version} (Number: ${versionNumber}, Commit: ${gitHash})`);
   } catch (err) {
     console.warn('[stamp-version] Could not sync version.json:', err.message);
   }
 
-  const tsContent = `// Hardcoded application version (v1, v2, v3, ...)
+  const tsContent = `// Auto-generated hardcoded version: v${versionNumber}-${gitHash}
 export const WARDEN_VERSION = '${version}';
 export const WARDEN_VERSION_NUMBER = ${versionNumber};
+export const WARDEN_GIT_HASH = '${gitHash}';
 export const WARDEN_RELEASE_TITLE = ${JSON.stringify(releaseTitle)};
 export const WARDEN_BUILD_TIME = '${releaseDate}';
 `;
