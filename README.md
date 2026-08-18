@@ -53,8 +53,6 @@
   - Flags unconfirmed or conflicting servers for human confirmation before enabling 4 AM updates.
 - **Single Docker Container Deployment**:
   - Exposes Express API + Next.js frontend in a single unit mounting a persistent `./data:/data` volume.
-- **React Native Mobile Thin Client (`/mobile`)**:
-  - Pure thin client communicating strictly with Warden API using `X-Warden-API-Key`. Zero direct contact with Crafty or Modrinth.
 
 
 ## Repo Structure
@@ -69,36 +67,27 @@ Warden/
 │   └── src/
 │       ├── index.ts
 │       └── types.ts
-├── server/                  # Node.js/Express API + Next.js web application
-│   ├── Dockerfile           # Multi-stage container runner with healthcheck
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── tsconfig.server.json
-│   └── src/
-│       ├── server.ts        # Express server entry point
-│       ├── config.ts        # Environment & config loader
-│       ├── adapters/
-│       │   ├── crafty.ts    # Schema-validated Crafty v2 client
-│       │   └── modrinth.ts  # Modrinth v2 client & dependency resolver
-│       ├── db/
-│       │   └── storage.ts   # Persistent JSON storage in /data
-│       ├── detection/
-│       │   └── loader.ts    # 4-step loader & MC version detector
-│       ├── jobs/
-│       │   └── cron.ts      # 4 AM safety update cron runner
-│       ├── routes/
-│       │   └── api.ts       # Express REST API routes (/api/v1/*)
-│       ├── components/ui/   # Custom flat component layer (Button, Card, Badge, Dropdown, Table, Modal)
-│       └── app/             # Next.js web views (Dashboard, Mods, Audit Logs, Settings)
-└── mobile/                  # React Native + TypeScript thin-client app
+└── server/                  # Node.js/Express API + Next.js web application
+    ├── Dockerfile           # Multi-stage container runner with healthcheck
     ├── package.json
     ├── tsconfig.json
-    ├── App.tsx              # Main entry point & bottom navigation
+    ├── tsconfig.server.json
     └── src/
-        ├── services/api.ts  # Warden API client
-        ├── context/AppContext.tsx
-        ├── components/ui/   # Custom flat mobile components & SVG icons
-        └── screens/         # Onboarding, Dashboard, Mods, Audit Logs, Settings
+        ├── server.ts        # Express server entry point
+        ├── config.ts        # Environment & config loader
+        ├── adapters/
+        │   ├── crafty.ts    # Schema-validated Crafty v2 client
+        │   └── modrinth.ts  # Modrinth v2 client & dependency resolver
+        ├── db/
+        │   └── storage.ts   # Persistent JSON storage in /data
+        ├── detection/
+        │   └── loader.ts    # 4-step loader & MC version detector
+        ├── jobs/
+        │   └── cron.ts      # 4 AM safety update cron runner
+        ├── routes/
+        │   └── api.ts       # Express REST API routes (/api/v1/*)
+        ├── components/ui/   # Custom flat component layer (Button, Card, Badge, Dropdown, Table, Modal)
+        └── app/             # Next.js web views (Dashboard, Mods, Audit Logs, Settings)
 ```
 
 
@@ -148,39 +137,6 @@ docker compose up -d --build
 - Access the Warden dashboard at `http://<YOUR-SERVER-IP>:3000`
 - View live application logs: `docker compose logs -f`
 - Stop the container: `docker compose down`
-
-
-## Cloudflare Tunnel Ingress Setup (Outbound-Only)
-
-Expose **only** the Warden container to the internet via Cloudflare Tunnel (`cloudflared`). Crafty Controller remains strictly isolated inside your local home network.
-
-Add the following ingress rule in your `config.yml` for `cloudflared`:
-
-```yaml
-tunnel: YOUR-TUNNEL-UUID
-credentials-file: /etc/cloudflared/YOUR-TUNNEL-UUID.json
-
-ingress:
-  # Publicly expose Warden Web UI and Mobile thin client API
-  - hostname: warden.yourdomain.com
-    service: http://localhost:3000
-
-  # Catch-all default rule
-  - service: http_status:404
-```
-
-
-## Mobile App Setup (`/mobile`)
-
-1. Build/launch the React Native app on your device or emulator:
-   ```bash
-   cd mobile
-   npm install
-   npm start
-   ```
-2. On first launch, enter:
-   - **Warden Server Tunnel URL**: `https://warden.yourdomain.com`
-   - **Warden API Key**: Value of `WARDEN_API_KEY` set in your `.env`.
 
 
 ## Operational Tasks
