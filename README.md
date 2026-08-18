@@ -55,7 +55,7 @@
   - Verifies SHA-512 checksums of downloaded mod `.jar` files prior to deployment.
 - **.mrpack Modpack Support**:
   - 1-click modpack upload, preview, and selective mod/datapack/override installation.
-- **4 AM Safety Engine**:
+- **Safety Engine**:
   - Batch queries Modrinth via `POST /v2/version_files/update` using local SHA-512 hashes.
   - Pre-update safety backups of current server `mods` directory.
   - **Automatic Rollback**: If server fails to reach `online` status or crashes after updates, automatically restores pre-update backup and restarts the server safely.
