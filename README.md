@@ -13,7 +13,6 @@
   <img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/next.js-14-000000?style=flat&logo=next.js&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/typescript-5.x-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/minecraft-1.21.1_ready-10B981?style=flat" alt="Minecraft" />
   <img src="https://img.shields.io/badge/modrinth-v2_api-00AF5C?style=flat&logo=modrinth&logoColor=white" alt="Modrinth" />
   <img src="https://img.shields.io/badge/license-GNUv3-blue.svg?style=flat" alt="GNUv3 License" />
 </p>
