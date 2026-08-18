@@ -18,10 +18,10 @@ export interface ProcessOptions {
 export class ServerProcess extends EventEmitter {
   public readonly serverId: string;
   public readonly serverDir: string;
-  public readonly jarFile: string;
-  public readonly javaPath: string;
-  public readonly minMemory: string;
-  public readonly maxMemory: string;
+  public jarFile: string;
+  public javaPath: string;
+  public minMemory: string;
+  public maxMemory: string;
   public readonly jvmArgs: string[];
 
   private process: ChildProcess | null = null;
@@ -50,12 +50,24 @@ export class ServerProcess extends EventEmitter {
     this.maxMemory = opts.maxMemory || '4G';
     this.jvmArgs = opts.jvmArgs || [
       '-XX:+UseG1GC',
-      '-XX:+ParallelRefProcEnabled',
       '-XX:MaxGCPauseMillis=200',
       '-XX:+UnlockExperimentalVMOptions',
       '-XX:+DisableExplicitGC',
       '-XX:+AlwaysPreTouch',
     ];
+  }
+
+  public setJavaPath(newPath: string): void {
+    this.javaPath = newPath;
+  }
+
+  public setJarFile(newJar: string): void {
+    this.jarFile = newJar;
+  }
+
+  public setMemory(min: string, max: string): void {
+    this.minMemory = min;
+    this.maxMemory = max;
   }
 
   public getStatus(): ServerStatus {

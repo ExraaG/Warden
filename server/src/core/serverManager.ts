@@ -43,10 +43,9 @@ export class ServerManager {
    * Resolve the correct Java binary path for a given Minecraft version.
    * Dynamically scans /usr/lib/jvm/ for available installations.
    * MC 26.x snapshots require Java 25+, MC 1.20.5+ requires Java 21+, older versions use Java 17+.
+   * If version is unknown, defaults to the HIGHEST available Java runtime.
    */
   private resolveJavaPath(mcVersion?: string): string {
-    if (!mcVersion) return 'java';
-
     // Discover all available Java installations by scanning /usr/lib/jvm/
     const jvmDir = '/usr/lib/jvm';
     const availableJavas: { version: number; path: string }[] = [];
@@ -54,7 +53,7 @@ export class ServerManager {
       if (fs.existsSync(jvmDir)) {
         const entries = fs.readdirSync(jvmDir);
         for (const entry of entries) {
-          const match = entry.match(/^java-(\d+)-openjdk/);
+          const match = entry.match(/(?:java|openjdk)[-_]?(\d+)/i);
           if (match) {
             const javaPath = path.join(jvmDir, entry, 'bin', 'java');
             if (fs.existsSync(javaPath)) {
@@ -77,31 +76,38 @@ export class ServerManager {
     };
 
     // MC 26.x snapshots (class file version 69 = Java 25+)
-    if (/^26\b/.test(mcVersion)) {
+    if (mcVersion && (/^26(\b|\.)/i.test(mcVersion) || /mc\.26/i.test(mcVersion))) {
       const found = findJava(25);
       if (found) {
-        console.log(`[Warden] Resolved Java for MC ${mcVersion}: ${found}`);
+        console.log(`[Warden] Resolved Java for MC ${mcVersion} (>=25): ${found}`);
         return found;
       }
     }
 
-    // MC 1.20.5+ requires Java 21+
-    if (/^1\.2[1-9]/.test(mcVersion) || /^1\.20\.([5-9]|[1-9]\d)/.test(mcVersion)) {
+    // MC 1.20.5+ / 1.21+ requires Java 21+
+    if (mcVersion && (/^1\.2[1-9]/.test(mcVersion) || /^1\.20\.([5-9]|[1-9]\d)/.test(mcVersion))) {
       const found = findJava(21);
       if (found) {
-        console.log(`[Warden] Resolved Java for MC ${mcVersion}: ${found}`);
+        console.log(`[Warden] Resolved Java for MC ${mcVersion} (>=21): ${found}`);
         return found;
       }
     }
 
     // MC 1.16.5–1.20.4 uses Java 17+
-    const found = findJava(17);
-    if (found) {
-      console.log(`[Warden] Resolved Java for MC ${mcVersion}: ${found}`);
-      return found;
+    if (mcVersion && /^1\.(1[6-9]|20\.[0-4]\b)/.test(mcVersion)) {
+      const found = findJava(17);
+      if (found) {
+        console.log(`[Warden] Resolved Java for MC ${mcVersion} (>=17): ${found}`);
+        return found;
+      }
     }
 
-    // Fallback to system default
+    // Default / fallback: use the highest Java available or system default
+    if (availableJavas.length > 0) {
+      console.log(`[Warden] Defaulting to highest available Java (${availableJavas[0].version}): ${availableJavas[0].path}`);
+      return availableJavas[0].path;
+    }
+
     console.log(`[Warden] No JVM found in /usr/lib/jvm, falling back to system 'java'`);
     return 'java';
   }
@@ -273,22 +279,26 @@ export class ServerManager {
       } catch {}
     }
 
-    // Also check stored detection for mcVersion
-    if (!mcVersion) {
-      const detection = db.getServerDetection(serverId);
-      if (detection?.mcVersion) mcVersion = detection.mcVersion;
+    // Resolve jar name if not provided
+    if (!jarName) {
+      const files = await fs.promises.readdir(dir).catch(() => []);
+      const foundJar = files.find(f => f.endsWith('.jar') && !f.startsWith('installer'));
+      jarName = foundJar || 'server.jar';
+    }
+
+    // Extract mcVersion from jarName if still missing
+    if (!mcVersion && jarName) {
+      const match = jarName.match(/(?:mc[.-]|minecraft[.-]|v)?(26\.\d+|1\.\d+(\.\d+)?)/i);
+      if (match) {
+        mcVersion = match[1];
+        console.log(`[Warden] Extracted MC version '${mcVersion}' from jar '${jarName}'`);
+      }
     }
 
     const javaPath = this.resolveJavaPath(mcVersion);
 
     let proc = this.processes.get(serverId);
     if (!proc) {
-      if (!jarName) {
-        const files = await fs.promises.readdir(dir).catch(() => []);
-        const foundJar = files.find(f => f.endsWith('.jar') && !f.startsWith('installer'));
-        jarName = foundJar || 'server.jar';
-      }
-
       proc = new ServerProcess({
         serverId,
         serverDir: dir,
@@ -298,6 +308,11 @@ export class ServerManager {
         maxMemory: maxMemory || '4G',
       });
       this.processes.set(serverId, proc);
+    } else {
+      // Always update runtime options before starting
+      proc.setJavaPath(javaPath);
+      proc.setJarFile(jarName);
+      proc.setMemory(minMemory || '2G', maxMemory || '4G');
     }
 
     await proc.start();
