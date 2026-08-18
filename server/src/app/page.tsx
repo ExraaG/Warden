@@ -79,6 +79,32 @@ export default function DashboardPage() {
     { id: '32G', label: '32 GB' },
   ];
 
+  const [createAvailableVersions, setCreateAvailableVersions] = useState<DropdownOption[]>(CREATE_MC_VERSIONS);
+  const [createLoadingVersions, setCreateLoadingVersions] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!showCreateModal) return;
+    setCreateLoadingVersions(true);
+    fetch(`/api/v1/meta/versions?loader=${createForm.loader}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          const mapped: DropdownOption[] = data.data.map((v: any) => ({
+            id: v.id,
+            label: v.label,
+            sublabel: v.sublabel,
+          }));
+          setCreateAvailableVersions(mapped);
+          // If current version is not in list, auto-select latest
+          if (!mapped.find((m) => m.id === createForm.mcVersion)) {
+            setCreateForm((prev) => ({ ...prev, mcVersion: mapped[0].id }));
+          }
+        }
+      })
+      .catch((err) => console.warn('Failed to load dynamic versions:', err))
+      .finally(() => setCreateLoadingVersions(false));
+  }, [showCreateModal, createForm.loader]);
+
   const handleCreateServer = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreatingServer(true);
@@ -4893,10 +4919,12 @@ export default function DashboardPage() {
                 />
               ) : (
                 <Dropdown
-                  options={CREATE_MC_VERSIONS}
+                  options={createAvailableVersions}
                   selectedId={createForm.mcVersion}
                   onSelect={(opt) => setCreateForm({ ...createForm, mcVersion: opt.id })}
-                  title="Select Minecraft Version"
+                  title={createLoadingVersions ? 'Fetching live versions...' : 'Select Minecraft Version'}
+                  placeholder={createLoadingVersions ? 'Loading...' : 'Select Version'}
+                  searchable={true}
                 />
               )}
             </div>

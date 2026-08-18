@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { serverManager } from '../core/serverManager.js';
+import { VersionFetcher } from '../core/versionFetcher.js';
 import { modrinthAdapter } from '../adapters/modrinth.js';
 import { mrPackAdapter } from '../adapters/mrpack.js';
 import { updateJobRunner } from '../jobs/cron.js';
@@ -60,6 +61,17 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     engine: 'warden-standalone',
   });
+});
+
+// Meta: Live Minecraft Versions per loader
+apiRouter.get('/v1/meta/versions', async (req: Request, res: Response) => {
+  const loader = (req.query.loader as ServerLoader) || 'paper';
+  try {
+    const versions = await VersionFetcher.getVersions(loader);
+    res.json({ success: true, data: versions } as ApiResponse<any>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
 });
 
 // 1. List Servers
