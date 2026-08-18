@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
 import { WardenIcon } from './WardenIcon';
 
@@ -34,7 +35,11 @@ export const Dropdown: React.FC<DropdownProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; left: number; width: number }>({ left: 0, width: 200 });
+
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selected = options.find((o) => o.id === selectedId) || options[0];
@@ -49,8 +54,43 @@ export const Dropdown: React.FC<DropdownProps> = ({
     : options;
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updatePosition = () => {
+    if (!dropdownRef.current) return;
+    const rect = dropdownRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const menuWidth = Math.max(rect.width, 220);
+    const openUpwards = spaceBelow < 260 && rect.top > 260;
+
+    setMenuPos({
+      top: openUpwards ? undefined : rect.bottom + 6,
+      bottom: openUpwards ? window.innerHeight - rect.top + 6 : undefined,
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - menuWidth - 8)),
+      width: menuWidth,
+    });
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition, true);
+    }
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(target) &&
+        menuRef.current && !menuRef.current.contains(target)
+      ) {
         setIsOpen(false);
         setSearchQuery('');
       }
@@ -61,7 +101,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
 
   useEffect(() => {
     if (isOpen && isSearchEnabled && searchInputRef.current) {
-      setTimeout(() => searchInputRef.current?.focus(), 50);
+      setTimeout(() => searchInputRef.current?.focus(), 60);
     }
   }, [isOpen, isSearchEnabled]);
 
@@ -70,6 +110,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
       <button
         type="button"
         onClick={() => {
+          updatePosition();
           setIsOpen(!isOpen);
           setSearchQuery('');
         }}
@@ -87,8 +128,17 @@ export const Dropdown: React.FC<DropdownProps> = ({
         <WardenIcon name="chevron-down" size={14} className={clsx('text-slate-400 ml-1.5 sm:ml-2 transition-transform shrink-0', isOpen && 'rotate-180')} />
       </button>
 
-      {isOpen && (
-        <div className="absolute left-0 top-full mt-1.5 w-full min-w-[200px] max-w-[calc(100vw-2rem)] bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.85)] z-[99999] p-1.5 animate-in fade-in zoom-in-95 duration-100">
+      {isOpen && mounted && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            top: menuPos.top !== undefined ? `${menuPos.top}px` : undefined,
+            bottom: menuPos.bottom !== undefined ? `${menuPos.bottom}px` : undefined,
+            left: `${menuPos.left}px`,
+            width: `${menuPos.width}px`,
+          }}
+          className="fixed bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[99999999] p-1.5 animate-in fade-in zoom-in-95 duration-100"
+        >
           {title && (
             <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-[var(--color-border)] mb-1 font-mono">
               {title}
@@ -102,7 +152,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search versions..."
+                placeholder="Search options..."
                 className="w-full h-7 bg-[var(--bg-main)] border border-[var(--color-border)] px-2 rounded text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 font-mono"
               />
             </div>
@@ -142,7 +192,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
