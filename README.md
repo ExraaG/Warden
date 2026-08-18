@@ -1,10 +1,10 @@
-# Warden 🛡️
+# Warden
 
 **Warden** is an opinionated, flat-designed self-hosted tool built to manage Minecraft servers running on Crafty Controller v4, automate safe daily 4 AM Modrinth mod updates with atomic rollback protection, and provide both web and mobile thin-client interfaces.
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
 - **Flat Dark Ops-Tool Aesthetic**: Built with dark slate theme, Industrial Safety Amber (`#f59e0b`) accent, Tabler icons, crisp custom UI components, and **zero gradients**.
 - **Top-Left Server Switcher Dropdown**: Fast switching across all Crafty-managed Minecraft servers.
@@ -30,7 +30,7 @@
 
 ---
 
-## 🏗️ Repo Structure
+## Repo Structure
 
 ```
 Warden/
@@ -76,7 +76,7 @@ Warden/
 
 ---
 
-## 🚀 Quick Start (Docker Deployment)
+## Quick Start (Docker Deployment)
 
 ### 1. Configure Environment Variables
 Copy `.env.example` to `.env` and fill in your Crafty Controller URL and API credentials:
@@ -85,7 +85,7 @@ Copy `.env.example` to `.env` and fill in your Crafty Controller URL and API cre
 cp .env.example .env
 ```
 
-#### 🔑 How to Get Your Crafty API Key:
+#### How to Get Your Crafty API Key:
 1. Open your **Crafty Controller** panel in your browser.
 2. Click your **Profile avatar/name** in the top right corner.
 3. Click **Account Settings**.
@@ -120,7 +120,7 @@ Access the Warden web interface at `http://localhost:3000`.
 
 ---
 
-## ☁️ Cloudflare Tunnel Ingress Setup (Outbound-Only)
+## Cloudflare Tunnel Ingress Setup (Outbound-Only)
 
 Expose **only** the Warden container to the internet via Cloudflare Tunnel (`cloudflared`). Crafty Controller remains strictly isolated inside your local home network.
 
@@ -141,7 +141,7 @@ ingress:
 
 ---
 
-## 📱 Mobile App Setup (`/mobile`)
+## Mobile App Setup (`/mobile`)
 
 1. Build/launch the React Native app on your device or emulator:
    ```bash
@@ -155,7 +155,7 @@ ingress:
 
 ---
 
-## 🛠️ Operational Tasks
+## Operational Tasks
 
 ### Confirming a Server's Loader & MC Version
 If a server has conflicting or missing loader metadata, Warden flags it with a **Human Operator Confirmation Required** banner.
@@ -171,6 +171,6 @@ If a server has conflicting or missing loader metadata, Warden flags it with a *
 
 ---
 
-## 🤖 Disclaimer & Attribution
+## Disclaimer & Attribution
 
 Portions of this codebase and architecture were built and accelerated with the assistance of AI development tools. All code has been structured, reviewed, and tested for performance, reliability, and security.
