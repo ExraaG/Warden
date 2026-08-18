@@ -4,6 +4,23 @@
 
 ---
 
+## Screenshots
+
+**Dashboard — Server Overview with live stats**
+![Dashboard](docs/screenshots/dashboard.png)
+
+**Mods tab — Installed mods with Modrinth update detection**
+![Mods](docs/screenshots/mods.png)
+
+**Audit Logs — Step-by-step 4 AM update execution trail**
+![Audit Logs](docs/screenshots/audit-logs.png)
+
+**Settings — Crafty API configuration and Warden API key management**
+![Settings](docs/screenshots/settings.png)
+
+---
+
+
 ## Key Features
 
 - **Flat Dark Ops-Tool Aesthetic**: Built with dark slate theme, Industrial Safety Amber (`#f59e0b`) accent, Tabler icons, crisp custom UI components, and **zero gradients**.
