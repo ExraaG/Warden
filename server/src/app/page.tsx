@@ -105,6 +105,12 @@ export default function DashboardPage() {
       .finally(() => setCreateLoadingVersions(false));
   }, [showCreateModal, createForm.loader]);
 
+  useEffect(() => {
+    const handleOpenCreate = () => setShowCreateModal(true);
+    window.addEventListener('warden_open_create_server', handleOpenCreate);
+    return () => window.removeEventListener('warden_open_create_server', handleOpenCreate);
+  }, []);
+
   const handleCreateServer = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreatingServer(true);
@@ -1488,47 +1494,11 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading && !server) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-        <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-8 h-8 rounded-full mb-3" />
-        <span className="text-xs font-mono">Loading server details...</span>
-      </div>
-    );
-  }
-
-  if (!server) {
-    return (
-      <div className="space-y-6">
-        <Card className="bg-[var(--bg-surface)] border-[var(--color-border)] p-6 sm:p-10 text-center max-w-lg mx-auto my-12">
-          <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] text-[var(--color-accent)] border border-[var(--accent-border)] flex items-center justify-center mx-auto mb-4 font-minecraft text-xl font-bold">
-            +
-          </div>
-          <h3 className="font-minecraft font-bold text-slate-100 text-lg mb-2">No Minecraft Server Found</h3>
-          <p className="text-slate-400 text-xs mb-6 leading-relaxed font-mono">
-            Warden runs standalone with 1-click downloads for Paper, Fabric, Purpur, Quilt, and Vanilla.
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)} className="px-5">
-              <WardenIcon name="plus" size={14} className="text-[#0d0e11]" />
-              Create New Server
-            </Button>
-            <a href="/settings" className="inline-block">
-              <Button variant="outline" size="sm">
-                Settings
-              </Button>
-            </a>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  const isConfirmed = server.detection?.isConfirmed;
-  const stats = server.stats || { cpuPercent: 0, memoryBytes: 0, maxMemoryBytes: 0, onlinePlayers: 0, maxPlayers: 20, uptimeSeconds: 0 };
-  const currentLoaderName = (server.detection?.loader && server.detection.loader !== 'unknown' ? server.detection.loader : 'unknown').toUpperCase();
-  const currentVersionNum = server.detection?.mcVersion || '?';
-  const isOnline = server.status === 'online';
+  const isConfirmed = server?.detection?.isConfirmed;
+  const stats = server?.stats || { cpuPercent: 0, memoryBytes: 0, maxMemoryBytes: 0, onlinePlayers: 0, maxPlayers: 20, uptimeSeconds: 0 };
+  const currentLoaderName = (server?.detection?.loader && server.detection.loader !== 'unknown' ? server.detection.loader : 'unknown').toUpperCase();
+  const currentVersionNum = server?.detection?.mcVersion || '?';
+  const isOnline = server?.status === 'online';
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -1558,6 +1528,36 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      {loading && !server ? (
+        <div className="flex flex-col items-center justify-center py-24 text-slate-400">
+          <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-8 h-8 rounded-full mb-3" />
+          <span className="text-xs font-mono">Loading server details...</span>
+        </div>
+      ) : !server ? (
+        <div className="space-y-6">
+          <Card className="bg-[var(--bg-surface)] border-[var(--color-border)] p-6 sm:p-10 text-center max-w-lg mx-auto my-12">
+            <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] text-[var(--color-accent)] border border-[var(--accent-border)] flex items-center justify-center mx-auto mb-4 font-minecraft text-xl font-bold">
+              +
+            </div>
+            <h3 className="font-minecraft font-bold text-slate-100 text-lg mb-2">No Minecraft Server Found</h3>
+            <p className="text-slate-400 text-xs mb-6 leading-relaxed font-mono">
+              Warden runs standalone with 1-click downloads for Paper, Fabric, Purpur, Quilt, and Vanilla.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)} className="px-5">
+                <WardenIcon name="plus" size={14} className="text-[#0d0e11]" />
+                Create New Server
+              </Button>
+              <a href="/settings" className="inline-block">
+                <Button variant="outline" size="sm">
+                  Settings
+                </Button>
+              </a>
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <>
       {/* Detection Confirmation Banner */}
       {!isConfirmed && (
         <div className="bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
@@ -3784,7 +3784,8 @@ export default function DashboardPage() {
           )}
         </div>
       )}
-
+        </>
+      )}
 
       {/* Manual Loader & MC Version Confirmation Modal */}
       <Modal

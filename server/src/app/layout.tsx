@@ -45,21 +45,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   }, []);
 
   const handleSelectServer = (option: DropdownOption) => {
+    if (option.id === '__create_new__') {
+      window.dispatchEvent(new CustomEvent('warden_open_create_server'));
+      return;
+    }
     setSelectedServerId(option.id);
     localStorage.setItem('warden_selected_server_id', option.id);
     window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: option.id }));
   };
 
-  const dropdownOptions: DropdownOption[] = servers.map((s) => {
-    const loaderName = (s.detection?.loader && s.detection.loader !== 'unknown' ? s.detection.loader : 'fabric').toUpperCase();
-    const versionNum = s.detection?.mcVersion || '1.21.1';
-    return {
-      id: s.id,
-      label: s.name,
-      sublabel: `${loaderName} • ${versionNum}`,
-      status: s.status,
-    };
-  });
+  const dropdownOptions: DropdownOption[] = [
+    ...servers.map((s) => {
+      const loaderName = (s.detection?.loader && s.detection.loader !== 'unknown' ? s.detection.loader : 'fabric').toUpperCase();
+      const versionNum = s.detection?.mcVersion || '1.21.1';
+      return {
+        id: s.id,
+        label: s.name,
+        sublabel: `${loaderName} • ${versionNum}`,
+        status: s.status,
+      };
+    }),
+    {
+      id: '__create_new__',
+      label: '+ Create New Server',
+      sublabel: '1-Click Server Installer',
+    },
+  ];
 
   const navItems: { href: string; label: string; icon: WardenIconName }[] = [
     { href: '/', label: 'Dashboard', icon: 'box' },
