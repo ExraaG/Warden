@@ -134,6 +134,29 @@ apiRouter.post('/v1/servers/:id/action', authMiddleware, async (req: Request, re
 
     res.json({ success: true } as ApiResponse<null>);
   } catch (err: any) {
+    // Return specific error code for EULA so frontend can show the popup
+    if (err.message === 'EULA_NOT_ACCEPTED') {
+      return res.status(403).json({ success: false, error: 'EULA_NOT_ACCEPTED' } as ApiResponse<null>);
+    }
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 4.0.1 EULA Status Check & Accept
+apiRouter.get('/v1/servers/:id/eula', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const accepted = serverManager.isEulaAccepted(req.params.id);
+    res.json({ success: true, data: { accepted } } as ApiResponse<{ accepted: boolean }>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+apiRouter.post('/v1/servers/:id/eula', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    serverManager.acceptEula(req.params.id);
+    res.json({ success: true, data: { accepted: true } } as ApiResponse<{ accepted: boolean }>);
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
   }
 });
@@ -499,9 +522,10 @@ apiRouter.post('/v1/settings', authMiddleware, (req: Request, res: Response) => 
 });
 
 // 24. System Self-Update & GitHub Release Check
-apiRouter.get('/v1/system/update-status', async (_req: Request, res: Response) => {
+apiRouter.get('/v1/system/update-status', async (req: Request, res: Response) => {
   try {
-    const status = await SystemUpdater.checkUpdate();
+    const force = req.query.force === 'true' || req.query.force === '1';
+    const status = await SystemUpdater.checkUpdate(force);
     res.json({ success: true, data: status } as ApiResponse<any>);
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);

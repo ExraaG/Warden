@@ -96,10 +96,12 @@ export class ServerProcess extends EventEmitter {
         return reject(new Error(`Server jar not found at ${jarFullPath}`));
       }
 
-      // Ensure EULA is accepted
+      // Check EULA acceptance — do NOT auto-accept, frontend must prompt user
       const eulaPath = path.join(this.serverDir, 'eula.txt');
-      if (!fs.existsSync(eulaPath) || !fs.readFileSync(eulaPath, 'utf8').includes('eula=true')) {
-        fs.writeFileSync(eulaPath, 'eula=true\n', 'utf8');
+      const eulaAccepted = fs.existsSync(eulaPath) && fs.readFileSync(eulaPath, 'utf8').includes('eula=true');
+      if (!eulaAccepted) {
+        this.addLog('[Warden] EULA not yet accepted. Please accept the Minecraft EULA to start the server.');
+        return reject(new Error('EULA_NOT_ACCEPTED'));
       }
 
       const args = [

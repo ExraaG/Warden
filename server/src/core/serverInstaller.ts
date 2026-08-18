@@ -39,12 +39,8 @@ export class ServerInstaller {
       }
     }
 
-    // Automatically accept EULA
-    await fs.promises.writeFile(
-      path.join(targetDir, 'eula.txt'),
-      '# Accepted by Warden Server Orchestrator\neula=true\n',
-      'utf8'
-    );
+    // EULA acceptance is handled by the frontend via popup modal
+    // Do NOT auto-accept here
 
     // Create default server.properties if not already existing
     const propsPath = path.join(targetDir, 'server.properties');
@@ -78,6 +74,28 @@ export class ServerInstaller {
 
   // 1. PaperMC Installer
   private static async installPaper(targetDir: string, version: string): Promise<string> {
+    // Try Paper v3 (fill.papermc.io) API first
+    try {
+      const v3BuildsUrl = `https://fill.papermc.io/v3/projects/paper/versions/${version}/builds`;
+      const res = await fetch(v3BuildsUrl);
+      if (res.ok) {
+        const builds = (await res.json()) as any[];
+        if (Array.isArray(builds) && builds.length > 0) {
+          const latestBuild = builds[builds.length - 1];
+          const downloadObj =
+            latestBuild.downloads?.['server:default'] ||
+            latestBuild.downloads?.application ||
+            latestBuild.downloads?.['server:mojang'];
+          if (downloadObj?.url && downloadObj?.name) {
+            const jarDest = path.join(targetDir, downloadObj.name);
+            await this.downloadFile(downloadObj.url, jarDest);
+            return downloadObj.name;
+          }
+        }
+      }
+    } catch {}
+
+    // Fallback to Paper v2 API
     const versionUrl = `https://api.papermc.io/v2/projects/paper/versions/${version}`;
     const res = await fetch(versionUrl);
     if (!res.ok) {

@@ -41,28 +41,68 @@ export class ServerManager {
 
   /**
    * Resolve the correct Java binary path for a given Minecraft version.
-   * MC 26.x snapshots require Java 25, MC 1.20.5+ requires Java 21, older versions use Java 17.
+   * Dynamically scans /usr/lib/jvm/ for available installations.
+   * MC 26.x snapshots require Java 25+, MC 1.20.5+ requires Java 21+, older versions use Java 17+.
    */
   private resolveJavaPath(mcVersion?: string): string {
     if (!mcVersion) return 'java';
 
-    // MC 26.x snapshots (class file version 69 = Java 25)
+    // Discover all available Java installations by scanning /usr/lib/jvm/
+    const jvmDir = '/usr/lib/jvm';
+    const availableJavas: { version: number; path: string }[] = [];
+    try {
+      if (fs.existsSync(jvmDir)) {
+        const entries = fs.readdirSync(jvmDir);
+        for (const entry of entries) {
+          const match = entry.match(/^java-(\d+)-openjdk/);
+          if (match) {
+            const javaPath = path.join(jvmDir, entry, 'bin', 'java');
+            if (fs.existsSync(javaPath)) {
+              availableJavas.push({ version: parseInt(match[1], 10), path: javaPath });
+            }
+          }
+        }
+        availableJavas.sort((a, b) => b.version - a.version); // Highest first
+      }
+    } catch {}
+
+    // Helper: find the best Java >= minVersion
+    const findJava = (minVersion: number): string | null => {
+      // First try exact match, then closest >= minVersion
+      const exact = availableJavas.find(j => j.version === minVersion);
+      if (exact) return exact.path;
+      const compatible = availableJavas.find(j => j.version >= minVersion);
+      if (compatible) return compatible.path;
+      return null;
+    };
+
+    // MC 26.x snapshots (class file version 69 = Java 25+)
     if (/^26\b/.test(mcVersion)) {
-      const java25 = '/usr/lib/jvm/java-25-openjdk/bin/java';
-      if (fs.existsSync(java25)) return java25;
+      const found = findJava(25);
+      if (found) {
+        console.log(`[Warden] Resolved Java for MC ${mcVersion}: ${found}`);
+        return found;
+      }
     }
 
-    // MC 1.20.5+ requires Java 21
+    // MC 1.20.5+ requires Java 21+
     if (/^1\.2[1-9]/.test(mcVersion) || /^1\.20\.([5-9]|[1-9]\d)/.test(mcVersion)) {
-      const java21 = '/usr/lib/jvm/java-21-openjdk/bin/java';
-      if (fs.existsSync(java21)) return java21;
+      const found = findJava(21);
+      if (found) {
+        console.log(`[Warden] Resolved Java for MC ${mcVersion}: ${found}`);
+        return found;
+      }
     }
 
-    // MC 1.16.5–1.20.4 uses Java 17
-    const java17 = '/usr/lib/jvm/java-17-openjdk/bin/java';
-    if (fs.existsSync(java17)) return java17;
+    // MC 1.16.5–1.20.4 uses Java 17+
+    const found = findJava(17);
+    if (found) {
+      console.log(`[Warden] Resolved Java for MC ${mcVersion}: ${found}`);
+      return found;
+    }
 
     // Fallback to system default
+    console.log(`[Warden] No JVM found in /usr/lib/jvm, falling back to system 'java'`);
     return 'java';
   }
 
@@ -199,13 +239,8 @@ export class ServerManager {
       detectedAt: new Date().toISOString(),
     });
 
-    if (payload.autoStart) {
-      await this.startServer(serverId, {
-        minMemory: payload.minMemory || '2G',
-        maxMemory: payload.maxMemory || '4G',
-        jarFile: installResult.jarFileName,
-      });
-    }
+    // Don't auto-start — frontend will handle EULA acceptance before first start
+    // The user must accept the EULA via the UI popup, then click Start
 
     const created = await this.getServer(serverId);
     if (!created) throw new Error('Failed to retrieve newly created server');
@@ -266,6 +301,22 @@ export class ServerManager {
     }
 
     await proc.start();
+  }
+
+  // EULA Management
+  public isEulaAccepted(serverId: string): boolean {
+    const dir = this.getServerDir(serverId);
+    const eulaPath = path.join(dir, 'eula.txt');
+    if (!fs.existsSync(eulaPath)) return false;
+    return fs.readFileSync(eulaPath, 'utf8').includes('eula=true');
+  }
+
+  public acceptEula(serverId: string): void {
+    const dir = this.getServerDir(serverId);
+    if (!fs.existsSync(dir)) throw new Error(`Server directory ${serverId} does not exist`);
+    const eulaPath = path.join(dir, 'eula.txt');
+    fs.writeFileSync(eulaPath, '#By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).\neula=true\n', 'utf8');
+    console.log(`[Warden] EULA accepted for server ${serverId}`);
   }
 
   public async stopServer(serverId: string): Promise<void> {

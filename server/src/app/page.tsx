@@ -122,7 +122,7 @@ export default function DashboardPage() {
       }).then((r) => r.json());
 
       if (res.success && res.data) {
-        showToast(`Server '${createForm.name}' created successfully!`, 'success');
+        showToast(`Server '${createForm.name}' created! Accept the EULA to start it.`, 'success');
         setShowCreateModal(false);
         setServerId(res.data.id);
         localStorage.setItem('warden_selected_server_id', res.data.id);
@@ -130,6 +130,8 @@ export default function DashboardPage() {
         window.dispatchEvent(new CustomEvent('warden_server_updated'));
         loadServerDetails(res.data.id);
         loadAllServers();
+        // Auto-show EULA popup for first-time setup
+        setShowEulaModal(true);
       } else {
         showToast(`Failed to create server: ${res.error}`, 'error');
       }
@@ -263,59 +265,6 @@ export default function DashboardPage() {
         }
       },
     });
-  };
-
-  // System Self-Update State
-  const [systemUpdate, setSystemUpdate] = useState<{
-    updateAvailable: boolean;
-    currentCommit: string;
-    latestCommit: string;
-    commitMessage?: string;
-    commitDate?: string;
-    author?: string;
-  } | null>(null);
-  const [showUpdateModal, setShowUpdateModal] = useState<boolean>(false);
-  const [installingUpdate, setInstallingUpdate] = useState<boolean>(false);
-  const [updateProgressMsg, setUpdateProgressMsg] = useState<string>('');
-  const [dismissedUpdateCommit, setDismissedUpdateCommit] = useState<string>('');
-
-  useEffect(() => {
-    fetch('/api/v1/system/update-status')
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.success && res.data && res.data.updateAvailable) {
-          setSystemUpdate(res.data);
-        }
-      })
-      .catch((err) => console.warn('Update check failed:', err));
-  }, []);
-
-  const handlePerformSelfUpdate = async () => {
-    setInstallingUpdate(true);
-    setUpdateProgressMsg('Safely stopping Minecraft servers and saving world data to /data...');
-    try {
-      const res = await fetch('/api/v1/system/self-update', { method: 'POST' }).then((r) => r.json());
-      if (res.success) {
-        setUpdateProgressMsg('Update initiated! Rebuilding application and restarting in 15 seconds...');
-        showToast('Warden update initiated. Reloading shortly...', 'success');
-        let count = 15;
-        const interval = setInterval(() => {
-          count -= 1;
-          if (count <= 0) {
-            clearInterval(interval);
-            window.location.reload();
-          } else {
-            setUpdateProgressMsg(`Rebuilding Warden... Reconnecting in ${count}s...`);
-          }
-        }, 1000);
-      } else {
-        showToast(`Update error: ${res.error}`, 'error');
-        setInstallingUpdate(false);
-      }
-    } catch (err: any) {
-      setUpdateProgressMsg('Warden restarted. Reconnecting in 10 seconds...');
-      setTimeout(() => window.location.reload(), 10000);
-    }
   };
 
   // Dev Mode State (Custom Loader & MC Version Override for search/install)
@@ -1451,6 +1400,9 @@ export default function DashboardPage() {
         setTimeout(() => loadServerDetails(serverId), 1000);
         setTimeout(() => loadServerDetails(serverId), 2500);
         setTimeout(() => loadServerDetails(serverId), 5000);
+      } else if (res.error === 'EULA_NOT_ACCEPTED') {
+        // Show EULA acceptance popup
+        setShowEulaModal(true);
       } else {
         setActionMessage({ text: `Failed: ${res.error}`, type: 'error' });
         setTimeout(() => setActionMessage(null), 4000);
@@ -1460,6 +1412,33 @@ export default function DashboardPage() {
       setTimeout(() => setActionMessage(null), 4000);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const [showEulaModal, setShowEulaModal] = useState<boolean>(false);
+  const [acceptingEula, setAcceptingEula] = useState<boolean>(false);
+
+  const handleAcceptEula = async () => {
+    if (!serverId) return;
+    setAcceptingEula(true);
+    try {
+      const res = await fetch(`/api/v1/servers/${serverId}/eula`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }).then((r) => r.json());
+
+      if (res.success) {
+        setShowEulaModal(false);
+        showToast('Minecraft EULA accepted! Starting server...', 'success');
+        // Now try starting the server again
+        await handleAction('start');
+      } else {
+        showToast(`Failed to accept EULA: ${res.error}`, 'error');
+      }
+    } catch (err: any) {
+      showToast(`Error accepting EULA: ${err.message}`, 'error');
+    } finally {
+      setAcceptingEula(false);
     }
   };
 
@@ -1589,38 +1568,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* System Update Available Notification Banner */}
-      {systemUpdate && systemUpdate.updateAvailable && dismissedUpdateCommit !== systemUpdate.latestCommit && (
-        <div className="bg-gradient-to-r from-emerald-950/80 via-emerald-900/30 to-[var(--bg-surface)] border border-emerald-500/40 rounded-xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
-              <WardenIcon name="download" size={16} className="text-emerald-400" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-minecraft text-xs font-bold text-emerald-300 uppercase tracking-wider">
-                  New Warden Update Available
-                </span>
-                <span className="bg-emerald-950 text-emerald-300 border border-emerald-800/60 px-1.5 py-0.5 rounded text-[10px] font-mono">
-                  {systemUpdate.latestCommit}
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 font-mono mt-0.5 truncate">
-                {systemUpdate.commitMessage || 'Latest bugfixes and improvements ready to install'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-            <Button variant="ghost" size="sm" onClick={() => setDismissedUpdateCommit(systemUpdate.latestCommit)} className="text-slate-400 hover:text-slate-200 text-xs">
-              Later
-            </Button>
-            <Button variant="primary" size="sm" onClick={() => setShowUpdateModal(true)} className="bg-emerald-500 hover:bg-emerald-400 text-[#0d0e11] font-bold text-xs">
-              <WardenIcon name="download" size={13} className="text-[#0d0e11]" />
-              Update Now
-            </Button>
-          </div>
-        </div>
-      )}
+
 
       {/* Action message toast */}
       {actionMessage && (
@@ -5279,76 +5227,58 @@ export default function DashboardPage() {
         </form>
       </Modal>
 
-      {/* System Update Confirmation Modal */}
-      <Modal
-        isOpen={showUpdateModal}
-        onClose={() => !installingUpdate && setShowUpdateModal(false)}
-        title="Install Warden System Update"
-      >
-        <div className="space-y-4">
-          <div className="bg-[var(--bg-main)] p-3.5 rounded-xl border border-[var(--color-border)] space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-slate-400">Current Version</span>
-              <span className="text-slate-200 font-bold">{systemUpdate?.currentCommit || 'Installed'}</span>
-            </div>
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-slate-400">Target Release</span>
-              <span className="text-emerald-400 font-bold">{systemUpdate?.latestCommit}</span>
-            </div>
-            {systemUpdate?.commitMessage && (
-              <div className="pt-2 border-t border-[var(--color-border)] text-xs text-slate-300 font-mono">
-                <span className="text-slate-500 block text-[10px] uppercase font-bold mb-0.5">Changelog</span>
-                &quot;{systemUpdate.commitMessage}&quot;
-              </div>
-            )}
-          </div>
 
-          {/* Important Safety & Disclaimer Notice */}
-          <div className="bg-amber-950/20 border border-amber-500/30 rounded-xl p-3.5 space-y-2">
-            <div className="flex items-center gap-2 text-amber-400 font-bold text-xs font-minecraft tracking-wider uppercase">
-              <WardenIcon name="triangle-alert" size={14} className="text-amber-400 shrink-0" />
-              Important Update Notice &amp; Disclaimer
-            </div>
-            <ul className="text-xs text-amber-200/80 font-mono space-y-1.5 pl-4 list-disc leading-relaxed">
-              <li>
-                <strong>All Server Data is Preserved:</strong> All your Minecraft worlds, configs, player inventories, mods, and plugins in <code className="text-amber-300">/data</code> are 100% safe and will NOT be modified.
-              </li>
-              <li>
-                <strong>Servers Gracefully Stopped:</strong> Any currently active Minecraft servers will be safely stopped before updating to flush world chunk saves and avoid any corrupted save states.
-              </li>
-              <li>
-                <strong>Rebuild Sequence:</strong> Warden will pull the latest release from GitHub, build the application, and restart the service automatically.
-              </li>
-            </ul>
-          </div>
 
-          {installingUpdate && (
-            <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 flex items-center gap-3 animate-pulse">
-              <WardenIcon name="refresh-cw" size={16} className="text-emerald-400 animate-spin shrink-0" />
-              <span className="text-xs text-emerald-300 font-mono">
-                {updateProgressMsg || 'Saving server worlds, pulling release, and rebuilding...'}
+      {/* EULA Acceptance Modal */}
+      <Modal isOpen={showEulaModal} onClose={() => setShowEulaModal(false)} title="Minecraft EULA" maxWidth="md">
+        <div className="flex flex-col gap-4">
+          <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
+            <div className="shrink-0 w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+              <WardenIcon name="triangle-alert" size={20} className="text-amber-400" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold text-amber-200">
+                Minecraft End User License Agreement
               </span>
+              <p className="text-xs text-amber-200/70 leading-relaxed">
+                Before starting a Minecraft server, you must agree to the Minecraft EULA. By accepting, you acknowledge that you have read and agree to the terms.
+              </p>
             </div>
-          )}
+          </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
+          <a
+            href="https://aka.ms/MinecraftEULA"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-mono transition-colors px-1 underline underline-offset-2"
+          >
+            Read the official Minecraft EULA ↗
+          </a>
+
+          <div className="bg-slate-800/40 border border-slate-600/30 rounded-lg p-3">
+            <p className="text-[11px] text-slate-400 leading-relaxed font-mono">
+              &quot;By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).&quot;
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[var(--color-border)]">
             <Button
               variant="outline"
               size="sm"
-              disabled={installingUpdate}
-              onClick={() => setShowUpdateModal(false)}
+              disabled={acceptingEula}
+              onClick={() => setShowEulaModal(false)}
             >
-              Cancel
+              Decline
             </Button>
             <Button
               variant="primary"
               size="sm"
-              isLoading={installingUpdate}
-              onClick={handlePerformSelfUpdate}
+              isLoading={acceptingEula}
+              onClick={handleAcceptEula}
               className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold"
             >
-              <WardenIcon name="download" size={14} className="text-black" />
-              Confirm &amp; Install Update
+              <WardenIcon name="check" size={14} className="text-black" />
+              Accept EULA &amp; Start Server
             </Button>
           </div>
         </div>

@@ -7,12 +7,73 @@ import { usePathname } from 'next/navigation';
 import { Dropdown, DropdownOption } from '../components/ui/Dropdown';
 import { WardenServer } from '@warden/shared';
 import { WardenIcon, WardenIconName } from '../components/ui/WardenIcon';
-import { ToastContainer } from '../components/ui/Toast';
+import { ToastContainer, showToast } from '../components/ui/Toast';
+import { Modal } from '../components/ui/Modal';
+import { Button } from '../components/ui/Button';
+
+export interface SystemUpdateInfo {
+  updateAvailable: boolean;
+  version?: string;
+  currentCommit: string;
+  latestCommit: string;
+  commitMessage?: string;
+  commitDate?: string;
+  author?: string;
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [servers, setServers] = useState<WardenServer[]>([]);
   const [selectedServerId, setSelectedServerId] = useState<string>('');
+
+  // Global GitHub Update State
+  const [systemUpdate, setSystemUpdate] = useState<SystemUpdateInfo | null>(null);
+  const [showUpdateModal, setShowUpdateModal] = useState<boolean>(false);
+  const [installingUpdate, setInstallingUpdate] = useState<boolean>(false);
+  const [updateProgressMsg, setUpdateProgressMsg] = useState<string>('');
+  const [dismissedCommit, setDismissedCommit] = useState<string>('');
+
+  const checkUpdates = () => {
+    // Check GitHub with force=true on page load
+    fetch('/api/v1/system/update-status?force=true')
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && res.data) {
+          if (res.data.updateAvailable) {
+            setSystemUpdate(res.data);
+          }
+        }
+      })
+      .catch((err) => console.warn('[Warden] Update check failed:', err));
+  };
+
+  const handlePerformSelfUpdate = async () => {
+    setInstallingUpdate(true);
+    setUpdateProgressMsg('Safely stopping Minecraft servers and saving world data...');
+    try {
+      const res = await fetch('/api/v1/system/self-update', { method: 'POST' }).then((r) => r.json());
+      if (res.success) {
+        setUpdateProgressMsg('Update initiated! Rebuilding application and restarting in 15 seconds...');
+        showToast('Warden update initiated. Reloading shortly...', 'success');
+        let count = 15;
+        const interval = setInterval(() => {
+          count -= 1;
+          if (count <= 0) {
+            clearInterval(interval);
+            window.location.reload();
+          } else {
+            setUpdateProgressMsg(`Rebuilding Warden... Reconnecting in ${count}s...`);
+          }
+        }, 1000);
+      } else {
+        showToast(`Update error: ${res.error}`, 'error');
+        setInstallingUpdate(false);
+      }
+    } catch (err: any) {
+      setUpdateProgressMsg('Warden restarting. Reconnecting in 10 seconds...');
+      setTimeout(() => window.location.reload(), 10000);
+    }
+  };
 
   const loadServers = () => {
     fetch('/api/v1/servers')
@@ -32,15 +93,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   };
 
   useEffect(() => {
+    // Check for updates on every page / website load
+    checkUpdates();
     loadServers();
+
     const handleUpdate = () => loadServers();
+    const handleTriggerUpdateModal = () => setShowUpdateModal(true);
+
     window.addEventListener('warden_server_updated', handleUpdate);
     window.addEventListener('warden_server_changed', handleUpdate);
-    const interval = setInterval(loadServers, 5000);
+    window.addEventListener('warden_open_update_modal', handleTriggerUpdateModal);
+
+    // Periodic check every 5 minutes in background
+    const updateInterval = setInterval(checkUpdates, 5 * 60 * 1000);
+    const serverInterval = setInterval(loadServers, 5000);
+
     return () => {
       window.removeEventListener('warden_server_updated', handleUpdate);
       window.removeEventListener('warden_server_changed', handleUpdate);
-      clearInterval(interval);
+      window.removeEventListener('warden_open_update_modal', handleTriggerUpdateModal);
+      clearInterval(updateInterval);
+      clearInterval(serverInterval);
     };
   }, []);
 
@@ -96,6 +169,52 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body suppressHydrationWarning className="bg-[var(--bg-main)] text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
+        {/* Global Update Notification Banner */}
+        {systemUpdate?.updateAvailable && dismissedCommit !== systemUpdate.latestCommit && (
+          <div className="bg-gradient-to-r from-emerald-950/95 via-slate-900/95 to-emerald-950/95 border-b border-emerald-500/40 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50 shadow-lg shadow-emerald-950/30">
+            <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto">
+              <span className="flex h-2.5 w-2.5 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span className="font-minecraft text-xs font-bold text-emerald-300 tracking-wide shrink-0">
+                NEW UPDATE AVAILABLE
+              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] font-mono">
+                  {systemUpdate.currentCommit}
+                </span>
+                <span className="text-slate-500 text-xs">→</span>
+                <span className="bg-emerald-950 text-emerald-300 border border-emerald-600/70 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
+                  {systemUpdate.latestCommit}
+                </span>
+              </div>
+              <span className="text-xs text-slate-300 font-mono truncate hidden md:inline">
+                {systemUpdate.commitMessage || 'Latest release ready to install'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDismissedCommit(systemUpdate.latestCommit)}
+                className="text-slate-400 hover:text-slate-200 text-xs"
+              >
+                Later
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setShowUpdateModal(true)}
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-minecraft text-xs shadow-md shadow-emerald-950/40"
+              >
+                <WardenIcon name="download" size={13} className="text-black" />
+                Accept &amp; Update
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Seamless Header (Same background color as page) */}
         <header className="bg-[var(--bg-main)] px-3 sm:px-6 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 sticky top-0 z-40 transition-colors border-b border-white/[0.04] sm:border-b-0">
           <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
@@ -138,6 +257,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Nav Links */}
             <nav className="flex items-center gap-1 sm:gap-1.5 text-sm font-medium w-full sm:w-auto justify-between sm:justify-start flex-nowrap shrink-0">
+              {systemUpdate?.updateAvailable && (
+                <button
+                  onClick={() => setShowUpdateModal(true)}
+                  className="bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-500 hover:text-black font-minecraft text-[10px] sm:text-xs px-2 sm:px-2.5 py-1.5 rounded-md flex items-center gap-1.5 transition-all shrink-0 animate-pulse"
+                  title="New update available on GitHub"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>UPDATE</span>
+                </button>
+              )}
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -161,6 +290,83 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Main Content Area */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 pt-1 sm:pt-2 pb-6">{children}</main>
+
+        {/* Global Self-Update Modal */}
+        <Modal
+          isOpen={showUpdateModal}
+          onClose={() => !installingUpdate && setShowUpdateModal(false)}
+          title="Install Warden Update"
+          maxWidth="xl"
+        >
+          <div className="flex flex-col gap-4">
+            <div className="bg-[var(--bg-card)] border border-[var(--color-border)] rounded-xl p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono text-slate-400">Target Commit / Release</span>
+                <span className="text-xs font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40 font-bold">
+                  {systemUpdate?.latestCommit || 'latest'}
+                </span>
+              </div>
+              {systemUpdate?.commitMessage && (
+                <div className="text-sm font-semibold text-slate-200 font-mono">
+                  &quot;{systemUpdate.commitMessage}&quot;
+                </div>
+              )}
+              {systemUpdate?.author && (
+                <div className="text-xs font-mono text-slate-400">
+                  Author: <span className="text-slate-300">{systemUpdate.author}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-4 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                <WardenIcon name="triangle-alert" size={16} className="text-amber-400" />
+                Important Update Notice &amp; Disclaimer
+              </div>
+              <ul className="text-xs text-amber-200/80 font-mono space-y-1.5 pl-4 list-disc leading-relaxed">
+                <li>
+                  <strong>All Server Data is Preserved:</strong> All your Minecraft worlds, configs, player inventories, mods, and plugins in <code className="text-amber-300">/data</code> are 100% safe and will NOT be modified.
+                </li>
+                <li>
+                  <strong>Servers Gracefully Stopped:</strong> Any currently active Minecraft servers will be safely stopped before updating to flush world chunk saves and avoid any corrupted save states.
+                </li>
+                <li>
+                  <strong>Rebuild Sequence:</strong> Warden will pull the latest release from GitHub, build the application, and restart the service automatically.
+                </li>
+              </ul>
+            </div>
+
+            {installingUpdate && (
+              <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 flex items-center gap-3 animate-pulse">
+                <WardenIcon name="refresh-cw" size={16} className="text-emerald-400 animate-spin shrink-0" />
+                <span className="text-xs text-emerald-300 font-mono">
+                  {updateProgressMsg || 'Saving server worlds, pulling release, and rebuilding...'}
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={installingUpdate}
+                onClick={() => setShowUpdateModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                isLoading={installingUpdate}
+                onClick={handlePerformSelfUpdate}
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-minecraft text-xs"
+              >
+                <WardenIcon name="download" size={14} className="text-black" />
+                Confirm &amp; Install Update
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
         {/* Global Floating Toast Notifications */}
         <ToastContainer />

@@ -9,6 +9,7 @@ const execPromise = util.promisify(exec);
 
 export interface SystemUpdateStatus {
   updateAvailable: boolean;
+  version?: string;
   currentCommit: string;
   latestCommit: string;
   commitMessage?: string;
@@ -21,25 +22,47 @@ export class SystemUpdater {
   private static cachedStatus: { timestamp: number; data: SystemUpdateStatus } | null = null;
   private static CACHE_TTL_MS = 60 * 1000; // 1 minute cache
 
-  public static async getCurrentCommit(): Promise<string> {
-    // 1. Try local git if .git directory exists
+  public static async getVersionInfo(): Promise<{ commit: string; version: string }> {
+    let commit = 'unknown';
+    let version = '1.0.0';
+
+    // 1. Check for version info file in multiple standard locations
+    const candidateFiles = [
+      path.resolve(process.cwd(), 'version.json'),
+      path.resolve(process.cwd(), '..', 'version.json'),
+      path.resolve(__dirname, '..', '..', 'version.json'),
+      path.resolve(__dirname, '..', 'version.json'),
+      path.resolve('/app/version.json'),
+      path.resolve('/app/server/version.json'),
+    ];
+
+    for (const versionFile of candidateFiles) {
+      if (fs.existsSync(versionFile)) {
+        try {
+          const raw = JSON.parse(await fs.promises.readFile(versionFile, 'utf8'));
+          if (raw.version) version = raw.version;
+          if (raw.commit && raw.commit !== 'unknown') {
+            commit = raw.commitFull || raw.commit;
+            return { commit, version };
+          }
+        } catch {}
+      }
+    }
+
+    // 2. Fallback to local git if .git directory exists
     try {
       const { stdout } = await execPromise('git rev-parse HEAD', { timeout: 3000 });
       if (stdout && stdout.trim()) {
-        return stdout.trim();
+        commit = stdout.trim();
       }
     } catch {}
 
-    // 2. Check for version info file
-    const versionFile = path.resolve(process.cwd(), 'version.json');
-    if (fs.existsSync(versionFile)) {
-      try {
-        const raw = JSON.parse(await fs.promises.readFile(versionFile, 'utf8'));
-        if (raw.commit) return raw.commit;
-      } catch {}
-    }
+    return { commit, version };
+  }
 
-    return 'unknown';
+  public static async getCurrentCommit(): Promise<string> {
+    const info = await this.getVersionInfo();
+    return info.commit;
   }
 
   public static async checkUpdate(force = false): Promise<SystemUpdateStatus> {
@@ -47,7 +70,7 @@ export class SystemUpdater {
       return this.cachedStatus.data;
     }
 
-    const currentCommit = await this.getCurrentCommit();
+    const { commit: currentCommit, version } = await this.getVersionInfo();
 
     try {
       const res = await fetch('https://api.github.com/repos/ExraaG/Warden/commits/main', {
@@ -75,6 +98,7 @@ export class SystemUpdater {
 
       const result: SystemUpdateStatus = {
         updateAvailable,
+        version,
         currentCommit: currentCommit.substring(0, 7),
         latestCommit: latestCommit.substring(0, 7),
         commitMessage,
@@ -88,6 +112,7 @@ export class SystemUpdater {
       console.warn('[SystemUpdater] Failed to check for updates from GitHub:', err.message);
       const fallback: SystemUpdateStatus = {
         updateAvailable: false,
+        version,
         currentCommit: currentCommit.substring(0, 7),
         latestCommit: 'unknown',
         error: err.message,

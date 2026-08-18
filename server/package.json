@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "rm -rf .next && tsx watch src/server.ts",
+    "stamp-version": "node ../scripts/stamp-version.js || true",
+    "dev": "npm run stamp-version && rm -rf .next && tsx watch src/server.ts",
     "build:next": "next build",
     "build:server": "tsc -p tsconfig.server.json",
-    "build": "npm run build:next && npm run build:server",
+    "build": "npm run stamp-version && npm run build:next && npm run build:server",
     "start": "NODE_ENV=production node dist-server/server.js"
   },
   "dependencies": {
