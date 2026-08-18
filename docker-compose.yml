@@ -9,10 +9,10 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-22313}:22313"
       - "25565:25565"
     environment:
-      - PORT=3000
+      - PORT=22313
       - TZ=${TZ:-Europe/Vienna}
       - WARDEN_API_KEY=${WARDEN_API_KEY:-warden_secret_key_change_me}
       - DATA_DIR=/data
@@ -20,7 +20,7 @@ services:
     volumes:
       - ./data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:22313/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3

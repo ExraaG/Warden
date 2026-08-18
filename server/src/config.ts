@@ -12,7 +12,7 @@ export interface AppConfig {
 
 export const config: AppConfig = {
   wardenApiKey: process.env.WARDEN_API_KEY || 'warden_secret_key_change_me',
-  port: parseInt(process.env.PORT || '8989', 10),
+  port: parseInt(process.env.PORT || '22313', 10),
   timezone: process.env.TZ || 'Europe/Vienna',
   dataDir: process.env.DATA_DIR || path.join(process.cwd(), 'data'),
   javaPath: process.env.JAVA_PATH || 'java',

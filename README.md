@@ -103,7 +103,7 @@ cd Warden
 docker compose up -d --build
 ```
 
-- Access the Warden dashboard at `http://localhost:3000` (or `http://<YOUR-SERVER-IP>:3000`)
+- Access the Warden dashboard at `http://localhost:22313` (or `http://<YOUR-SERVER-IP>:22313`)
 - Connect your Minecraft client to port `25565`
 - View live application logs: `docker compose logs -f`
 - Stop the container: `docker compose down`

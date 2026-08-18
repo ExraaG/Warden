@@ -20,7 +20,7 @@ FROM base AS runner
 WORKDIR /app/server
 
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=22313
 ENV TZ=UTC
 ENV DATA_DIR=/data
 
@@ -38,8 +38,8 @@ COPY --from=builder /app/server/public ./public
 # Ensure persistent data directory exists
 RUN mkdir -p /data
 
-# Expose Warden Web UI (3000) and Minecraft Game Port (25565)
-EXPOSE 3000 25565
+# Expose Warden Web UI (22313) and Minecraft Game Port (25565)
+EXPOSE 22313 25565
 
 # Docker Healthcheck
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
