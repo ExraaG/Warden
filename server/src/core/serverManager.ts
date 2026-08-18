@@ -39,6 +39,33 @@ export class ServerManager {
     }
   }
 
+  /**
+   * Resolve the correct Java binary path for a given Minecraft version.
+   * MC 26.x snapshots require Java 25, MC 1.20.5+ requires Java 21, older versions use Java 17.
+   */
+  private resolveJavaPath(mcVersion?: string): string {
+    if (!mcVersion) return 'java';
+
+    // MC 26.x snapshots (class file version 69 = Java 25)
+    if (/^26\b/.test(mcVersion)) {
+      const java25 = '/usr/lib/jvm/java-25-openjdk/bin/java';
+      if (fs.existsSync(java25)) return java25;
+    }
+
+    // MC 1.20.5+ requires Java 21
+    if (/^1\.2[1-9]/.test(mcVersion) || /^1\.20\.([5-9]|[1-9]\d)/.test(mcVersion)) {
+      const java21 = '/usr/lib/jvm/java-21-openjdk/bin/java';
+      if (fs.existsSync(java21)) return java21;
+    }
+
+    // MC 1.16.5–1.20.4 uses Java 17
+    const java17 = '/usr/lib/jvm/java-17-openjdk/bin/java';
+    if (fs.existsSync(java17)) return java17;
+
+    // Fallback to system default
+    return 'java';
+  }
+
   public getServersDir(): string {
     return this.serversDir;
   }
@@ -198,6 +225,7 @@ export class ServerManager {
     let minMemory = options?.minMemory;
     let maxMemory = options?.maxMemory;
     let jarName = options?.jarFile;
+    let mcVersion: string | undefined;
 
     const metaPath = path.join(dir, 'warden.json');
     if (fs.existsSync(metaPath)) {
@@ -206,8 +234,17 @@ export class ServerManager {
         if (!minMemory && meta.minMemory) minMemory = meta.minMemory;
         if (!maxMemory && meta.maxMemory) maxMemory = meta.maxMemory;
         if (!jarName && meta.jarFile) jarName = meta.jarFile;
+        if (meta.mcVersion) mcVersion = meta.mcVersion;
       } catch {}
     }
+
+    // Also check stored detection for mcVersion
+    if (!mcVersion) {
+      const detection = db.getServerDetection(serverId);
+      if (detection?.mcVersion) mcVersion = detection.mcVersion;
+    }
+
+    const javaPath = this.resolveJavaPath(mcVersion);
 
     let proc = this.processes.get(serverId);
     if (!proc) {
@@ -221,6 +258,7 @@ export class ServerManager {
         serverId,
         serverDir: dir,
         jarFile: jarName,
+        javaPath,
         minMemory: minMemory || '2G',
         maxMemory: maxMemory || '4G',
       });

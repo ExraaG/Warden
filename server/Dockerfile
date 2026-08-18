@@ -24,8 +24,10 @@ ENV PORT=22313
 ENV TZ=UTC
 ENV DATA_DIR=/data
 
-# Install curl for healthcheck & OpenJDK runtime for Minecraft servers
-RUN apk add --no-cache curl openjdk21-jre openjdk17-jre
+# Install curl for healthcheck & OpenJDK runtimes for Minecraft servers
+# Java 17 for MC 1.16.5–1.20.4, Java 21 for MC 1.20.5+, Java 25 for MC 26.x snapshots
+RUN apk add --no-cache curl openjdk25-jre openjdk21-jre openjdk17-jre \
+    && ln -sf /usr/lib/jvm/java-21-openjdk/bin/java /usr/local/bin/java
 
 # Copy compiled shared library and server output
 COPY --from=builder /app/shared /app/shared
