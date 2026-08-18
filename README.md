@@ -1,6 +1,20 @@
-# Warden
+<p align="center">
+  <img src="docs/assets/warden_logo.png" width="460" alt="Warden Logo" />
+</p>
 
-**Warden** is an opinionated, flat-designed self-hosted tool built to manage Minecraft servers running on Crafty Controller v4, automate safe daily 4 AM Modrinth mod updates with atomic rollback protection, and provide both web and mobile thin-client interfaces.
+<p align="center">
+  <b>Modern Minecraft Companion Dashboard & Automation Engine</b><br />
+  <i>Lightweight, responsive management web app for Crafty Controller with 1-click Modrinth & .mrpack updates.</i>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/next.js-14-000000?style=flat&logo=next.js&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/typescript-5.x-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/crafty-v4_ready-10B981?style=flat" alt="Crafty Controller" />
+  <img src="https://img.shields.io/badge/modrinth-v2_api-00AF5C?style=flat&logo=modrinth&logoColor=white" alt="Modrinth" />
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat" alt="MIT License" />
+</p>
 
 
 ## Screenshots
