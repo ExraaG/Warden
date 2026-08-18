@@ -259,6 +259,59 @@ export default function DashboardPage() {
     });
   };
 
+  // System Self-Update State
+  const [systemUpdate, setSystemUpdate] = useState<{
+    updateAvailable: boolean;
+    currentCommit: string;
+    latestCommit: string;
+    commitMessage?: string;
+    commitDate?: string;
+    author?: string;
+  } | null>(null);
+  const [showUpdateModal, setShowUpdateModal] = useState<boolean>(false);
+  const [installingUpdate, setInstallingUpdate] = useState<boolean>(false);
+  const [updateProgressMsg, setUpdateProgressMsg] = useState<string>('');
+  const [dismissedUpdateCommit, setDismissedUpdateCommit] = useState<string>('');
+
+  useEffect(() => {
+    fetch('/api/v1/system/update-status')
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && res.data && res.data.updateAvailable) {
+          setSystemUpdate(res.data);
+        }
+      })
+      .catch((err) => console.warn('Update check failed:', err));
+  }, []);
+
+  const handlePerformSelfUpdate = async () => {
+    setInstallingUpdate(true);
+    setUpdateProgressMsg('Safely stopping Minecraft servers and saving world data to /data...');
+    try {
+      const res = await fetch('/api/v1/system/self-update', { method: 'POST' }).then((r) => r.json());
+      if (res.success) {
+        setUpdateProgressMsg('Update initiated! Rebuilding application and restarting in 15 seconds...');
+        showToast('Warden update initiated. Reloading shortly...', 'success');
+        let count = 15;
+        const interval = setInterval(() => {
+          count -= 1;
+          if (count <= 0) {
+            clearInterval(interval);
+            window.location.reload();
+          } else {
+            setUpdateProgressMsg(`Rebuilding Warden... Reconnecting in ${count}s...`);
+          }
+        }, 1000);
+      } else {
+        showToast(`Update error: ${res.error}`, 'error');
+        setInstallingUpdate(false);
+      }
+    } catch (err: any) {
+      setUpdateProgressMsg('Warden restarted. Reconnecting in 10 seconds...');
+      setTimeout(() => window.location.reload(), 10000);
+    }
+  };
+
   // Dev Mode State (Custom Loader & MC Version Override for search/install)
   const [devMode, setDevMode] = useState<boolean>(false);
   const [devLoader, setDevLoader] = useState<ServerLoader>('fabric');
@@ -1531,6 +1584,39 @@ export default function DashboardPage() {
             <Button variant="outline" size="sm" onClick={() => setShowConfirmModal(true)}>
               <WardenIcon name="edit" size={14} className="text-slate-300" />
               Change
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* System Update Available Notification Banner */}
+      {systemUpdate && systemUpdate.updateAvailable && dismissedUpdateCommit !== systemUpdate.latestCommit && (
+        <div className="bg-gradient-to-r from-emerald-950/80 via-emerald-900/30 to-[var(--bg-surface)] border border-emerald-500/40 rounded-xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <WardenIcon name="download" size={16} className="text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-minecraft text-xs font-bold text-emerald-300 uppercase tracking-wider">
+                  New Warden Update Available
+                </span>
+                <span className="bg-emerald-950 text-emerald-300 border border-emerald-800/60 px-1.5 py-0.5 rounded text-[10px] font-mono">
+                  {systemUpdate.latestCommit}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 font-mono mt-0.5 truncate">
+                {systemUpdate.commitMessage || 'Latest bugfixes and improvements ready to install'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <Button variant="ghost" size="sm" onClick={() => setDismissedUpdateCommit(systemUpdate.latestCommit)} className="text-slate-400 hover:text-slate-200 text-xs">
+              Later
+            </Button>
+            <Button variant="primary" size="sm" onClick={() => setShowUpdateModal(true)} className="bg-emerald-500 hover:bg-emerald-400 text-[#0d0e11] font-bold text-xs">
+              <WardenIcon name="download" size={13} className="text-[#0d0e11]" />
+              Update Now
             </Button>
           </div>
         </div>
@@ -5163,6 +5249,81 @@ export default function DashboardPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* System Update Confirmation Modal */}
+      <Modal
+        isOpen={showUpdateModal}
+        onClose={() => !installingUpdate && setShowUpdateModal(false)}
+        title="Install Warden System Update"
+      >
+        <div className="space-y-4">
+          <div className="bg-[var(--bg-main)] p-3.5 rounded-xl border border-[var(--color-border)] space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-slate-400">Current Version</span>
+              <span className="text-slate-200 font-bold">{systemUpdate?.currentCommit || 'Installed'}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-slate-400">Target Release</span>
+              <span className="text-emerald-400 font-bold">{systemUpdate?.latestCommit}</span>
+            </div>
+            {systemUpdate?.commitMessage && (
+              <div className="pt-2 border-t border-[var(--color-border)] text-xs text-slate-300 font-mono">
+                <span className="text-slate-500 block text-[10px] uppercase font-bold mb-0.5">Changelog</span>
+                &quot;{systemUpdate.commitMessage}&quot;
+              </div>
+            )}
+          </div>
+
+          {/* Important Safety & Disclaimer Notice */}
+          <div className="bg-amber-950/20 border border-amber-500/30 rounded-xl p-3.5 space-y-2">
+            <div className="flex items-center gap-2 text-amber-400 font-bold text-xs font-minecraft tracking-wider uppercase">
+              <WardenIcon name="triangle-alert" size={14} className="text-amber-400 shrink-0" />
+              Important Update Notice &amp; Disclaimer
+            </div>
+            <ul className="text-xs text-amber-200/80 font-mono space-y-1.5 pl-4 list-disc leading-relaxed">
+              <li>
+                <strong>All Server Data is Preserved:</strong> All your Minecraft worlds, configs, player inventories, mods, and plugins in <code className="text-amber-300">/data</code> are 100% safe and will NOT be modified.
+              </li>
+              <li>
+                <strong>Servers Gracefully Stopped:</strong> Any currently active Minecraft servers will be safely stopped before updating to flush world chunk saves and avoid any corrupted save states.
+              </li>
+              <li>
+                <strong>Rebuild Sequence:</strong> Warden will pull the latest release from GitHub, build the application, and restart the service automatically.
+              </li>
+            </ul>
+          </div>
+
+          {installingUpdate && (
+            <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 flex items-center gap-3 animate-pulse">
+              <WardenIcon name="refresh-cw" size={16} className="text-emerald-400 animate-spin shrink-0" />
+              <span className="text-xs text-emerald-300 font-mono">
+                {updateProgressMsg || 'Saving server worlds, pulling release, and rebuilding...'}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={installingUpdate}
+              onClick={() => setShowUpdateModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              isLoading={installingUpdate}
+              onClick={handlePerformSelfUpdate}
+              className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold"
+            >
+              <WardenIcon name="download" size={14} className="text-black" />
+              Confirm &amp; Install Update
+            </Button>
+          </div>
+        </div>
       </Modal>
 
     </div>

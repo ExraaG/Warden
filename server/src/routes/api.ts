@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { serverManager } from '../core/serverManager.js';
 import { VersionFetcher } from '../core/versionFetcher.js';
+import { SystemUpdater } from '../core/systemUpdater.js';
 import { modrinthAdapter } from '../adapters/modrinth.js';
 import { mrPackAdapter } from '../adapters/mrpack.js';
 import { updateJobRunner } from '../jobs/cron.js';
@@ -495,4 +496,23 @@ apiRouter.post('/v1/settings', authMiddleware, (req: Request, res: Response) => 
   const updated = db.updateSettings(req.body);
   updateJobRunner.reloadCronSchedules();
   res.json({ success: true, data: updated } as ApiResponse<any>);
+});
+
+// 24. System Self-Update & GitHub Release Check
+apiRouter.get('/v1/system/update-status', async (_req: Request, res: Response) => {
+  try {
+    const status = await SystemUpdater.checkUpdate();
+    res.json({ success: true, data: status } as ApiResponse<any>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+apiRouter.post('/v1/system/self-update', authMiddleware, async (_req: Request, res: Response) => {
+  try {
+    const result = await SystemUpdater.performSelfUpdate();
+    res.json({ success: true, data: result } as ApiResponse<any>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
 });
