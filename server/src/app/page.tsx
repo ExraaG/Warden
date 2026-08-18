@@ -3757,6 +3757,33 @@ export default function DashboardPage() {
             )}
           </Card>
 
+          {/* Android Mobile Client Card */}
+          <Card
+            header="Android Mobile App"
+            badge={
+              <span className="bg-emerald-950 text-[var(--color-accent)] border border-emerald-800/60 px-2 py-0.5 rounded text-[10px] font-minecraft uppercase font-bold tracking-wider">
+                Coming Soon
+              </span>
+            }
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="font-semibold text-xs text-slate-200">
+                  Native Android Companion for Warden
+                </div>
+                <p className="text-xs text-slate-400 font-mono leading-relaxed max-w-xl">
+                  A lightweight Android client for Warden is currently in development. It will support real-time push notifications for server crash alerts &amp; mod updates, live console streaming, and remote server power controls on the go.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-main)] border border-[var(--color-border)] text-xs text-slate-300 font-mono">
+                  <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
+                  In Development
+                </span>
+              </div>
+            </div>
+          </Card>
+
           {/* Danger Zone: Delete Server */}
           {server && (
             <Card className="p-5 sm:p-6 border-red-900/40 bg-red-950/10 space-y-4">

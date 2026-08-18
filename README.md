@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/next.js-14-000000?style=flat&logo=next.js&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/typescript-5.x-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/modrinth-v2_api-00AF5C?style=flat&logo=modrinth&logoColor=white" alt="Modrinth" />
+  <img src="https://img.shields.io/badge/Android%20Client-Coming%20Soon-3DDC84?style=flat&logo=android&logoColor=white" alt="Android Client Coming Soon" />
   <img src="https://img.shields.io/badge/license-GNUv3-blue.svg?style=flat" alt="GNUv3 License" />
 </p>
 
@@ -61,6 +62,8 @@
   - **Automatic Rollback**: If server fails to reach `online` status or crashes after updates, automatically restores pre-update backup and restarts the server safely.
 - **Single Docker Container Deployment**:
   - Runs Express API + Next.js frontend + Java OpenJDK runtime in a single lightweight unit mounting `./data:/data`.
+- **Android Companion App (Coming Soon)**:
+  - Native React Native / Android client for remote server controls, real-time push alerts on crashes/updates, and live monitoring from anywhere.
 
 
 ## Repo Structure
