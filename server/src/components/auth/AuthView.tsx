@@ -258,8 +258,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0d0e11] flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-sm relative z-10 my-auto">
+    <div className="fixed inset-0 z-50 bg-[#0d0e11] flex items-start sm:items-center justify-center p-4 pt-14 sm:pt-0 overflow-y-auto">
+      <div className="w-full max-w-sm relative z-10 sm:-translate-y-12 my-auto">
         {/* Official Logo Outside UI Box */}
         <div className="text-center mb-4">
           <img
@@ -291,7 +291,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   autoFocus={!requires2FA}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
+                  placeholder="NotchGamer"
                   className="w-full h-9 sm:h-10 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60 focus:border-[var(--color-accent)] font-mono transition-all"
                 />
               </div>
@@ -393,7 +393,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   autoFocus
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
+                  placeholder="NotchGamer"
                   className="w-full h-9 sm:h-10 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60 focus:border-[var(--color-accent)] font-mono transition-all"
                 />
               </div>
