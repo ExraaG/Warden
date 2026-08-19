@@ -260,16 +260,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
   return (
     <div className="fixed inset-0 z-50 bg-[#0d0e11] flex items-center justify-center p-4 overflow-y-auto">
       <div className="w-full max-w-sm relative z-10 my-auto">
-        <Card className="p-6 bg-[var(--bg-surface)] border-[var(--color-border)] space-y-5">
-          {/* Official Logo */}
-          <div className="text-center pb-1">
-            <img
-              src="/warden_logo.png"
-              alt="Warden"
-              className="h-8 mx-auto object-contain select-none"
-            />
-          </div>
+        {/* Official Logo Outside UI Box */}
+        <div className="text-center mb-4">
+          <img
+            src="/warden_logo.png"
+            alt="Warden"
+            className="h-8 sm:h-9 mx-auto object-contain select-none"
+          />
+        </div>
 
+        <Card className="p-6 bg-[var(--bg-surface)] border-[var(--color-border)] space-y-5">
           {/* Error Banner */}
           {errorMessage && (
             <div className="bg-red-950/40 border border-red-500/40 rounded-lg p-3 text-xs text-red-300 font-mono flex items-start gap-2.5">
@@ -291,8 +291,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   autoFocus={!requires2FA}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin"
-                  className="w-full h-9 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60 font-mono transition-colors"
+                  placeholder="Enter username"
+                  className="w-full h-9 sm:h-10 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60 focus:border-[var(--color-accent)] font-mono transition-all"
                 />
               </div>
 
@@ -304,7 +304,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
+                  placeholder="Enter password"
                 />
               </div>
 
@@ -336,7 +336,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                       value={recoveryCode}
                       onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
                       placeholder="XXXX-XXXX-XXXX-XXXX"
-                      className="w-full h-9 bg-[var(--bg-surface)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 font-mono uppercase tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                      className="w-full h-9 sm:h-10 bg-[var(--bg-surface)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 font-mono uppercase tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
                     />
                   ) : (
                     <input
@@ -347,7 +347,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                       value={totpCode}
                       onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
                       placeholder="123456"
-                      className="w-full h-9 bg-[var(--bg-surface)] border border-[var(--color-border)] px-3 rounded-md text-base text-slate-100 font-mono tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                      className="w-full h-9 sm:h-10 bg-[var(--bg-surface)] border border-[var(--color-border)] px-3 rounded-md text-base text-slate-100 font-mono tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
                     />
                   )}
                 </div>
@@ -358,7 +358,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                 variant="primary"
                 size="md"
                 isLoading={loading}
-                className="w-full font-minecraft text-xs justify-center py-2"
+                className="w-full font-minecraft text-xs justify-center py-2.5"
               >
                 <WardenIcon name="check" size={14} className="text-[#0d0e11]" />
                 {requires2FA ? 'Verify & Log In' : 'Log In'}
@@ -393,8 +393,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   autoFocus
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin"
-                  className="w-full h-9 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60"
+                  placeholder="Enter username"
+                  className="w-full h-9 sm:h-10 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60 focus:border-[var(--color-accent)] font-mono transition-all"
                 />
               </div>
 
@@ -406,7 +406,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
+                  placeholder="Enter password"
                 />
               </div>
 
@@ -418,7 +418,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repeat password"
+                  placeholder="Confirm password"
                 />
               </div>
 
