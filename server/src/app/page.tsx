@@ -359,6 +359,8 @@ export default function DashboardPage() {
               setServerId('');
               setServer(null);
               localStorage.removeItem('warden_selected_server_id');
+              window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: '' }));
+              window.dispatchEvent(new CustomEvent('warden_server_updated'));
             }
             loadAllServers();
           } else {
@@ -3660,35 +3662,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Crafty API URL & Key */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1">
-                        Crafty Controller URL
-                      </label>
-                      <input
-                        type="text"
-                        value={craftyUrl}
-                        onChange={(e) => setCraftyUrl(e.target.value)}
-                        placeholder="https://your-crafty-host:8443 or https://host.docker.internal:8443"
-                        className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs text-slate-100 font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1">
-                        Crafty API Key <span className="text-slate-500 font-normal">(leave blank to keep current)</span>
-                      </label>
-                      <input
-                        type="password"
-                        value={craftyApiKey}
-                        onChange={(e) => setCraftyApiKey(e.target.value)}
-                        placeholder="••••••••••••••••"
-                        className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs text-slate-100 font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50"
-                      />
-                    </div>
-                  </div>
-
                   <div className="flex items-center gap-3 pt-2">
                     <Button type="submit" variant="primary" size="sm" isLoading={savingSettings}>
                       <WardenIcon name="save" size={14} className="text-[#0d0e11]" />
@@ -5170,52 +5143,52 @@ export default function DashboardPage() {
         }}
         title={createModalTab === 'import' ? 'Import Minecraft Server (.zip)' : 'Create Minecraft Server'}
       >
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Mode Switcher Tabs */}
-          <div className="flex items-center bg-[var(--bg-main)] p-1 rounded-lg border border-[var(--color-border)] gap-1">
+          <div className="flex items-center bg-[var(--bg-main)] p-1 rounded-xl border border-[var(--color-border)] gap-1.5">
             <button
               type="button"
               onClick={() => setCreateModalTab('install')}
-              className={`flex-1 py-1.5 px-3 rounded-md text-xs font-minecraft font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 px-3.5 rounded-lg text-xs font-minecraft font-bold transition-all flex items-center justify-center gap-2 ${
                 createModalTab === 'install'
                   ? 'bg-[var(--color-accent)] text-[#0d0e11] shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
               }`}
             >
-              <WardenIcon name="plus" size={13} className={createModalTab === 'install' ? 'text-[#0d0e11]' : 'text-slate-400'} />
-              New Installation
+              <WardenIcon name="plus" size={14} className={createModalTab === 'install' ? 'text-[#0d0e11]' : 'text-slate-400'} />
+              New Server
             </button>
             <button
               type="button"
               onClick={() => setCreateModalTab('import')}
-              className={`flex-1 py-1.5 px-3 rounded-md text-xs font-minecraft font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 px-3.5 rounded-lg text-xs font-minecraft font-bold transition-all flex items-center justify-center gap-2 ${
                 createModalTab === 'import'
                   ? 'bg-[var(--color-accent)] text-[#0d0e11] shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
               }`}
             >
-              <WardenIcon name="upload" size={13} className={createModalTab === 'import' ? 'text-[#0d0e11]' : 'text-slate-400'} />
-              Import Backup (.zip)
+              <WardenIcon name="upload" size={14} className={createModalTab === 'import' ? 'text-[#0d0e11]' : 'text-slate-400'} />
+              Import Server (.zip)
             </button>
           </div>
 
           {createModalTab === 'install' ? (
             <form onSubmit={handleCreateServer} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Server Name</label>
+                <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5 font-mono">Server Name</label>
                 <input
                   type="text"
                   required
                   value={createForm.name}
                   onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                   placeholder="e.g. Survival SMP"
-                  className="w-full h-8 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 font-mono transition-colors"
+                  className="w-full h-9 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 font-mono transition-colors"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Server Type</label>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5 font-mono">Server Type</label>
                   <Dropdown
                     options={CREATE_LOADER_OPTIONS}
                     selectedId={createForm.loader}
@@ -5225,8 +5198,8 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-semibold uppercase text-slate-400">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[11px] font-semibold uppercase text-slate-400 font-mono">
                       {customVersionMode ? 'MC Version (Custom)' : 'MC Version'}
                     </label>
                     <button
@@ -5244,8 +5217,8 @@ export default function DashboardPage() {
                       required
                       value={createForm.mcVersion}
                       onChange={(e) => setCreateForm({ ...createForm, mcVersion: e.target.value })}
-                      placeholder="e.g. 1.21.1, 26.2, 25w06a"
-                      className="w-full h-8 bg-[var(--bg-main)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 font-mono"
+                      placeholder="e.g. 26.2, 1.21.1, 25w06a"
+                      className="w-full h-9 bg-[var(--bg-main)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 font-mono"
                     />
                   ) : (
                     <Dropdown
@@ -5260,9 +5233,9 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3.5">
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Server Port</label>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5 font-mono">Server Port</label>
                   <NumberInput
                     value={createForm.port}
                     onChange={(val) => setCreateForm({ ...createForm, port: parseInt(val, 10) || 25565 })}
@@ -5272,7 +5245,7 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Min RAM (Heap)</label>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5 font-mono">Min RAM (Heap)</label>
                   <Dropdown
                     options={CREATE_MIN_RAM_OPTIONS}
                     selectedId={createForm.minMemory}
@@ -5281,7 +5254,7 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Max RAM (Heap)</label>
+                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5 font-mono">Max RAM (Heap)</label>
                   <Dropdown
                     options={CREATE_MAX_RAM_OPTIONS}
                     selectedId={createForm.maxMemory}
@@ -5294,7 +5267,7 @@ export default function DashboardPage() {
               {/* Custom Emerald Styled Checkbox */}
               <div
                 onClick={() => setCreateForm((prev) => ({ ...prev, autoStart: !prev.autoStart }))}
-                className="flex items-center gap-2.5 pt-1.5 cursor-pointer select-none group"
+                className="flex items-center gap-2.5 pt-2 cursor-pointer select-none group"
               >
                 <div
                   className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${createForm.autoStart
@@ -5313,24 +5286,24 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
-                <Button variant="outline" size="sm" type="button" onClick={() => setShowCreateModal(false)}>
+              <div className="flex items-center justify-end gap-3 pt-5 border-t border-[var(--color-border)] mt-4">
+                <Button variant="outline" size="md" type="button" onClick={() => setShowCreateModal(false)} className="px-4 font-mono text-xs">
                   Cancel
                 </Button>
-                <Button variant="primary" size="sm" type="submit" isLoading={creatingServer}>
+                <Button variant="primary" size="md" type="submit" isLoading={creatingServer} className="px-5 font-minecraft text-xs">
                   <WardenIcon name="download" size={14} className="text-[#0d0e11]" />
-                  Install & Create Server
+                  Install &amp; Create Server
                 </Button>
               </div>
             </form>
           ) : (
             <form onSubmit={handleImportServer} className="space-y-4">
-              <div className="bg-[var(--bg-main)] p-3 rounded-lg border border-[var(--color-border)] text-xs text-slate-300 font-mono leading-relaxed flex items-start gap-2.5">
+              <div className="bg-[var(--bg-main)] p-3.5 rounded-lg border border-[var(--color-border)] text-xs text-slate-300 font-mono leading-relaxed flex items-start gap-2.5">
                 <WardenIcon name="upload" size={16} className="text-[var(--color-accent)] shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold text-slate-100">Crafty & Generic Zip Support:</span>
+                  <span className="font-bold text-slate-100">Minecraft Server Archive (.zip) Support:</span>
                   <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">
-                    Upload any Minecraft server archive. Warden automatically unpacks nested directories, detects your modloader (Paper, Fabric, Purpur, Forge, Spigot), finds your executable JAR, and configures the port.
+                    Upload any Minecraft server archive. Warden automatically unpacks nested directories, detects your modloader (Paper, Fabric, Purpur, Forge, Spigot, Vanilla), finds your executable JAR, and configures the port.
                   </p>
                 </div>
               </div>
@@ -5484,10 +5457,10 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--color-border)]">
+              <div className="flex items-center justify-end gap-3 pt-5 border-t border-[var(--color-border)] mt-4">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="md"
                   type="button"
                   disabled={importingServer}
                   onClick={() => {
@@ -5495,15 +5468,17 @@ export default function DashboardPage() {
                     setImportFile(null);
                     setImportName('');
                   }}
+                  className="px-4 font-mono text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   variant="primary"
-                  size="sm"
+                  size="md"
                   type="submit"
                   isLoading={importingServer}
                   disabled={!importFile || importingServer}
+                  className="px-5 font-minecraft text-xs"
                 >
                   <WardenIcon name="upload" size={14} className="text-[#0d0e11]" />
                   Import Server

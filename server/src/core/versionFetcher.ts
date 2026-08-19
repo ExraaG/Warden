@@ -54,18 +54,14 @@ export class VersionFetcher {
     return cached?.versions || this.getFallbackVersions();
   }
 
-  private static formatSublabel(v: string, isFirst: boolean): string | undefined {
-    if (v.startsWith('26.')) return 'Snapshot (Requires Java 25+)';
-    if (v === '1.21.1') return isFirst ? 'Latest Release (Recommended)' : 'Recommended Release';
-    if (v === '1.21') return 'Tricky Trials';
-    if (v === '1.20.6') return 'Armored Paws';
-    if (v === '1.20.4') return 'Popular Modding Standard';
-    if (v === '1.20.1') return 'LTS Standard';
-    if (v === '1.19.4') return 'Trails & Tales';
-    if (v === '1.19.2') return 'The Wild Update';
-    if (v === '1.18.2') return 'Caves & Cliffs II';
-    if (v === '1.16.5') return 'Nether Update';
+  private static formatSublabel(v: string, isFirst: boolean, isStable = true): string | undefined {
+    if (!isStable || v.includes('snapshot') || v.includes('-pre') || v.includes('-rc') || v.includes('w')) {
+      return 'Snapshot / Experimental';
+    }
     if (isFirst) return 'Latest Release';
+    if (v === '1.21.1') return 'Popular Release';
+    if (v === '1.20.1') return 'LTS Modding Standard';
+    if (v === '1.16.5') return 'Nether Update';
     return undefined;
   }
 
@@ -77,12 +73,15 @@ export class VersionFetcher {
     const rawVersions: string[] = data.versions || [];
     
     // Reverse so latest is first
-    return rawVersions.slice().reverse().map((v, i) => ({
-      id: v,
-      label: v,
-      sublabel: this.formatSublabel(v, i === 0),
-      isStable: !v.includes('pre') && !v.includes('rc') && !v.includes('snapshot'),
-    }));
+    return rawVersions.slice().reverse().map((v, i) => {
+      const isStable = !v.includes('pre') && !v.includes('rc') && !v.includes('snapshot');
+      return {
+        id: v,
+        label: v,
+        sublabel: this.formatSublabel(v, i === 0, isStable),
+        isStable,
+      };
+    });
   }
 
   // 2. PurpurMC API
@@ -92,12 +91,15 @@ export class VersionFetcher {
     const data: any = await res.json();
     const rawVersions: string[] = data.versions || [];
 
-    return rawVersions.slice().reverse().map((v, i) => ({
-      id: v,
-      label: v,
-      sublabel: this.formatSublabel(v, i === 0),
-      isStable: true,
-    }));
+    return rawVersions.slice().reverse().map((v, i) => {
+      const isStable = !v.includes('pre') && !v.includes('rc') && !v.includes('snapshot');
+      return {
+        id: v,
+        label: v,
+        sublabel: this.formatSublabel(v, i === 0, isStable),
+        isStable,
+      };
+    });
   }
 
   // 3. Fabric Meta API
@@ -111,7 +113,7 @@ export class VersionFetcher {
     return releases.map((item: any, i: number) => ({
       id: item.version,
       label: item.version,
-      sublabel: this.formatSublabel(item.version, i === 0),
+      sublabel: this.formatSublabel(item.version, i === 0, item.stable),
       isStable: item.stable,
     }));
   }
@@ -127,7 +129,7 @@ export class VersionFetcher {
     return releases.map((item: any, i: number) => ({
       id: item.version,
       label: item.version,
-      sublabel: this.formatSublabel(item.version, i === 0),
+      sublabel: this.formatSublabel(item.version, i === 0, item.stable),
       isStable: item.stable,
     }));
   }
@@ -143,14 +145,19 @@ export class VersionFetcher {
     return releases.map((v, i) => ({
       id: v.id,
       label: v.id,
-      sublabel: this.formatSublabel(v.id, i === 0),
+      sublabel: this.formatSublabel(v.id, i === 0, true),
       isStable: true,
     }));
   }
 
   private static getFallbackVersions(): MCVersionInfo[] {
     return [
-      { id: '1.21.1', label: '1.21.1', sublabel: 'Latest Release (Recommended)', isStable: true },
+      { id: '26.2', label: '26.2', sublabel: 'Latest Release', isStable: true },
+      { id: '26.1.2', label: '26.1.2', isStable: true },
+      { id: '26.1.1', label: '26.1.1', isStable: true },
+      { id: '26.1', label: '26.1', isStable: true },
+      { id: '1.21.4', label: '1.21.4', isStable: true },
+      { id: '1.21.1', label: '1.21.1', sublabel: 'Popular Release', isStable: true },
       { id: '1.21', label: '1.21', sublabel: 'Tricky Trials', isStable: true },
       { id: '1.20.6', label: '1.20.6', sublabel: 'Armored Paws', isStable: true },
       { id: '1.20.4', label: '1.20.4', sublabel: 'Popular Modding Standard', isStable: true },

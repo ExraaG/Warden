@@ -283,13 +283,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     fetch('/api/v1/servers')
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+        if (data.success && Array.isArray(data.data)) {
           setServers(data.data);
-          const savedId = localStorage.getItem('warden_selected_server_id');
-          if (savedId && data.data.some((s: WardenServer) => s.id === savedId)) {
-            setSelectedServerId(savedId);
+          if (data.data.length > 0) {
+            const savedId = localStorage.getItem('warden_selected_server_id');
+            if (savedId && data.data.some((s: WardenServer) => s.id === savedId)) {
+              setSelectedServerId(savedId);
+            } else {
+              setSelectedServerId(data.data[0].id);
+              localStorage.setItem('warden_selected_server_id', data.data[0].id);
+            }
           } else {
-            setSelectedServerId(data.data[0].id);
+            setSelectedServerId('');
+            localStorage.removeItem('warden_selected_server_id');
           }
         }
       })
@@ -304,9 +310,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     const handleUpdate = () => loadServers();
     const handleTriggerUpdateModal = () => setShowUpdateModal(true);
     const handleAuthChanged = () => checkAuth();
+    const handleServerChanged = (e: any) => {
+      if (e.detail) {
+        setSelectedServerId(e.detail);
+      } else {
+        setSelectedServerId('');
+      }
+    };
 
     window.addEventListener('warden_server_updated', handleUpdate);
-    window.addEventListener('warden_server_changed', handleUpdate);
+    window.addEventListener('warden_server_changed', handleServerChanged);
     window.addEventListener('warden_open_update_modal', handleTriggerUpdateModal);
     window.addEventListener('warden_auth_changed', handleAuthChanged);
 
@@ -316,7 +329,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
     return () => {
       window.removeEventListener('warden_server_updated', handleUpdate);
-      window.removeEventListener('warden_server_changed', handleUpdate);
+      window.removeEventListener('warden_server_changed', handleServerChanged);
       window.removeEventListener('warden_open_update_modal', handleTriggerUpdateModal);
       window.removeEventListener('warden_auth_changed', handleAuthChanged);
       clearInterval(updateInterval);
@@ -334,7 +347,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: option.id }));
   };
 
-  const dropdownOptions: DropdownOption[] = [
+  const dropdownOptions: DropdownOption[] = servers.length > 0 ? [
     ...servers.map((s) => {
       const loaderName = (s.detection?.loader && s.detection.loader !== 'unknown' ? s.detection.loader : 'fabric').toUpperCase();
       const versionNum = s.detection?.mcVersion || '1.21.1';
@@ -350,7 +363,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       label: '+ Create New Server',
       sublabel: 'Install Vanilla, Fabric, or Paper',
     },
-  ];
+  ] : [];
 
   const navItems: { href: string; label: string; icon: WardenIconName }[] = [
     { href: '/', label: 'Dashboard', icon: 'box' },

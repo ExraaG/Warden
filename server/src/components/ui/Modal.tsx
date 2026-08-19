@@ -19,7 +19,7 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   footer,
-  maxWidth = 'md',
+  maxWidth = 'xl',
 }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -54,15 +54,15 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   const modalContent = (
-    <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 w-full h-full min-h-screen z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
+    <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 w-full h-full min-h-screen z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md">
       <div
         className={clsx(
           'w-full bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150',
           maxWidths[maxWidth]
         )}
       >
-        <div className="px-4 sm:px-5 py-3.5 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--bg-card)] shrink-0">
-          <h3 className="text-xs sm:text-sm font-bold tracking-tight text-slate-100 flex items-center gap-2 truncate">
+        <div className="px-5 sm:px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--bg-card)] shrink-0">
+          <h3 className="text-xs sm:text-sm font-bold tracking-tight text-slate-100 flex items-center gap-2 truncate font-minecraft">
             <span className="truncate">{title}</span>
           </h3>
           <Button variant="ghost" size="sm" onClick={onClose} className="p-1 border-none text-slate-400 hover:text-white shrink-0">
@@ -70,12 +70,12 @@ export const Modal: React.FC<ModalProps> = ({
           </Button>
         </div>
 
-        <div id="modal-scroll-container" className="p-4 sm:p-5 text-xs sm:text-sm text-slate-200 overflow-y-auto flex-1 min-h-0">
+        <div id="modal-scroll-container" className="p-5 sm:p-6 text-xs sm:text-sm text-slate-200 overflow-y-auto flex-1 min-h-0">
           {children}
         </div>
 
         {footer && (
-          <div className="px-4 sm:px-5 py-3 border-t border-[var(--color-border)] bg-[var(--bg-main)] flex flex-wrap items-center justify-end gap-2 sm:gap-2.5 shrink-0">
+          <div className="px-5 sm:px-6 py-3.5 border-t border-[var(--color-border)] bg-[var(--bg-main)] flex flex-wrap items-center justify-end gap-2.5 sm:gap-3 shrink-0">
             {footer}
           </div>
         )}
