@@ -249,13 +249,11 @@ apiRouter.get('/v1/servers/:id/mods', authMiddleware, async (req: Request, res: 
   }
 });
 
-// 7. Modrinth Search
+// 7. Modrinth Search (Global & Server-Scoped)
 apiRouter.get('/v1/mods/search', authMiddleware, async (req: Request, res: Response) => {
-  const query = (req.query.query as string) || '';
+  const query = (req.query.query as string) || (req.query.q as string) || '';
   const loader = req.query.loader as string;
-  const mcVersion = req.query.version as string;
-  const offset = parseInt((req.query.offset as string) || '0', 10);
-  const limit = parseInt((req.query.limit as string) || '20', 10);
+  const mcVersion = (req.query.version as string) || (req.query.mcVersion as string);
 
   try {
     const results = await modrinthAdapter.searchMods(query, loader as ServerLoader, mcVersion);
@@ -265,13 +263,61 @@ apiRouter.get('/v1/mods/search', authMiddleware, async (req: Request, res: Respo
   }
 });
 
-// 8. Modrinth Versions
+apiRouter.get('/v1/servers/:id/mods/search', authMiddleware, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const query = (req.query.query as string) || (req.query.q as string) || '';
+  let loader = req.query.loader as string;
+  let mcVersion = (req.query.version as string) || (req.query.mcVersion as string);
+
+  try {
+    const srv = await serverManager.getServer(id);
+    if (!loader && srv?.detection?.loader && srv.detection.loader !== 'unknown') {
+      loader = srv.detection.loader;
+    }
+    if (!mcVersion && srv?.detection?.mcVersion && srv.detection.mcVersion !== 'unknown') {
+      mcVersion = srv.detection.mcVersion;
+    }
+
+    const results = await modrinthAdapter.searchMods(query, loader as ServerLoader, mcVersion);
+    res.json({ success: true, data: results } as ApiResponse<any>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 8. Modrinth Versions (Global & Server-Scoped)
 apiRouter.get('/v1/mods/:projectId/versions', authMiddleware, async (req: Request, res: Response) => {
   const { projectId } = req.params;
   const loader = req.query.loader as ServerLoader;
-  const mcVersion = req.query.version as string;
+  const mcVersion = (req.query.version as string) || (req.query.mcVersion as string);
 
   try {
+    const versions = await modrinthAdapter.getProjectVersions(projectId, loader, mcVersion);
+    res.json({ success: true, data: versions } as ApiResponse<any>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+apiRouter.get('/v1/servers/:id/mods/versions', authMiddleware, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const projectId = (req.query.projectId as string) || (req.query.id as string);
+  let loader = req.query.loader as ServerLoader;
+  let mcVersion = (req.query.version as string) || (req.query.mcVersion as string);
+
+  if (!projectId) {
+    return res.status(400).json({ success: false, error: 'projectId is required' } as ApiResponse<null>);
+  }
+
+  try {
+    const srv = await serverManager.getServer(id);
+    if (!loader && srv?.detection?.loader && srv.detection.loader !== 'unknown') {
+      loader = srv.detection.loader;
+    }
+    if (!mcVersion && srv?.detection?.mcVersion && srv.detection.mcVersion !== 'unknown') {
+      mcVersion = srv.detection.mcVersion;
+    }
+
     const versions = await modrinthAdapter.getProjectVersions(projectId, loader, mcVersion);
     res.json({ success: true, data: versions } as ApiResponse<any>);
   } catch (err: any) {

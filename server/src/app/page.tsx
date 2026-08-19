@@ -1902,8 +1902,8 @@ export default function DashboardPage() {
                     key={tab.id}
                     onClick={() => handleTabClick(tab.id as TabType)}
                     className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-md font-minecraft text-[11px] sm:text-xs flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 whitespace-nowrap ${isActive
-                        ? 'bg-[var(--color-accent)] text-[#0d0e11] font-bold shadow-sm'
-                        : 'bg-[var(--bg-surface)] text-slate-300 hover:text-slate-100 hover:bg-[var(--bg-card)] border border-[var(--color-border)]'
+                      ? 'bg-[var(--color-accent)] text-[#0d0e11] font-bold shadow-sm'
+                      : 'bg-[var(--bg-surface)] text-slate-300 hover:text-slate-100 hover:bg-[var(--bg-card)] border border-[var(--color-border)]'
                       }`}
                   >
                     <WardenIcon name={tab.icon as any} size={14} className={isActive ? 'text-[#0d0e11]' : 'text-slate-400'} />
@@ -2006,8 +2006,8 @@ export default function DashboardPage() {
                         >
                           <span
                             className={`w-3.5 h-3.5 rounded-full absolute top-[3px] transition-all ${devMode
-                                ? 'left-[19px] bg-white shadow-sm'
-                                : 'left-[3px] bg-red-500 shadow-[0_0_6px_#ef4444]'
+                              ? 'left-[19px] bg-white shadow-sm'
+                              : 'left-[3px] bg-red-500 shadow-[0_0_6px_#ef4444]'
                               }`}
                           />
                         </button>
@@ -2550,7 +2550,7 @@ export default function DashboardPage() {
                     Server Properties Editor
                   </h2>
                   <p className="text-xs sm:text-sm text-slate-400 mt-1.5 leading-relaxed">
-                    Visual controls for <code className="font-mono text-slate-200 bg-[var(--bg-main)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">server.properties</code>. Changes will update your Minecraft server configuration.
+                    Visual controls for <code className="font-mono text-slate-200 bg-[var(--bg-main)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">server.properties</code> Changes will update your Minecraft server configuration.
                   </p>
                 </div>
               </Card>
@@ -3026,8 +3026,8 @@ export default function DashboardPage() {
                             key={file.name}
                             onClick={() => isDirectory ? navigateInto(file.name) : handleOpenFile(file.name)}
                             className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all border ${isSelected
-                                ? 'bg-[var(--accent-dim)] border-[var(--accent-border)] text-[var(--color-accent)]'
-                                : 'bg-[var(--bg-main)] border-transparent hover:border-[var(--color-border)] hover:bg-[var(--bg-card)] text-slate-200'
+                              ? 'bg-[var(--accent-dim)] border-[var(--accent-border)] text-[var(--color-accent)]'
+                              : 'bg-[var(--bg-main)] border-transparent hover:border-[var(--color-border)] hover:bg-[var(--bg-card)] text-slate-200'
                               }`}
                           >
                             <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -3338,8 +3338,8 @@ export default function DashboardPage() {
                                 commandInputRef.current?.focus();
                               }}
                               className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-mono flex items-center justify-between transition-colors ${isHighlighted
-                                  ? 'bg-[var(--accent-dim)] text-[var(--color-accent)] font-bold'
-                                  : 'text-slate-200 hover:bg-[var(--bg-card)]'
+                                ? 'bg-[var(--accent-dim)] text-[var(--color-accent)] font-bold'
+                                : 'text-slate-200 hover:bg-[var(--bg-card)]'
                                 }`}
                             >
                               <div className="flex items-center gap-2 min-w-0">
@@ -3735,8 +3735,8 @@ export default function DashboardPage() {
                             >
                               <span
                                 className={`w-3.5 h-3.5 rounded-full absolute top-[3px] transition-all ${task.enabled
-                                    ? 'left-[19px] bg-[#0d0e11] shadow-sm'
-                                    : 'left-[3px] bg-slate-400'
+                                  ? 'left-[19px] bg-[#0d0e11] shadow-sm'
+                                  : 'left-[3px] bg-slate-400'
                                   }`}
                               />
                             </button>
@@ -4718,8 +4718,8 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => setMrPackIncludeMods(!mrPackIncludeMods)}
                         className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all text-left select-none ${mrPackIncludeMods
-                            ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/40 text-slate-100 shadow-sm'
-                            : 'bg-[var(--bg-main)] border-[var(--color-border)] text-slate-400 hover:border-slate-600'
+                          ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/40 text-slate-100 shadow-sm'
+                          : 'bg-[var(--bg-main)] border-[var(--color-border)] text-slate-400 hover:border-slate-600'
                           }`}
                       >
                         <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${mrPackIncludeMods ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]' : 'border-[var(--color-border)] bg-[var(--bg-card)]'
@@ -4737,8 +4737,8 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => setMrPackIncludeDatapacks(!mrPackIncludeDatapacks)}
                         className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all text-left select-none ${mrPackIncludeDatapacks
-                            ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/40 text-slate-100 shadow-sm'
-                            : 'bg-[var(--bg-main)] border-[var(--color-border)] text-slate-400 hover:border-slate-600'
+                          ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/40 text-slate-100 shadow-sm'
+                          : 'bg-[var(--bg-main)] border-[var(--color-border)] text-slate-400 hover:border-slate-600'
                           }`}
                       >
                         <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${mrPackIncludeDatapacks ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]' : 'border-[var(--color-border)] bg-[var(--bg-card)]'
@@ -4756,8 +4756,8 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => setMrPackIncludeOverrides(!mrPackIncludeOverrides)}
                         className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all text-left select-none ${mrPackIncludeOverrides
-                            ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/40 text-slate-100 shadow-sm'
-                            : 'bg-[var(--bg-main)] border-[var(--color-border)] text-slate-400 hover:border-slate-600'
+                          ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/40 text-slate-100 shadow-sm'
+                          : 'bg-[var(--bg-main)] border-[var(--color-border)] text-slate-400 hover:border-slate-600'
                           }`}
                       >
                         <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${mrPackIncludeOverrides ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]' : 'border-[var(--color-border)] bg-[var(--bg-card)]'
@@ -4775,8 +4775,8 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => setMrPackIncludeResourcePacks(!mrPackIncludeResourcePacks)}
                         className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all text-left select-none ${mrPackIncludeResourcePacks
-                            ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/40 text-slate-100 shadow-sm'
-                            : 'bg-[var(--bg-main)] border-[var(--color-border)] text-slate-400 hover:border-slate-600'
+                          ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/40 text-slate-100 shadow-sm'
+                          : 'bg-[var(--bg-main)] border-[var(--color-border)] text-slate-400 hover:border-slate-600'
                           }`}
                       >
                         <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${mrPackIncludeResourcePacks ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]' : 'border-[var(--color-border)] bg-[var(--bg-card)]'
@@ -4794,8 +4794,8 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => setMrPackIncludeShaderPacks(!mrPackIncludeShaderPacks)}
                         className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all text-left select-none ${mrPackIncludeShaderPacks
-                            ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/40 text-slate-100 shadow-sm'
-                            : 'bg-[var(--bg-main)] border-[var(--color-border)] text-slate-400 hover:border-slate-600'
+                          ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/40 text-slate-100 shadow-sm'
+                          : 'bg-[var(--bg-main)] border-[var(--color-border)] text-slate-400 hover:border-slate-600'
                           }`}
                       >
                         <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${mrPackIncludeShaderPacks ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]' : 'border-[var(--color-border)] bg-[var(--bg-card)]'
@@ -4869,18 +4869,18 @@ export default function DashboardPage() {
                             }
                           }}
                           className={`p-2.5 rounded-lg border transition-all flex items-start gap-3 select-none ${!categoryEnabled
-                              ? 'bg-[var(--bg-main)]/30 border-dashed border-[var(--color-border)]/40 opacity-40 cursor-not-allowed'
-                              : isChecked
-                                ? 'bg-[var(--bg-main)] border-[var(--color-border)] hover:border-[var(--color-accent)]/40 cursor-pointer'
-                                : 'bg-[var(--bg-main)]/50 border-[var(--color-border)]/40 opacity-50 cursor-pointer'
+                            ? 'bg-[var(--bg-main)]/30 border-dashed border-[var(--color-border)]/40 opacity-40 cursor-not-allowed'
+                            : isChecked
+                              ? 'bg-[var(--bg-main)] border-[var(--color-border)] hover:border-[var(--color-accent)]/40 cursor-pointer'
+                              : 'bg-[var(--bg-main)]/50 border-[var(--color-border)]/40 opacity-50 cursor-pointer'
                             }`}
                         >
                           {/* Checkbox */}
                           <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border mt-1 transition-colors ${!categoryEnabled
-                              ? 'border-slate-700 bg-slate-800'
-                              : isChecked
-                                ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]'
-                                : 'border-[var(--color-border)] bg-[var(--bg-card)]'
+                            ? 'border-slate-700 bg-slate-800'
+                            : isChecked
+                              ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]'
+                              : 'border-[var(--color-border)] bg-[var(--bg-card)]'
                             }`}>
                             {isChecked && <WardenIcon name="check" size={12} className="text-[#0d0e11] stroke-[3]" />}
                           </div>
@@ -5055,8 +5055,8 @@ export default function DashboardPage() {
                       <div
                         key={log.id}
                         className={`flex items-center justify-between text-[10px] font-mono px-2 py-1 rounded ${log.isError
-                            ? 'bg-amber-950/40 border border-amber-800/40 text-amber-300'
-                            : 'bg-[var(--bg-main)]/60 text-slate-300'
+                          ? 'bg-amber-950/40 border border-amber-800/40 text-amber-300'
+                          : 'bg-[var(--bg-main)]/60 text-slate-300'
                           }`}
                       >
                         <span className="flex items-center gap-1.5 truncate">
@@ -5149,11 +5149,10 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setCreateModalTab('install')}
-              className={`flex-1 py-2 px-3.5 rounded-lg text-xs font-minecraft font-bold transition-all flex items-center justify-center gap-2 ${
-                createModalTab === 'install'
+              className={`flex-1 py-2 px-3.5 rounded-lg text-xs font-minecraft font-bold transition-all flex items-center justify-center gap-2 ${createModalTab === 'install'
                   ? 'bg-[var(--color-accent)] text-[#0d0e11] shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-              }`}
+                }`}
             >
               <WardenIcon name="plus" size={14} className={createModalTab === 'install' ? 'text-[#0d0e11]' : 'text-slate-400'} />
               New Server
@@ -5161,11 +5160,10 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setCreateModalTab('import')}
-              className={`flex-1 py-2 px-3.5 rounded-lg text-xs font-minecraft font-bold transition-all flex items-center justify-center gap-2 ${
-                createModalTab === 'import'
+              className={`flex-1 py-2 px-3.5 rounded-lg text-xs font-minecraft font-bold transition-all flex items-center justify-center gap-2 ${createModalTab === 'import'
                   ? 'bg-[var(--color-accent)] text-[#0d0e11] shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-              }`}
+                }`}
             >
               <WardenIcon name="upload" size={14} className={createModalTab === 'import' ? 'text-[#0d0e11]' : 'text-slate-400'} />
               Import Server (.zip)
@@ -5271,8 +5269,8 @@ export default function DashboardPage() {
               >
                 <div
                   className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${createForm.autoStart
-                      ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]'
-                      : 'border-[var(--color-border)] bg-[var(--bg-main)] group-hover:border-[var(--color-accent)]/50'
+                    ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]'
+                    : 'border-[var(--color-border)] bg-[var(--bg-main)] group-hover:border-[var(--color-accent)]/50'
                     }`}
                 >
                   {createForm.autoStart && (
@@ -5333,11 +5331,10 @@ export default function DashboardPage() {
                       }
                     }
                   }}
-                  className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors ${
-                    importFile
+                  className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors ${importFile
                       ? 'border-[var(--color-accent)] bg-[var(--accent-dim)]/30'
                       : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/60 bg-[var(--bg-main)]'
-                  }`}
+                    }`}
                 >
                   <input
                     id="warden-import-file-input"
@@ -5431,11 +5428,10 @@ export default function DashboardPage() {
                 className="flex items-center gap-2.5 pt-1.5 cursor-pointer select-none group"
               >
                 <div
-                  className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
-                    importAutoStart
+                  className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${importAutoStart
                       ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]'
                       : 'border-[var(--color-border)] bg-[var(--bg-main)] group-hover:border-[var(--color-accent)]/50'
-                  }`}
+                    }`}
                 >
                   {importAutoStart && (
                     <svg className="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
