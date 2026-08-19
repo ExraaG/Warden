@@ -454,7 +454,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Global Update Notification Banner */}
         {systemUpdate?.updateAvailable && dismissedCommit !== systemUpdate.latestCommit && (
-          <div className="bg-emerald-950 border-b border-emerald-800/80 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50">
+          <div className="bg-gradient-to-r from-emerald-950/95 via-slate-900/95 to-emerald-950/95 border-b border-emerald-500/40 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50 shadow-lg shadow-emerald-950/30">
             <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto">
               <WardenIcon name="download" size={15} className="text-emerald-400 shrink-0" />
               <span className="font-minecraft text-xs font-bold text-emerald-300 tracking-wide shrink-0">
@@ -465,7 +465,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   {systemUpdate.currentCommit}
                 </span>
                 <span className="text-slate-500 text-xs">→</span>
-                <span className="bg-emerald-900/60 text-emerald-300 border border-emerald-600/70 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
+                <span className="bg-emerald-950 text-emerald-300 border border-emerald-600/70 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
                   {systemUpdate.latestCommit}
                 </span>
               </div>
@@ -486,7 +486,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 variant="primary"
                 size="sm"
                 onClick={() => setShowUpdateModal(true)}
-                className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-minecraft text-xs"
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-minecraft text-xs shadow-md shadow-emerald-950/40"
               >
                 <WardenIcon name="download" size={13} className="text-black" />
                 Accept &amp; Update
