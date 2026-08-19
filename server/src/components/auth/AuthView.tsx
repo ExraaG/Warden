@@ -310,45 +310,78 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
 
               {/* 2FA Section (if required) */}
               {requires2FA && (
-                <div className="p-3 bg-[var(--bg-main)] rounded-lg border border-[var(--accent-border)] space-y-2.5">
+                <div className="p-3.5 bg-[var(--bg-main)] rounded-lg border border-[var(--accent-border)] space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="block text-[11px] font-semibold uppercase text-[var(--color-accent)] font-mono">
-                      {useRecoveryCode ? 'Recovery Code' : '2FA Code'}
-                    </label>
+                    <span className="text-[11px] font-semibold uppercase text-[var(--color-accent)] font-mono">
+                      Two-Factor Authentication
+                    </span>
+                  </div>
+
+                  {/* Segmented Control / Tab Switcher */}
+                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-[var(--bg-card)] rounded-md border border-[var(--color-border)]">
                     <button
                       type="button"
                       onClick={() => {
-                        setUseRecoveryCode(!useRecoveryCode);
-                        setTotpCode('');
+                        setUseRecoveryCode(false);
                         setRecoveryCode('');
                       }}
-                      className="text-[10px] text-slate-400 hover:text-slate-200 underline font-mono"
+                      className={`py-1.5 px-2 rounded text-[11px] font-mono transition-colors flex items-center justify-center gap-1.5 ${
+                        !useRecoveryCode
+                          ? 'bg-[var(--color-accent)] text-[#0d0e11] font-bold shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
                     >
-                      {useRecoveryCode ? 'Use 6-digit code' : 'Use recovery code'}
+                      <WardenIcon name="binary" size={12} className={!useRecoveryCode ? 'text-[#0d0e11]' : 'text-slate-400'} />
+                      <span>6-Digit Code</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseRecoveryCode(true);
+                        setTotpCode('');
+                      }}
+                      className={`py-1.5 px-2 rounded text-[11px] font-mono transition-colors flex items-center justify-center gap-1.5 ${
+                        useRecoveryCode
+                          ? 'bg-[var(--color-accent)] text-[#0d0e11] font-bold shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <WardenIcon name="code" size={12} className={useRecoveryCode ? 'text-[#0d0e11]' : 'text-slate-400'} />
+                      <span>Recovery Code</span>
                     </button>
                   </div>
 
                   {useRecoveryCode ? (
-                    <input
-                      type="text"
-                      required
-                      autoFocus
-                      value={recoveryCode}
-                      onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
-                      placeholder="XXXX-XXXX-XXXX-XXXX"
-                      className="w-full h-9 sm:h-10 bg-[var(--bg-surface)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 font-mono uppercase tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-                    />
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        value={recoveryCode}
+                        onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
+                        placeholder="XXXX-XXXX-XXXX-XXXX"
+                        className="w-full h-9 sm:h-10 bg-[var(--bg-surface)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 font-mono uppercase tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                      />
+                      <p className="text-[10px] text-slate-400 font-mono text-center">
+                        Enter one of your 16-character backup recovery codes.
+                      </p>
+                    </div>
                   ) : (
-                    <input
-                      type="text"
-                      required
-                      autoFocus
-                      maxLength={6}
-                      value={totpCode}
-                      onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-                      placeholder="123456"
-                      className="w-full h-9 sm:h-10 bg-[var(--bg-surface)] border border-[var(--color-border)] px-3 rounded-md text-base text-slate-100 font-mono tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
-                    />
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        maxLength={6}
+                        value={totpCode}
+                        onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                        placeholder="123456"
+                        className="w-full h-9 sm:h-10 bg-[var(--bg-surface)] border border-[var(--color-border)] px-3 rounded-md text-base text-slate-100 font-mono tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                      />
+                      <p className="text-[10px] text-slate-400 font-mono text-center">
+                        Enter the code from your authenticator app.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
@@ -361,7 +394,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                 className="w-full font-minecraft text-xs justify-center py-2.5"
               >
                 <WardenIcon name="check" size={14} className="text-[#0d0e11]" />
-                {requires2FA ? 'Verify & Log In' : 'Log In'}
+                {requires2FA ? (useRecoveryCode ? 'Verify Recovery Code' : 'Verify 2FA & Log In') : 'Log In'}
               </Button>
 
               {/* Emergency Account Access Link */}
@@ -374,7 +407,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   }}
                   className="text-[11px] text-slate-400 hover:text-[var(--color-accent)] transition-colors font-mono"
                 >
-                  Lost 2FA / Password? <span className="underline">Emergency Console Recovery</span>
+                  Lost 2FA / Password? <span className="underline">Account Recovery</span>
                 </button>
               </div>
             </form>
@@ -498,9 +531,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   variant="outline"
                   size="sm"
                   onClick={() => setMode('setup')}
-                  className="flex-1 font-mono text-xs"
+                  className="flex-1 font-mono text-xs inline-flex items-center justify-center gap-1.5"
                 >
-                  Back
+                  <WardenIcon name="arrow-left" size={13} className="text-slate-400" />
+                  <span>Back</span>
                 </Button>
                 <Button
                   type="submit"
@@ -580,65 +614,121 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
             </div>
           )}
 
-          {/* ════════ MODE: EMERGENCY CONSOLE INFO ════════ */}
+          {/* ════════ MODE: EMERGENCY & RECOVERY ════════ */}
           {mode === 'emergency_info' && (
             <div className="space-y-4">
-              <div className="bg-red-950/30 border border-red-500/40 rounded-lg p-3 text-xs text-slate-300 font-mono leading-relaxed space-y-1.5">
-                <div className="font-bold flex items-center gap-1.5 text-red-300 uppercase tracking-wide">
-                  <WardenIcon name="triangle-alert" size={15} className="text-red-400" />
-                  Emergency Console Recovery
-                </div>
-                <p className="text-[11px] text-slate-300">
-                  Generates temporary 15-minute login credentials printed to the server terminal / Docker logs.
+              <div className="space-y-1">
+                <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wide font-minecraft flex items-center gap-2">
+                  <WardenIcon name="triangle-alert" size={15} className="text-[var(--color-accent)]" />
+                  Account Recovery Options
+                </h3>
+                <p className="text-[11px] text-slate-400 font-mono">
+                  Select a recovery method to regain access to your account:
                 </p>
               </div>
 
-              {emergencyTriggered ? (
-                <div className="bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-lg p-3 text-center space-y-2">
-                  <div className="text-xs font-bold text-slate-100 font-mono">
-                    Emergency Account Generated
+              {/* Option 1: Use Backup Recovery Code */}
+              <div className="p-3.5 bg-[var(--bg-main)] rounded-lg border border-[var(--color-border)] space-y-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded bg-[var(--bg-card)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent)] shrink-0">
+                    <WardenIcon name="code" size={14} />
                   </div>
-                  <p className="text-[11px] text-slate-300 font-mono">
-                    Check server console or run <code className="text-emerald-400 bg-black/40 px-1 py-0.5 rounded">docker compose logs</code> for credentials.
-                  </p>
-                  <div className="pt-1">
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        setUsername('warden_emergency_admin');
-                        setPassword('');
-                        setRequires2FA(false);
-                        setMode('login');
-                      }}
-                      className="w-full font-minecraft text-xs justify-center"
-                    >
-                      Enter Credentials &rarr;
-                    </Button>
+                  <div>
+                    <div className="text-xs font-bold text-slate-100 font-mono">
+                      Backup Recovery Code
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      Log in with one of your saved 16-character backup codes
+                    </div>
                   </div>
                 </div>
-              ) : (
                 <Button
                   type="button"
                   variant="primary"
-                  size="md"
-                  isLoading={emergencyLoading}
-                  onClick={handleTriggerEmergencyAccess}
-                  className="w-full font-minecraft text-xs justify-center py-2"
+                  size="sm"
+                  onClick={() => {
+                    setErrorMessage(null);
+                    setRequires2FA(true);
+                    setUseRecoveryCode(true);
+                    setMode('login');
+                  }}
+                  className="w-full font-minecraft text-xs justify-center"
                 >
-                  <WardenIcon name="terminal-square" size={14} className="text-[#0d0e11]" />
-                  Generate Recovery in Logs
+                  <WardenIcon name="check" size={13} className="text-[#0d0e11]" />
+                  Use Backup Recovery Code
                 </Button>
-              )}
+              </div>
 
-              <div className="pt-1 text-center">
+              {/* Option 2: Emergency Console Access */}
+              <div className="p-3.5 bg-[var(--bg-main)] rounded-lg border border-red-900/40 space-y-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded bg-red-950/40 border border-red-800/40 flex items-center justify-center text-red-400 shrink-0">
+                    <WardenIcon name="terminal-square" size={14} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-100 font-mono">
+                      Emergency Console Credentials
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      Print 15-minute temporary credentials to server logs
+                    </div>
+                  </div>
+                </div>
+
+                {emergencyTriggered ? (
+                  <div className="bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-lg p-3 text-center space-y-2">
+                    <div className="text-xs font-bold text-slate-100 font-mono">
+                      Emergency Account Generated
+                    </div>
+                    <p className="text-[11px] text-slate-300 font-mono">
+                      Check server console or run <code className="text-emerald-400 bg-black/40 px-1 py-0.5 rounded">docker compose logs</code> for credentials.
+                    </p>
+                    <div className="pt-1">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          setUsername('warden_emergency_admin');
+                          setPassword('');
+                          setRequires2FA(false);
+                          setUseRecoveryCode(false);
+                          setMode('login');
+                        }}
+                        className="w-full font-minecraft text-xs justify-center"
+                      >
+                        <WardenIcon name="play" size={12} className="text-[#0d0e11]" />
+                        Enter Credentials
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    isLoading={emergencyLoading}
+                    onClick={handleTriggerEmergencyAccess}
+                    className="w-full font-minecraft text-xs justify-center"
+                  >
+                    <WardenIcon name="terminal-square" size={13} className="text-red-400" />
+                    Generate Recovery in Logs
+                  </Button>
+                )}
+              </div>
+
+              {/* Centered Return to Login */}
+              <div className="pt-2 text-center">
                 <button
                   type="button"
-                  onClick={() => setMode('login')}
-                  className="text-xs text-slate-400 hover:text-slate-200 font-mono"
+                  onClick={() => {
+                    setErrorMessage(null);
+                    setMode('login');
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 font-mono transition-colors"
                 >
-                  &larr; Return to login
+                  <WardenIcon name="arrow-left" size={13} className="text-slate-400" />
+                  <span>Return to login</span>
                 </button>
               </div>
             </div>
