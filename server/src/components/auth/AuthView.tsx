@@ -259,29 +259,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0d0e11] flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-md relative z-10 my-auto">
-        <Card className="p-6 sm:p-8 bg-[var(--bg-surface)] border-[var(--color-border)] space-y-6">
-          {/* Logo & Header */}
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--color-accent)] mb-1">
-              <WardenIcon name="server" size={24} />
-            </div>
-            <h1 className="font-minecraft text-xl sm:text-2xl font-bold text-slate-100 tracking-wider uppercase">
-              {mode === 'setup' || mode === 'setup_2fa' || mode === 'setup_recovery_codes'
-                ? 'Welcome to Warden'
-                : 'Warden Server'}
-            </h1>
-            <p className="text-xs text-slate-400 font-mono">
-              {mode === 'setup'
-                ? 'Create Master Administrator Account'
-                : mode === 'setup_2fa'
-                ? 'Set up Two-Factor Authenticator (2FA)'
-                : mode === 'setup_recovery_codes'
-                ? 'Save Backup Recovery Codes'
-                : mode === 'emergency_info'
-                ? 'Emergency Console Account Recovery'
-                : 'Authentication Required'}
-            </p>
+      <div className="w-full max-w-sm relative z-10 my-auto">
+        <Card className="p-6 bg-[var(--bg-surface)] border-[var(--color-border)] space-y-5">
+          {/* Official Logo */}
+          <div className="text-center">
+            <img
+              src="/WARDENLOGO.svg"
+              alt="Warden"
+              className="h-11 mx-auto object-contain select-none"
+            />
           </div>
 
           {/* Error Banner */}
@@ -306,7 +292,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="admin"
-                  className="w-full h-9 sm:h-10 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60 font-mono transition-colors"
+                  className="w-full h-9 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60 font-mono transition-colors"
                 />
               </div>
 
@@ -318,16 +304,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
+                  placeholder="Password"
                 />
               </div>
 
-              {/* 2FA Section (if required or triggered) */}
+              {/* 2FA Section (if required) */}
               {requires2FA && (
-                <div className="p-3.5 bg-[var(--bg-main)] rounded-lg border border-[var(--accent-border)] space-y-3 animate-fadeIn">
+                <div className="p-3 bg-[var(--bg-main)] rounded-lg border border-[var(--accent-border)] space-y-2.5">
                   <div className="flex items-center justify-between">
                     <label className="block text-[11px] font-semibold uppercase text-[var(--color-accent)] font-mono">
-                      {useRecoveryCode ? 'Backup Recovery Code' : 'Authenticator 2FA (6-Digits)'}
+                      {useRecoveryCode ? 'Recovery Code' : '2FA Code'}
                     </label>
                     <button
                       type="button"
@@ -338,7 +324,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                       }}
                       className="text-[10px] text-slate-400 hover:text-slate-200 underline font-mono"
                     >
-                      {useRecoveryCode ? 'Use 6-digit TOTP' : 'Use recovery code'}
+                      {useRecoveryCode ? 'Use 6-digit code' : 'Use recovery code'}
                     </button>
                   </div>
 
@@ -361,7 +347,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                       value={totpCode}
                       onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
                       placeholder="123456"
-                      className="w-full h-10 bg-[var(--bg-surface)] border border-[var(--color-border)] px-3 rounded-md text-lg text-slate-100 font-mono tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                      className="w-full h-9 bg-[var(--bg-surface)] border border-[var(--color-border)] px-3 rounded-md text-base text-slate-100 font-mono tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
                     />
                   )}
                 </div>
@@ -372,14 +358,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                 variant="primary"
                 size="md"
                 isLoading={loading}
-                className="w-full font-minecraft text-xs justify-center py-2.5 shadow-md"
+                className="w-full font-minecraft text-xs justify-center py-2"
               >
                 <WardenIcon name="check" size={14} className="text-[#0d0e11]" />
-                {requires2FA ? 'Verify 2FA & Sign In' : 'Sign In'}
+                {requires2FA ? 'Verify & Log In' : 'Log In'}
               </Button>
 
               {/* Emergency Account Access Link */}
-              <div className="pt-2 text-center">
+              <div className="pt-1 text-center">
                 <button
                   type="button"
                   onClick={() => {
@@ -388,7 +374,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   }}
                   className="text-[11px] text-slate-400 hover:text-[var(--color-accent)] transition-colors font-mono"
                 >
-                  Locked out or lost 2FA? <span className="underline">Generate Emergency Console Access</span>
+                  Lost 2FA / Password? <span className="underline">Emergency Console Recovery</span>
                 </button>
               </div>
             </form>
@@ -397,14 +383,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
           {/* ════════ MODE: FIRST-TIME SETUP ════════ */}
           {mode === 'setup' && (
             <form onSubmit={handleSetup} className="space-y-4">
-              <div className="bg-[var(--accent-dim)]/40 border border-[var(--accent-border)] rounded-lg p-3 text-xs text-slate-300 font-mono leading-relaxed flex items-start gap-2">
-                <WardenIcon name="check" size={14} className="text-[var(--color-accent)] shrink-0 mt-0.5" />
-                <span>Create your primary administrator login to secure your Minecraft server dashboard.</span>
-              </div>
-
               <div>
                 <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
-                  Admin Username
+                  Username
                 </label>
                 <input
                   type="text"
@@ -412,20 +393,20 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   autoFocus
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. admin or alex"
-                  className="w-full h-9 sm:h-10 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60"
+                  placeholder="admin"
+                  className="w-full h-9 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs text-slate-100 font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
-                  Master Password
+                  Password
                 </label>
                 <PasswordInput
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter strong password"
+                  placeholder="Password"
                 />
               </div>
 
@@ -437,14 +418,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repeat master password"
+                  placeholder="Repeat password"
                 />
               </div>
 
               {/* Optional 2FA Checkbox */}
               <div
                 onClick={() => setWant2FAInSetup(!want2FAInSetup)}
-                className="flex items-center gap-2.5 pt-1 cursor-pointer select-none group"
+                className="flex items-center gap-2 pt-0.5 cursor-pointer select-none group"
               >
                 <div
                   className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
@@ -460,7 +441,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   )}
                 </div>
                 <span className="text-xs text-slate-300 group-hover:text-slate-100 transition-colors font-mono">
-                  Enable 2FA Authenticator App (Recommended)
+                  Enable 2FA (Authenticator App)
                 </span>
               </div>
 
@@ -469,10 +450,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                 variant="primary"
                 size="md"
                 isLoading={loading}
-                className="w-full font-minecraft text-xs justify-center py-2.5 mt-2"
+                className="w-full font-minecraft text-xs justify-center py-2 mt-1"
               >
-                <WardenIcon name="download" size={14} className="text-[#0d0e11]" />
-                {want2FAInSetup ? 'Proceed to 2FA Setup' : 'Complete Setup & Launch'}
+                <WardenIcon name="check" size={14} className="text-[#0d0e11]" />
+                {want2FAInSetup ? 'Continue to 2FA Setup' : 'Create Account'}
               </Button>
             </form>
           )}
@@ -480,24 +461,24 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
           {/* ════════ MODE: SETUP 2FA (QR CODE) ════════ */}
           {mode === 'setup_2fa' && setup2FAData && (
             <form onSubmit={handleVerifySetup2FA} className="space-y-4 text-center">
-              <p className="text-xs text-slate-300 font-mono leading-relaxed">
-                Scan this QR code with Google Authenticator, Aegis, Authy, or 1Password:
+              <p className="text-xs text-slate-300 font-mono">
+                Scan with Authenticator App:
               </p>
 
-              <div className="bg-white p-3 rounded-xl inline-block shadow-lg mx-auto">
-                <img src={setup2FAData.qrCodeDataUrl} alt="2FA QR Code" className="w-44 h-44 mx-auto" />
+              <div className="bg-white p-2.5 rounded-lg inline-block mx-auto">
+                <img src={setup2FAData.qrCodeDataUrl} alt="2FA QR Code" className="w-40 h-40 mx-auto" />
               </div>
 
-              <div className="bg-[var(--bg-main)] p-2.5 rounded-lg border border-[var(--color-border)] text-center">
-                <div className="text-[10px] text-slate-400 uppercase font-mono mb-1">Manual Entry Key:</div>
+              <div className="bg-[var(--bg-main)] p-2 rounded border border-[var(--color-border)] text-center">
+                <div className="text-[10px] text-slate-400 uppercase font-mono mb-0.5">Key:</div>
                 <div className="text-xs font-mono font-bold text-[var(--color-accent)] tracking-wider select-all">
                   {setup2FAData.secret}
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1.5 font-mono text-left">
-                  Enter 6-Digit Authenticator Code
+                <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono text-left">
+                  6-Digit Code
                 </label>
                 <input
                   type="text"
@@ -507,11 +488,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   value={totpCode}
                   onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="123456"
-                  className="w-full h-10 bg-[var(--bg-main)] border border-[var(--color-border)] px-3 rounded-md text-lg text-slate-100 font-mono tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                  className="w-full h-9 bg-[var(--bg-main)] border border-[var(--color-border)] px-3 rounded-md text-base text-slate-100 font-mono tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-2 pt-1">
                 <Button
                   type="button"
                   variant="outline"
@@ -529,7 +510,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   disabled={totpCode.length !== 6}
                   className="flex-1 font-minecraft text-xs justify-center"
                 >
-                  Verify &amp; Save
+                  Verify &amp; Continue
                 </Button>
               </div>
             </form>
@@ -541,18 +522,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
               <div className="bg-amber-950/30 border border-amber-500/40 rounded-lg p-3 text-xs text-amber-200 font-mono leading-relaxed space-y-1">
                 <div className="font-bold flex items-center gap-1.5 text-amber-300">
                   <WardenIcon name="triangle-alert" size={14} className="text-amber-400" />
-                  Save Your Emergency Recovery Codes
+                  Backup Recovery Codes
                 </div>
                 <p className="text-[11px] text-amber-200/80">
-                  If you ever lose access to your phone or authenticator app, these one-time codes are your backup.
+                  Save these one-time codes in case you lose access to your authenticator app.
                 </p>
               </div>
 
-              <div className="bg-[var(--bg-main)] p-3 rounded-lg border border-[var(--color-border)] grid grid-cols-2 gap-2 text-center">
+              <div className="bg-[var(--bg-main)] p-2.5 rounded-lg border border-[var(--color-border)] grid grid-cols-2 gap-1.5 text-center">
                 {generatedRecoveryCodes.map((code, idx) => (
                   <div
                     key={idx}
-                    className="p-1.5 bg-[var(--bg-card)] rounded text-[11px] font-mono font-bold text-slate-200 select-all border border-[var(--color-border)]/60"
+                    className="p-1 bg-[var(--bg-card)] rounded text-[11px] font-mono font-bold text-slate-200 select-all border border-[var(--color-border)]/60"
                   >
                     {code}
                   </div>
@@ -568,7 +549,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   className="flex-1 font-mono text-xs"
                 >
                   <WardenIcon name="edit" size={13} className="text-slate-400" />
-                  Copy Codes
+                  Copy
                 </Button>
                 <Button
                   type="button"
@@ -591,10 +572,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                     onAuthenticated(pendingUser);
                   }
                 }}
-                className="w-full font-minecraft text-xs justify-center py-2.5 mt-3"
+                className="w-full font-minecraft text-xs justify-center py-2 mt-2"
               >
                 <WardenIcon name="check" size={14} className="text-[#0d0e11]" />
-                I Have Saved My Codes • Launch Dashboard
+                Done
               </Button>
             </div>
           )}
@@ -602,29 +583,25 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
           {/* ════════ MODE: EMERGENCY CONSOLE INFO ════════ */}
           {mode === 'emergency_info' && (
             <div className="space-y-4">
-              <div className="bg-red-950/30 border border-red-500/40 rounded-lg p-3.5 text-xs text-slate-300 font-mono leading-relaxed space-y-2">
+              <div className="bg-red-950/30 border border-red-500/40 rounded-lg p-3 text-xs text-slate-300 font-mono leading-relaxed space-y-1.5">
                 <div className="font-bold flex items-center gap-1.5 text-red-300 uppercase tracking-wide">
                   <WardenIcon name="triangle-alert" size={15} className="text-red-400" />
-                  Server Console Emergency Recovery
+                  Emergency Console Recovery
                 </div>
                 <p className="text-[11px] text-slate-300">
-                  Warden can generate a temporary single-use recovery login directly inside the server terminal / Docker logs.
+                  Generates temporary 15-minute login credentials printed to the server terminal / Docker logs.
                 </p>
-                <div className="bg-[#0a0b0d] p-2.5 rounded border border-[var(--color-border)] text-[10px] text-slate-400 space-y-1">
-                  <div><span className="text-amber-300 font-semibold">15-Minute Expiration:</span> Credentials automatically expire.</div>
-                  <div><span className="text-emerald-300 font-semibold">Restricted:</span> Access is strictly limited to Password Reset &amp; 2FA management.</div>
-                </div>
               </div>
 
               {emergencyTriggered ? (
-                <div className="bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-lg p-3.5 text-center space-y-2">
+                <div className="bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-lg p-3 text-center space-y-2">
                   <div className="text-xs font-bold text-slate-100 font-mono">
-                    Emergency Account Generated in Logs
+                    Emergency Account Generated
                   </div>
                   <p className="text-[11px] text-slate-300 font-mono">
-                    Check your server console or run <code className="text-emerald-400 bg-black/40 px-1 py-0.5 rounded">docker compose logs</code> to read your temporary credentials.
+                    Check server console or run <code className="text-emerald-400 bg-black/40 px-1 py-0.5 rounded">docker compose logs</code> for credentials.
                   </p>
-                  <div className="pt-2">
+                  <div className="pt-1">
                     <Button
                       type="button"
                       variant="primary"
@@ -637,7 +614,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                       }}
                       className="w-full font-minecraft text-xs justify-center"
                     >
-                      Enter Recovery Credentials &rarr;
+                      Enter Credentials &rarr;
                     </Button>
                   </div>
                 </div>
@@ -648,10 +625,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   size="md"
                   isLoading={emergencyLoading}
                   onClick={handleTriggerEmergencyAccess}
-                  className="w-full font-minecraft text-xs justify-center py-2.5"
+                  className="w-full font-minecraft text-xs justify-center py-2"
                 >
                   <WardenIcon name="terminal-square" size={14} className="text-[#0d0e11]" />
-                  Generate Emergency Access in Logs
+                  Generate Recovery in Logs
                 </Button>
               )}
 
@@ -661,7 +638,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   onClick={() => setMode('login')}
                   className="text-xs text-slate-400 hover:text-slate-200 font-mono"
                 >
-                  &larr; Return to regular login
+                  &larr; Return to login
                 </button>
               </div>
             </div>

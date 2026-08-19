@@ -367,8 +367,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </head>
         <body className="bg-[#0d0e11] text-slate-100 min-h-screen flex items-center justify-center font-sans">
           <div className="text-center space-y-3">
-            <div className="h-10 w-14 warden-logo-mask mx-auto" />
-            <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-6 h-6 rounded-full" />
+            <img src="/WARDENLOGO.svg" alt="Warden" className="h-10 mx-auto object-contain select-none" />
+            <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-5 h-5 rounded-full" />
           </div>
         </body>
       </html>
@@ -499,11 +499,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="bg-[var(--bg-main)] px-3 sm:px-6 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 sticky top-0 z-40 transition-colors border-b border-white/[0.04] sm:border-b-0">
           <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
             {/* Brand Logo */}
-            <Link href="/" className="flex items-center gap-1.5 group shrink-0">
-              <div className="h-8 w-11 sm:h-9 sm:w-12 warden-logo-mask shrink-0" />
-              <span className="font-minecraft font-bold text-lg sm:text-2xl tracking-widest text-slate-100 group-hover:text-[var(--color-accent)] transition-colors leading-none">
-                WARDEN
-              </span>
+            <Link href="/" className="flex items-center group shrink-0">
+              <img
+                src="/WARDENLOGO.svg"
+                alt="Warden"
+                className="h-6 sm:h-7 object-contain select-none opacity-90 group-hover:opacity-100 transition-opacity"
+              />
             </Link>
 
             {/* Mobile Server Switcher */}
