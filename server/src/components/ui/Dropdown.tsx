@@ -140,20 +140,20 @@ export const Dropdown: React.FC<DropdownProps> = ({
           className="fixed bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[99999999] p-1.5 animate-in fade-in zoom-in-95 duration-100"
         >
           {title && (
-            <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-[var(--color-border)] mb-1 font-mono">
+            <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-[#232733] mb-1 font-mono">
               {title}
             </div>
           )}
 
           {isSearchEnabled && (
-            <div className="p-1 mb-1 border-b border-[var(--color-border)]/60">
+            <div className="p-1 mb-1.5">
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search options..."
-                className="w-full h-7 bg-[var(--bg-main)] border border-[var(--color-border)] px-2 rounded text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 font-mono"
+                className="w-full h-7 bg-[var(--bg-main)] border border-[#232733] px-2 rounded text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/50 font-mono"
               />
             </div>
           )}

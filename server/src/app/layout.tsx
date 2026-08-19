@@ -23,6 +23,29 @@ export interface SystemUpdateInfo {
   author?: string;
 }
 
+const AnimatedLogOutIcon: React.FC<{ size?: number; className?: string }> = ({ size = 14, className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`overflow-visible transition-colors ${className || ''}`}
+  >
+    {/* Door outline */}
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    {/* Animated Arrow sliding out on hover */}
+    <g className="transition-transform duration-200 ease-out group-hover:translate-x-1">
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </g>
+  </svg>
+);
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [servers, setServers] = useState<WardenServer[]>([]);
@@ -580,10 +603,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <button
                   type="button"
                   onClick={handleLogout}
-                  title="Sign Out"
-                  className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/30 rounded-md transition-colors border border-transparent hover:border-red-800/40"
+                  title="Log Out"
+                  className="group p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/30 rounded-md transition-all border border-transparent hover:border-red-800/40 flex items-center justify-center"
                 >
-                  <WardenIcon name="power" size={13} />
+                  <AnimatedLogOutIcon size={14} className="text-slate-400 group-hover:text-red-400" />
                 </button>
               </div>
             </nav>
