@@ -358,53 +358,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     { href: '/settings', label: 'Settings', icon: 'settings' },
   ];
 
-  if (authLoading) {
-    return (
-      <html lang="en" className="dark" data-theme="emerald" suppressHydrationWarning>
-        <head>
-          <title>Warden - Minecraft Server &amp; Mod Ops</title>
-          <link rel="icon" href="/logo.svg" type="image/svg+xml" />
-        </head>
-        <body className="bg-[#0d0e11] text-slate-100 min-h-screen flex items-center justify-center font-sans">
-          <div className="text-center space-y-3">
-            <img src="/warden_logo.png" alt="Warden" className="h-10 mx-auto object-contain select-none" />
-            <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-5 h-5 rounded-full" />
-          </div>
-        </body>
-      </html>
-    );
-  }
-
-  if (!authStatus.authenticated || !authStatus.hasUsers) {
-    return (
-      <html lang="en" className="dark" data-theme="emerald" suppressHydrationWarning>
-        <head>
-          <title>Warden - Minecraft Server &amp; Mod Ops</title>
-          <link rel="icon" href="/logo.svg" type="image/svg+xml" />
-        </head>
-        <body className="bg-[#0d0e11] text-slate-100 min-h-screen flex flex-col font-sans">
-          <AuthView
-            authStatus={authStatus}
-            onAuthenticated={(user, isTemp, expiresAt) => {
-              setAuthStatus({
-                hasUsers: true,
-                authenticated: true,
-                user,
-                isTempRecovery: isTemp,
-                expiresAt,
-              });
-              setCurrentUser(user);
-              setIsTempRecovery(Boolean(isTemp));
-              setTempExpiresAt(expiresAt);
-              loadServers();
-            }}
-          />
-          <ToastContainer />
-        </body>
-      </html>
-    );
-  }
-
   return (
     <html lang="en" className="dark" data-theme="emerald" suppressHydrationWarning>
       <head>
@@ -423,34 +376,60 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body suppressHydrationWarning className="bg-[var(--bg-main)] text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
-        {/* Emergency Temp Recovery Warning Banner */}
-        {isTempRecovery && (
-          <div className="bg-red-950 border-b border-red-800/80 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <WardenIcon name="triangle-alert" size={16} className="text-red-400 shrink-0" />
-              <span className="font-minecraft text-xs font-bold text-red-300 tracking-wide uppercase">
-                EMERGENCY RECOVERY SESSION ACTIVE
-              </span>
-              <span className="bg-red-900/60 text-red-200 border border-red-700 px-2 py-0.5 rounded text-[11px] font-mono font-bold">
-                {tempTimeRemaining}
-              </span>
-              <span className="text-xs text-amber-200/90 font-mono hidden md:inline">
-                Restricted to password reset &amp; account recovery.
-              </span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setShowEmergencyResetModal(true)}
-                className="bg-red-500 hover:bg-red-400 text-black font-bold font-minecraft text-xs"
-              >
-                <WardenIcon name="edit" size={13} className="text-black" />
-                Reset Master Password &amp; 2FA
-              </Button>
+        {authLoading ? (
+          <div className="fixed inset-0 z-50 bg-[#0d0e11] flex items-center justify-center">
+            <div className="text-center space-y-3">
+              <img src="/warden_logo.png" alt="Warden" className="h-8 mx-auto object-contain select-none" />
+              <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-5 h-5 rounded-full" />
             </div>
           </div>
-        )}
+        ) : !authStatus.authenticated || !authStatus.hasUsers ? (
+          <AuthView
+            authStatus={authStatus}
+            onAuthenticated={(user, isTemp, expiresAt) => {
+              setAuthStatus({
+                hasUsers: true,
+                authenticated: true,
+                user,
+                isTempRecovery: isTemp,
+                expiresAt,
+              });
+              setCurrentUser(user);
+              setIsTempRecovery(Boolean(isTemp));
+              setTempExpiresAt(expiresAt);
+              loadServers();
+            }}
+          />
+        ) : (
+          <>
+            {/* Emergency Temp Recovery Warning Banner */}
+            {isTempRecovery && (
+              <div className="bg-red-950 border-b border-red-800/80 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <WardenIcon name="triangle-alert" size={16} className="text-red-400 shrink-0" />
+                  <span className="font-minecraft text-xs font-bold text-red-300 tracking-wide uppercase">
+                    EMERGENCY RECOVERY SESSION ACTIVE
+                  </span>
+                  <span className="bg-red-900/60 text-red-200 border border-red-700 px-2 py-0.5 rounded text-[11px] font-mono font-bold">
+                    {tempTimeRemaining}
+                  </span>
+                  <span className="text-xs text-amber-200/90 font-mono hidden md:inline">
+                    Restricted to password reset &amp; account recovery.
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setShowEmergencyResetModal(true)}
+                    className="bg-red-500 hover:bg-red-400 text-black font-bold font-minecraft text-xs"
+                  >
+                    <WardenIcon name="edit" size={13} className="text-black" />
+                    Reset Master Password &amp; 2FA
+                  </Button>
+                </div>
+              </div>
+            )}
 
         {/* Global Update Notification Banner */}
         {systemUpdate?.updateAvailable && dismissedCommit !== systemUpdate.latestCommit && (
@@ -791,6 +770,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </Modal>
+          </>
+        )}
 
         {/* Global Floating Toast Notifications */}
         <ToastContainer />

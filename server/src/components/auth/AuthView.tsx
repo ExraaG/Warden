@@ -469,10 +469,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                 <img src={setup2FAData.qrCodeDataUrl} alt="2FA QR Code" className="w-40 h-40 mx-auto" />
               </div>
 
-              <div className="bg-[var(--bg-main)] p-2 rounded border border-[var(--color-border)] text-center">
-                <div className="text-[10px] text-slate-400 uppercase font-mono mb-0.5">Key:</div>
-                <div className="text-xs font-mono font-bold text-[var(--color-accent)] tracking-wider select-all">
-                  {setup2FAData.secret}
+              <div className="bg-[var(--bg-main)] p-2.5 rounded-lg border border-[var(--color-border)] text-center space-y-1">
+                <div className="text-[10px] text-slate-400 uppercase font-mono">Key:</div>
+                <div className="text-[11px] font-mono font-bold text-[var(--color-accent)] tracking-wider select-all break-all px-1.5 py-1 rounded bg-[var(--bg-card)] border border-[var(--color-border)]/60">
+                  {setup2FAData.secret.match(/.{1,4}/g)?.join(' ') || setup2FAData.secret}
                 </div>
               </div>
 
