@@ -232,6 +232,9 @@ export class ServerManager {
     };
 
     const statInfo = await fs.promises.stat(dir).catch(() => null);
+    const primaryAdmin = db.getUsers().find(u => u.role === 'admin')?.id || 'admin';
+    const ownerId = savedMeta?.ownerId || primaryAdmin;
+    const allowedUserIds: string[] = Array.isArray(savedMeta?.allowedUserIds) ? savedMeta.allowedUserIds : [];
 
     return {
       id: serverId,
@@ -240,17 +243,21 @@ export class ServerManager {
       status,
       detection,
       stats,
+      ownerId,
+      allowedUserIds,
       createdAt: statInfo?.birthtime?.toISOString() || new Date().toISOString(),
       updatedAt: statInfo?.mtime?.toISOString() || new Date().toISOString(),
     };
   }
 
   // 3. Create a new server
-  public async createServer(payload: CreateServerPayload): Promise<WardenServer> {
+  public async createServer(payload: CreateServerPayload, ownerId?: string): Promise<WardenServer> {
     const serverId = `server-${Date.now()}`;
     const targetDir = this.getServerDir(serverId);
 
     const installResult = await ServerInstaller.installServer(targetDir, payload);
+    const primaryAdmin = db.getUsers().find(u => u.role === 'admin')?.id || 'admin';
+    const serverOwnerId = payload.ownerId || ownerId || primaryAdmin;
 
     // Save persistent metadata
     const meta = {
@@ -262,6 +269,8 @@ export class ServerManager {
       port: payload.port || 25565,
       minMemory: payload.minMemory || '2G',
       maxMemory: payload.maxMemory || '4G',
+      ownerId: serverOwnerId,
+      allowedUserIds: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -743,7 +752,8 @@ export class ServerManager {
       minMemory?: string;
       maxMemory?: string;
       autoStart?: boolean;
-    } = {}
+    } = {},
+    ownerId?: string
   ): Promise<WardenServer> {
     const serverId = `server-${Date.now()}`;
     const targetDir = this.getServerDir(serverId);
@@ -794,7 +804,7 @@ export class ServerManager {
         }
       }
 
-      // 3. Inspect existing warden.json or detect server properties & executable JAR
+      // 2. Read existing warden.json if present
       let existingWardenJson: any = null;
       const wardenJsonPath = path.join(targetDir, 'warden.json');
       if (fs.existsSync(wardenJsonPath)) {
@@ -803,19 +813,19 @@ export class ServerManager {
         } catch {}
       }
 
-      // Read server.properties if available
+      // 3. Read server.properties if present
       const props = await this.getServerProperties(serverId);
-      let motdName = '';
-      if (props['motd']) {
-        motdName = props['motd']
-          .replace(/\\u00a7[0-9a-fk-or]/gi, '')
-          .replace(/§[0-9a-fk-or]/gi, '')
-          .split('|')[0]
-          ?.trim();
-      }
+      const motdName = props['motd']
+        ? props['motd']
+            .replace(/\\u00a7[0-9a-fk-or]/gi, '')
+            .replace(/§[0-9a-fk-or]/gi, '')
+            .split('|')[0]
+            ?.trim()
+        : null;
 
+      files = await fs.promises.readdir(targetDir);
       const serverName =
-        options.name?.trim() ||
+        options.name ||
         existingWardenJson?.name ||
         motdName ||
         `Imported Server`;
@@ -863,9 +873,10 @@ export class ServerManager {
 
       let mcVersion = existingWardenJson?.mcVersion || '';
       if (!mcVersion) {
-        const mcMatch = chosenJar.match(/(?:mc\.|-|v)?(\d+\.\d+(?:\.\d+)?)/i);
-        if (mcMatch) {
-          mcVersion = mcMatch[1];
+        // Extract version from jar filename (e.g. paper-1.21.1-123.jar, fabric-server-mc.1.20.4-loader.jar)
+        const verMatch = chosenJar.match(/(\d+\.\d+(?:\.\d+)?)/);
+        if (verMatch) {
+          mcVersion = verMatch[1];
         } else {
           mcVersion = '1.21.1';
         }
@@ -894,6 +905,10 @@ export class ServerManager {
         await this.saveServerProperties(serverId, { 'server-port': String(port) } as any);
       }
 
+      const primaryAdmin = db.getUsers().find(u => u.role === 'admin')?.id || 'admin';
+      const serverOwnerId = ownerId || existingWardenJson?.ownerId || primaryAdmin;
+      const allowedUserIds: string[] = Array.isArray(existingWardenJson?.allowedUserIds) ? existingWardenJson.allowedUserIds : [];
+
       // 7. Write/Update warden.json
       const meta = {
         id: serverId,
@@ -905,6 +920,8 @@ export class ServerManager {
         minMemory: options.minMemory || existingWardenJson?.minMemory || '2G',
         maxMemory: options.maxMemory || existingWardenJson?.maxMemory || '4G',
         javaPath: existingWardenJson?.javaPath,
+        ownerId: serverOwnerId,
+        allowedUserIds,
         createdAt: existingWardenJson?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -951,6 +968,30 @@ export class ServerManager {
       } catch {}
       throw new Error(`Failed to import server: ${err.message}`);
     }
+  }
+
+  /**
+   * Update allowed user IDs for a server
+   */
+  public async updateServerAccess(serverId: string, allowedUserIds: string[]): Promise<WardenServer> {
+    const dir = this.getServerDir(serverId);
+    if (!fs.existsSync(dir)) {
+      throw new Error(`Server directory ${serverId} does not exist`);
+    }
+    const metaPath = path.join(dir, 'warden.json');
+    let meta: any = {};
+    if (fs.existsSync(metaPath)) {
+      try {
+        meta = JSON.parse(await fs.promises.readFile(metaPath, 'utf8'));
+      } catch {}
+    }
+    meta.allowedUserIds = allowedUserIds;
+    meta.updatedAt = new Date().toISOString();
+    await fs.promises.writeFile(metaPath, JSON.stringify(meta, null, 2), 'utf8');
+
+    const updated = await this.getServer(serverId);
+    if (!updated) throw new Error('Server not found after updating access');
+    return updated;
   }
 }
 

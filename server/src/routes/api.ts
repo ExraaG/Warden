@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { serverManager } from '../core/serverManager.js';
 import { VersionFetcher } from '../core/versionFetcher.js';
 import { SystemUpdater } from '../core/systemUpdater.js';
@@ -16,6 +17,11 @@ import {
   ManualConfirmationPayload,
   InstallModPayload,
   CreateServerPayload,
+  CreateUserPayload,
+  UpdateUserPayload,
+  ServerAccessPayload,
+  WardenUserPublic,
+  WardenUser,
   ServerLoader,
 } from '@warden/shared';
 
@@ -23,6 +29,13 @@ import { AuthManager } from '../core/authManager.js';
 import { extractToken } from './auth.js';
 
 export const apiRouter = Router();
+
+function hasServerAccess(user: any, server: WardenServer): boolean {
+  if (!user || user.role === 'admin') return true;
+  if (server.ownerId === user.id) return true;
+  if (server.allowedUserIds && server.allowedUserIds.includes(user.id)) return true;
+  return false;
+}
 
 // Auth Middleware protecting /api/v1 routes
 const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
@@ -101,10 +114,15 @@ apiRouter.get('/v1/meta/versions', async (req: Request, res: Response) => {
 });
 
 // 1. List Servers
-apiRouter.get('/v1/servers', authMiddleware, async (_req: Request, res: Response) => {
+apiRouter.get('/v1/servers', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const servers = await serverManager.getServers();
-    res.json({ success: true, data: servers } as ApiResponse<WardenServer[]>);
+    const user = (req as any).user;
+    const allServers = await serverManager.getServers();
+    if (!user || user.role === 'admin') {
+      return res.json({ success: true, data: allServers } as ApiResponse<WardenServer[]>);
+    }
+    const filtered = allServers.filter((s) => hasServerAccess(user, s));
+    res.json({ success: true, data: filtered } as ApiResponse<WardenServer[]>);
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
   }
@@ -113,6 +131,7 @@ apiRouter.get('/v1/servers', authMiddleware, async (_req: Request, res: Response
 // 2. Create a New Minecraft Server (1-Click Install)
 apiRouter.post('/v1/servers/create', authMiddleware, async (req: Request, res: Response) => {
   const payload: CreateServerPayload = req.body;
+  const user = (req as any).user;
   if (!payload || !payload.name || !payload.loader || !payload.mcVersion) {
     return res.status(400).json({
       success: false,
@@ -122,7 +141,7 @@ apiRouter.post('/v1/servers/create', authMiddleware, async (req: Request, res: R
 
   try {
     console.log(`[Warden API] Creating new server '${payload.name}' (${payload.loader} ${payload.mcVersion})...`);
-    const server = await serverManager.createServer(payload);
+    const server = await serverManager.createServer(payload, user?.id);
     res.json({ success: true, data: server } as ApiResponse<WardenServer>);
   } catch (err: any) {
     console.error('[Warden API] Server creation failed:', err);
@@ -133,9 +152,13 @@ apiRouter.post('/v1/servers/create', authMiddleware, async (req: Request, res: R
 // 3. Get Single Server Details
 apiRouter.get('/v1/servers/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const user = (req as any).user;
     const server = await serverManager.getServer(req.params.id);
     if (!server) {
       return res.status(404).json({ success: false, error: 'Server not found' } as ApiResponse<null>);
+    }
+    if (!hasServerAccess(user, server)) {
+      return res.status(403).json({ success: false, error: 'Access denied to this server' } as ApiResponse<null>);
     }
     res.json({ success: true, data: server } as ApiResponse<WardenServer>);
   } catch (err: any) {
@@ -189,7 +212,19 @@ apiRouter.post('/v1/servers/:id/eula', authMiddleware, async (req: Request, res:
 // 4.1 Delete Server Permanently
 apiRouter.delete('/v1/servers/:id', authMiddleware, async (req: Request, res: Response) => {
   const { id } = req.params;
+  const user = (req as any).user;
   try {
+    const server = await serverManager.getServer(id);
+    if (!server) {
+      return res.status(404).json({ success: false, error: 'Server not found' } as ApiResponse<null>);
+    }
+    if (user && user.role !== 'admin' && server.ownerId !== user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden: Only the server owner or an administrator can delete this server.',
+      } as ApiResponse<null>);
+    }
+
     console.log(`[Warden API] Permanently deleting server '${id}'...`);
     await serverManager.deleteServer(id);
     res.json({ success: true, data: { deletedId: id } } as ApiResponse<any>);
@@ -635,6 +670,7 @@ apiRouter.get('/v1/servers/:id/export', authMiddleware, async (req: Request, res
 // 26. Import Server from ZIP Archive (Crafty Controller / Generic / Warden Backups)
 apiRouter.post('/v1/servers/import', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const user = (req as any).user;
     const name = req.query.name as string | undefined;
     const minMemory = req.query.minMemory as string | undefined;
     const maxMemory = req.query.maxMemory as string | undefined;
@@ -654,16 +690,174 @@ apiRouter.post('/v1/servers/import', authMiddleware, async (req: Request, res: R
     });
 
     console.log(`[Warden API] Importing server from uploaded zip: ${tempZipPath}...`);
-    const server = await serverManager.importServerFromZip(tempZipPath, {
-      name,
-      minMemory,
-      maxMemory,
-      autoStart,
-    });
+    const server = await serverManager.importServerFromZip(
+      tempZipPath,
+      {
+        name,
+        minMemory,
+        maxMemory,
+        autoStart,
+      },
+      user?.id
+    );
 
     res.json({ success: true, data: server } as ApiResponse<WardenServer>);
   } catch (err: any) {
     console.error('[Warden API] Server import failed:', err);
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 27. List All Users (for Collaborators & Admin Management)
+apiRouter.get('/v1/users', authMiddleware, async (_req: Request, res: Response) => {
+  try {
+    const users = db.getUsers().map((u) => AuthManager.toPublicUser(u));
+    res.json({ success: true, data: users } as ApiResponse<WardenUserPublic[]>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 28. Create User Account (Admin Only)
+apiRouter.post('/v1/users', authMiddleware, async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ success: false, error: 'Forbidden: Only administrators can create user accounts.' } as ApiResponse<null>);
+  }
+
+  const { username, password, role } = req.body as CreateUserPayload;
+  if (!username || !password) {
+    return res.status(400).json({ success: false, error: 'Username and password are required.' } as ApiResponse<null>);
+  }
+  if (username.trim().length < 2) {
+    return res.status(400).json({ success: false, error: 'Username must be at least 2 characters long.' } as ApiResponse<null>);
+  }
+  if (password.length < 4) {
+    return res.status(400).json({ success: false, error: 'Password must be at least 4 characters long.' } as ApiResponse<null>);
+  }
+
+  const existing = db.getUserByUsername(username.trim());
+  if (existing) {
+    return res.status(400).json({ success: false, error: `User '${username.trim()}' already exists.` } as ApiResponse<null>);
+  }
+
+  try {
+    const passwordHash = await AuthManager.hashPassword(password);
+    const newUser: WardenUser = {
+      id: `user-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+      username: username.trim(),
+      passwordHash,
+      role: role === 'admin' ? 'admin' : 'user',
+      totpEnabled: false,
+      recoveryCodes: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    db.createUser(newUser);
+    res.json({ success: true, data: AuthManager.toPublicUser(newUser) } as ApiResponse<WardenUserPublic>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 29. Update User Role or Password (Admin Only)
+apiRouter.patch('/v1/users/:id', authMiddleware, async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const { id } = req.params;
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ success: false, error: 'Forbidden: Only administrators can update user accounts.' } as ApiResponse<null>);
+  }
+
+  const targetUser = db.getUserById(id);
+  if (!targetUser) {
+    return res.status(404).json({ success: false, error: 'User not found.' } as ApiResponse<null>);
+  }
+
+  const { role, newPassword } = req.body as UpdateUserPayload;
+  const updates: Partial<WardenUser> = {};
+
+  if (role && (role === 'admin' || role === 'user')) {
+    // If demoting an admin, ensure they are not the last admin
+    if (targetUser.role === 'admin' && role === 'user') {
+      const allAdmins = db.getUsers().filter((u) => u.role === 'admin');
+      if (allAdmins.length <= 1) {
+        return res.status(400).json({ success: false, error: 'Cannot demote the last remaining administrator account.' } as ApiResponse<null>);
+      }
+    }
+    updates.role = role;
+  }
+
+  if (newPassword) {
+    if (newPassword.length < 4) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 4 characters long.' } as ApiResponse<null>);
+    }
+    updates.passwordHash = await AuthManager.hashPassword(newPassword);
+  }
+
+  try {
+    const updated = db.updateUser(id, updates);
+    if (!updated) return res.status(404).json({ success: false, error: 'User not found.' } as ApiResponse<null>);
+    res.json({ success: true, data: AuthManager.toPublicUser(updated) } as ApiResponse<WardenUserPublic>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 30. Delete User Account (Admin Only)
+apiRouter.delete('/v1/users/:id', authMiddleware, async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const { id } = req.params;
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ success: false, error: 'Forbidden: Only administrators can delete user accounts.' } as ApiResponse<null>);
+  }
+
+  if (user.id === id) {
+    return res.status(400).json({ success: false, error: 'You cannot delete your own active administrator account.' } as ApiResponse<null>);
+  }
+
+  const targetUser = db.getUserById(id);
+  if (!targetUser) {
+    return res.status(404).json({ success: false, error: 'User not found.' } as ApiResponse<null>);
+  }
+
+  if (targetUser.role === 'admin') {
+    const allAdmins = db.getUsers().filter((u) => u.role === 'admin');
+    if (allAdmins.length <= 1) {
+      return res.status(400).json({ success: false, error: 'Cannot delete the last remaining administrator account.' } as ApiResponse<null>);
+    }
+  }
+
+  try {
+    db.deleteUser(id);
+    res.json({ success: true, data: { deletedId: id } } as ApiResponse<any>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 31. Manage Server Access & Permissions (Owner or Admin Only)
+apiRouter.post('/v1/servers/:id/access', authMiddleware, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { allowedUserIds } = req.body as ServerAccessPayload;
+  const user = (req as any).user;
+
+  try {
+    const server = await serverManager.getServer(id);
+    if (!server) {
+      return res.status(404).json({ success: false, error: 'Server not found.' } as ApiResponse<null>);
+    }
+
+    if (user && user.role !== 'admin' && server.ownerId !== user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden: Only the server owner or an administrator can manage server access.',
+      } as ApiResponse<null>);
+    }
+
+    const updated = await serverManager.updateServerAccess(id, Array.isArray(allowedUserIds) ? allowedUserIds : []);
+    res.json({ success: true, data: updated } as ApiResponse<WardenServer>);
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
   }
 });

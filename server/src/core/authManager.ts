@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 import { db } from '../db/storage.js';
-import { WardenUser, WardenUserPublic } from '@warden/shared';
+import { WardenUser, WardenUserPublic, WardenUserRole } from '@warden/shared';
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
@@ -62,7 +62,7 @@ function generateTOTP(secret: string, timestamp = Date.now()): string {
 export interface TokenPayload {
   id: string;
   username: string;
-  role: 'admin' | 'temp_recovery';
+  role: WardenUserRole;
   isTempRecovery?: boolean;
 }
 

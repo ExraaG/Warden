@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { WardenServer, ServerLoader, ScheduledTask } from '@warden/shared';
+import { WardenServer, ServerLoader, ScheduledTask, WardenUserPublic } from '@warden/shared';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -24,6 +24,12 @@ export default function DashboardPage() {
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabType>('mods');
   const [liveUptime, setLiveUptime] = useState<number>(0);
+
+  // User Accounts & Server Access State
+  const [currentUser, setCurrentUser] = useState<WardenUserPublic | null>(null);
+  const [usersList, setUsersList] = useState<WardenUserPublic[]>([]);
+  const [serverAllowedUsers, setServerAllowedUsers] = useState<string[]>([]);
+  const [savingServerAccess, setSavingServerAccess] = useState<boolean>(false);
 
   // Create Server Modal State & Options
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
@@ -647,6 +653,7 @@ export default function DashboardPage() {
       .then((res) => {
         if (res.success && res.data) {
           setServer(res.data);
+          setServerAllowedUsers(Array.isArray(res.data.allowedUserIds) ? res.data.allowedUserIds : []);
           if (res.data.stats?.uptimeSeconds) {
             setLiveUptime(res.data.stats.uptimeSeconds);
           }
@@ -663,6 +670,26 @@ export default function DashboardPage() {
       })
       .catch((err) => console.error('Error fetching server details:', err))
       .finally(() => setLoading(false));
+  }, []);
+
+  const fetchAuthAndUsers = useCallback(() => {
+    fetch('/api/v1/auth/status')
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && res.data?.user) {
+          setCurrentUser(res.data.user);
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/v1/users')
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && Array.isArray(res.data)) {
+          setUsersList(res.data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const loadAllServers = useCallback(() => {
@@ -720,6 +747,7 @@ export default function DashboardPage() {
   }, [loadServerDetails]);
 
   useEffect(() => {
+    fetchAuthAndUsers();
     loadAllServers();
 
     const handleServerChanged = (e: any) => {
@@ -1402,6 +1430,34 @@ export default function DashboardPage() {
       })
       .catch((err: any) => showToast(`Save error: ${err.message}`, 'error'))
       .finally(() => setSavingSettings(false));
+  };
+
+  const handleToggleUserAccess = (userId: string) => {
+    setServerAllowedUsers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleSaveServerAccess = async () => {
+    if (!serverId) return;
+    setSavingServerAccess(true);
+    try {
+      const res = await fetch(`/api/v1/servers/${serverId}/access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ allowedUserIds: serverAllowedUsers }),
+      }).then((r) => r.json());
+      if (res.success) {
+        showToast('Server access permissions updated successfully!', 'success');
+        loadServerDetails(serverId);
+      } else {
+        showToast(res.error || 'Failed to update server access', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update server access', 'error');
+    } finally {
+      setSavingServerAccess(false);
+    }
   };
 
   const handleCreateTask = async (e: React.FormEvent) => {
@@ -3465,6 +3521,138 @@ export default function DashboardPage() {
               </div>
 
 
+
+              {/* Server Access & Collaborator Permissions Card */}
+              <Card className="p-5 sm:p-6 space-y-5">
+                <div className="section-header flex items-center justify-between">
+                  <div>
+                    <h3 className="section-title font-minecraft font-bold text-slate-100 tracking-wider flex items-center gap-2 uppercase">
+                      <WardenIcon name="users" size={16} className="text-[var(--color-accent)]" />
+                      Server Access &amp; Collaborator Permissions
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Manage which user accounts have access to view, control, and configure <span className="text-[var(--color-accent)] font-semibold">{server?.name || 'this server'}</span>.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Owner Information */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-[var(--bg-main)] rounded-lg border border-[var(--color-border)]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--bg-card)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent)] font-minecraft font-bold text-xs shrink-0">
+                      {((usersList.find((u) => u.id === server?.ownerId)?.username || 'Admin').substring(0, 2)).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-100 font-mono flex items-center gap-2">
+                        <span>Server Owner:</span>
+                        <span className="text-[var(--color-accent)]">
+                          {usersList.find((u) => u.id === server?.ownerId)?.username || 'Primary Admin'}
+                        </span>
+                        <span className="text-[9px] bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 px-1.5 py-0.5 rounded uppercase font-bold font-mono">
+                          Owner
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        {server?.ownerId === currentUser?.id
+                          ? 'You are the owner of this server.'
+                          : currentUser?.role === 'admin'
+                          ? 'You have administrative override privileges for this server.'
+                          : 'You have been granted collaborator access to this server.'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Collaborator User Selection */}
+                {(currentUser?.role === 'admin' || server?.ownerId === currentUser?.id) ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="text-xs font-semibold text-slate-200">
+                      Authorized Accounts
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-mono">
+                      Check the accounts that are permitted to view and manage this server:
+                    </p>
+
+                    {usersList.filter((u) => u.id !== server?.ownerId).length === 0 ? (
+                      <div className="p-4 bg-[var(--bg-main)] rounded-lg border border-[var(--color-border)] text-xs text-slate-400 font-mono text-center">
+                        No other user accounts found in the system. Create additional user accounts in System Settings.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {usersList
+                          .filter((u) => u.id !== server?.ownerId)
+                          .map((u) => {
+                            const isAllowed = serverAllowedUsers.includes(u.id);
+                            return (
+                              <label
+                                key={u.id}
+                                className={`flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer select-none ${
+                                  isAllowed
+                                    ? 'bg-[var(--bg-main)] border-[var(--color-accent)]/40 hover:border-[var(--color-accent)]/60'
+                                    : 'bg-[var(--bg-main)]/60 border-[var(--color-border)] hover:border-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={isAllowed}
+                                    onChange={() => handleToggleUserAccess(u.id)}
+                                    className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[var(--color-accent)] focus:ring-[var(--color-accent)] cursor-pointer"
+                                  />
+                                  <div>
+                                    <div className="text-xs font-bold text-slate-100 font-mono flex items-center gap-2">
+                                      <span>{u.username}</span>
+                                      <span
+                                        className={`text-[9px] px-1.5 py-0.2 rounded uppercase font-bold font-mono ${
+                                          u.role === 'admin'
+                                            ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60'
+                                            : 'bg-slate-800 text-slate-300 border border-slate-700'
+                                        }`}
+                                      >
+                                        {u.role === 'admin' ? 'Admin' : 'User'}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                      {isAllowed ? 'Has full server management access' : 'No access to this server'}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <span
+                                  className={`text-[10px] font-mono px-2 py-0.5 rounded ${
+                                    isAllowed
+                                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                                      : 'bg-slate-900 text-slate-500 border border-slate-800'
+                                  }`}
+                                >
+                                  {isAllowed ? 'Granted' : 'Revoked'}
+                                </span>
+                              </label>
+                            );
+                          })}
+                      </div>
+                    )}
+
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        isLoading={savingServerAccess}
+                        onClick={handleSaveServerAccess}
+                        className="font-minecraft text-xs px-5"
+                      >
+                        <WardenIcon name="save" size={13} className="text-[#0d0e11]" />
+                        Apply Access Permissions
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-[var(--bg-main)] rounded-lg border border-[var(--color-border)] text-xs text-slate-400 font-mono">
+                    Collaborator permissions for this server are managed by the server owner.
+                  </div>
+                )}
+              </Card>
 
               {/* Server Backup & Export (.zip) Card */}
               <Card className="p-5 sm:p-6 space-y-4">

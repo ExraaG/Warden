@@ -36,6 +36,21 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [changingPassword, setChangingPassword] = useState<boolean>(false);
 
+  // User Accounts Management State (Admins Only)
+  const [usersList, setUsersList] = useState<WardenUserPublic[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
+  const [showAddUserModal, setShowAddUserModal] = useState<boolean>(false);
+  const [showEditUserModal, setShowEditUserModal] = useState<boolean>(false);
+  const [selectedUserToEdit, setSelectedUserToEdit] = useState<WardenUserPublic | null>(null);
+  const [newUsername, setNewUsername] = useState<string>('');
+  const [newUserPassword, setNewUserPassword] = useState<string>('');
+  const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
+  const [editUserPassword, setEditUserPassword] = useState<string>('');
+  const [editUserRole, setEditUserRole] = useState<'admin' | 'user'>('user');
+  const [creatingUser, setCreatingUser] = useState<boolean>(false);
+  const [updatingUser, setUpdatingUser] = useState<boolean>(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
   // 2FA Management State
   const [show2FAModal, setShow2FAModal] = useState<boolean>(false);
   const [twoFactorData, setTwoFactorData] = useState<TwoFactorGenerateResponse | null>(null);
@@ -56,6 +71,18 @@ export default function SettingsPage() {
     } catch {}
   };
 
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const res = await fetch('/api/v1/users').then((r) => r.json());
+      if (res.success && Array.isArray(res.data)) {
+        setUsersList(res.data);
+      }
+    } catch {} finally {
+      setLoadingUsers(false);
+    }
+  };
+
   const fetchUpdateStatus = async (force = false) => {
     try {
       const res = await fetch(`/api/v1/system/update-status${force ? '?force=true' : ''}`).then((r) => r.json());
@@ -69,6 +96,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchAuthUser();
+    fetchUsers();
     fetchUpdateStatus();
     fetch('/api/v1/servers')
       .then((r) => r.json())
@@ -93,6 +121,96 @@ export default function SettingsPage() {
       })
       .catch((err) => console.error('Error loading settings:', err));
   }, []);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUsername.trim() || !newUserPassword) {
+      showToast('Username and password are required.', 'error');
+      return;
+    }
+    setCreatingUser(true);
+    try {
+      const res = await fetch('/api/v1/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: newUsername.trim(),
+          password: newUserPassword,
+          role: newUserRole,
+        }),
+      }).then((r) => r.json());
+      if (res.success) {
+        showToast(`User account '${newUsername.trim()}' created!`, 'success');
+        setNewUsername('');
+        setNewUserPassword('');
+        setNewUserRole('user');
+        setShowAddUserModal(false);
+        fetchUsers();
+      } else {
+        showToast(res.error || 'Failed to create user account.', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to create user account.', 'error');
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
+  const handleOpenEditUser = (user: WardenUserPublic) => {
+    setSelectedUserToEdit(user);
+    setEditUserRole(user.role === 'admin' ? 'admin' : 'user');
+    setEditUserPassword('');
+    setShowEditUserModal(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserToEdit) return;
+    setUpdatingUser(true);
+    try {
+      const res = await fetch(`/api/v1/users/${selectedUserToEdit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role: editUserRole,
+          newPassword: editUserPassword || undefined,
+        }),
+      }).then((r) => r.json());
+      if (res.success) {
+        showToast(`User '${selectedUserToEdit.username}' updated successfully!`, 'success');
+        setShowEditUserModal(false);
+        setSelectedUserToEdit(null);
+        setEditUserPassword('');
+        fetchUsers();
+      } else {
+        showToast(res.error || 'Failed to update user.', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update user.', 'error');
+    } finally {
+      setUpdatingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (user: WardenUserPublic) => {
+    if (!confirm(`Are you sure you want to delete user '${user.username}'? This cannot be undone.`)) {
+      return;
+    }
+    setDeletingUserId(user.id);
+    try {
+      const res = await fetch(`/api/v1/users/${user.id}`, { method: 'DELETE' }).then((r) => r.json());
+      if (res.success) {
+        showToast(`User '${user.username}' deleted successfully.`, 'success');
+        fetchUsers();
+      } else {
+        showToast(res.error || 'Failed to delete user.', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete user.', 'error');
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -700,6 +818,132 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        {/* User Accounts Management Card (Admin Only) */}
+        {currentUser?.role === 'admin' && (
+          <Card
+            header="User Accounts & Access"
+            badge={
+              <span className="bg-[var(--bg-main)] text-[var(--color-accent)] border border-[var(--color-border)] px-2 py-0.5 rounded text-[10px] font-minecraft uppercase font-bold tracking-wider">
+                {usersList.length} {usersList.length === 1 ? 'Account' : 'Accounts'}
+              </span>
+            }
+          >
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[var(--color-border)]">
+                <div>
+                  <div className="text-xs font-semibold text-slate-200">
+                    System User Accounts
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    Create and manage accounts. Standard users can create servers and access servers assigned to them.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    setNewUsername('');
+                    setNewUserPassword('');
+                    setNewUserRole('user');
+                    setShowAddUserModal(true);
+                  }}
+                  className="font-minecraft text-xs shrink-0 px-4"
+                >
+                  <WardenIcon name="plus" size={13} className="text-[#0d0e11]" />
+                  Add User
+                </Button>
+              </div>
+
+              {/* User Accounts List */}
+              <div className="space-y-2">
+                {loadingUsers && usersList.length === 0 ? (
+                  <div className="py-6 text-center text-xs font-mono text-slate-400">
+                    Loading accounts...
+                  </div>
+                ) : usersList.length === 0 ? (
+                  <div className="py-6 text-center text-xs font-mono text-slate-400">
+                    No user accounts found.
+                  </div>
+                ) : (
+                  usersList.map((u) => {
+                    const isSelf = u.id === currentUser?.id;
+                    const isDeleting = deletingUserId === u.id;
+                    return (
+                      <div
+                        key={u.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-[var(--bg-main)] rounded-lg border border-[var(--color-border)] hover:border-slate-700 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[var(--bg-card)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent)] font-minecraft font-bold text-xs shrink-0">
+                            {u.username.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-100 font-mono flex items-center gap-2">
+                              <span>{u.username}</span>
+                              {isSelf && (
+                                <span className="text-[9px] bg-[var(--color-accent)]/20 text-[var(--color-accent)] border border-[var(--color-accent)]/40 px-1.5 py-0.2 rounded uppercase font-bold font-mono">
+                                  You
+                                </span>
+                              )}
+                              <span
+                                className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold font-mono ${
+                                  u.role === 'admin'
+                                    ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60'
+                                    : 'bg-slate-800 text-slate-300 border border-slate-700'
+                                }`}
+                              >
+                                {u.role === 'admin' ? 'Admin' : 'User'}
+                              </span>
+                              {u.totpEnabled ? (
+                                <span className="text-[9px] bg-emerald-950/50 text-emerald-300 border border-emerald-800/40 px-1.5 py-0.2 rounded font-mono">
+                                  2FA
+                                </span>
+                              ) : (
+                                <span className="text-[9px] bg-slate-900 text-slate-500 border border-slate-800 px-1.5 py-0.2 rounded font-mono">
+                                  No 2FA
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                              Created {new Date(u.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenEditUser(u)}
+                            className="font-mono text-xs px-2.5 py-1 h-7"
+                          >
+                            <WardenIcon name="edit" size={12} className="text-slate-400" />
+                            Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            disabled={isSelf || isDeleting}
+                            isLoading={isDeleting}
+                            onClick={() => handleDeleteUser(u)}
+                            className="font-mono text-xs px-2.5 py-1 h-7 disabled:opacity-30"
+                          >
+                            <WardenIcon name="trash" size={12} />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Save Button */}
         <div className="flex justify-end gap-3 pt-2">
           <Button type="submit" variant="primary" isLoading={saving} className="px-6">
@@ -708,6 +952,142 @@ export default function SettingsPage() {
           </Button>
         </div>
       </form>
+
+      {/* Add User Modal */}
+      <Modal
+        isOpen={showAddUserModal}
+        onClose={() => setShowAddUserModal(false)}
+        title="Add New User Account"
+        maxWidth="md"
+      >
+        <form onSubmit={handleCreateUser} className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
+              Username
+            </label>
+            <input
+              type="text"
+              required
+              autoFocus
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              placeholder="e.g. Alex"
+              className="w-full h-10 bg-[var(--bg-main)] border border-[var(--color-border)] px-3 rounded-md text-sm text-slate-100 font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
+              Password
+            </label>
+            <PasswordInput
+              required
+              value={newUserPassword}
+              onChange={(e) => setNewUserPassword(e.target.value)}
+              placeholder="Enter password (min 4 characters)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
+              Account Role &amp; Permissions
+            </label>
+            <select
+              value={newUserRole}
+              onChange={(e) => setNewUserRole(e.target.value as 'admin' | 'user')}
+              className="w-full h-10 bg-[var(--bg-main)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+            >
+              <option value="user">Standard User (Can create servers &amp; manage assigned servers)</option>
+              <option value="admin">Administrator (Full access to all servers &amp; system settings)</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--color-border)]">
+            <Button type="button" variant="outline" size="sm" onClick={() => setShowAddUserModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={creatingUser}
+              className="font-minecraft text-xs px-5"
+            >
+              <WardenIcon name="plus" size={13} className="text-[#0d0e11]" />
+              Create Account
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal
+        isOpen={showEditUserModal && Boolean(selectedUserToEdit)}
+        onClose={() => {
+          setShowEditUserModal(false);
+          setSelectedUserToEdit(null);
+          setEditUserPassword('');
+        }}
+        title={`Edit User: ${selectedUserToEdit?.username || ''}`}
+        maxWidth="md"
+      >
+        {selectedUserToEdit && (
+          <form onSubmit={handleUpdateUser} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
+                Account Role
+              </label>
+              <select
+                value={editUserRole}
+                onChange={(e) => setEditUserRole(e.target.value as 'admin' | 'user')}
+                className="w-full h-10 bg-[var(--bg-main)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+              >
+                <option value="user">Standard User (Assigned servers &amp; own servers)</option>
+                <option value="admin">Administrator (Full system &amp; all server access)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
+                Reset Password (Optional)
+              </label>
+              <PasswordInput
+                value={editUserPassword}
+                onChange={(e) => setEditUserPassword(e.target.value)}
+                placeholder="Leave blank to keep current password"
+              />
+              <p className="text-[10px] text-slate-400 font-mono mt-1">
+                Enter a new password only if you wish to reset this user's password.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--color-border)]">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowEditUserModal(false);
+                  setSelectedUserToEdit(null);
+                  setEditUserPassword('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                isLoading={updatingUser}
+                className="font-minecraft text-xs px-5"
+              >
+                <WardenIcon name="save" size={13} className="text-[#0d0e11]" />
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* 2FA Enable Modal (QR Code) */}
       <Modal

@@ -27,6 +27,8 @@ export interface WardenServer {
     lastBackupPath?: string;
     createdAt: string;
     updatedAt: string;
+    ownerId?: string;
+    allowedUserIds?: string[];
 }
 export interface InstalledMod {
     filename: string;
@@ -195,8 +197,21 @@ export interface CreateServerPayload {
     maxMemory?: string;
     port?: number;
     autoStart?: boolean;
+    ownerId?: string;
 }
-export type WardenUserRole = 'admin' | 'temp_recovery';
+export type WardenUserRole = 'admin' | 'user' | 'temp_recovery';
+export interface CreateUserPayload {
+    username: string;
+    password: string;
+    role: 'admin' | 'user';
+}
+export interface UpdateUserPayload {
+    role?: 'admin' | 'user';
+    newPassword?: string;
+}
+export interface ServerAccessPayload {
+    allowedUserIds: string[];
+}
 export interface WardenUser {
     id: string;
     username: string;
