@@ -585,19 +585,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div className="flex items-center gap-1 shrink-0 pl-1.5 sm:pl-2 sm:border-l sm:border-white/10">
                 <div
                   title={isTempRecovery ? 'Temporary Emergency Session' : `Logged in as ${currentUser?.username || 'Admin'}`}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-mono ${
+                  className={`flex items-center px-2.5 py-1 rounded-md text-[10px] sm:text-[11px] font-mono ${
                     isTempRecovery
                       ? 'bg-red-950/60 text-red-300 border border-red-700/60'
                       : 'bg-[var(--bg-card)] text-slate-300 border border-[var(--color-border)]'
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${isTempRecovery ? 'bg-red-400' : 'bg-[var(--color-accent)]'}`} />
-                  <span className="font-bold truncate max-w-[70px] sm:max-w-[110px]">
+                  <span className="font-bold truncate max-w-[80px] sm:max-w-[120px]">
                     {isTempRecovery ? 'Temp Admin' : currentUser?.username || 'Admin'}
                   </span>
-                  {currentUser?.totpEnabled && (
-                    <span title="2FA Active" className="text-[9px] font-bold text-emerald-400 uppercase font-mono">[2FA]</span>
-                  )}
                 </div>
 
                 <button
