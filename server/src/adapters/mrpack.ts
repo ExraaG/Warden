@@ -585,7 +585,7 @@ export class MrPackAdapter {
             iconUrl: modIconUrl,
             stage: 'error',
             targetDir,
-            message: `⚠️ Skipped ${filename}: ${err.message}`,
+            message: `Skipped ${filename}: ${err.message}`,
           });
         }
       }

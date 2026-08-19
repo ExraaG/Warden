@@ -1861,7 +1861,7 @@ export default function DashboardPage() {
 
           {/* Tab Navigation with Dynamic Left & Right Scroll Hint Indicators */}
           <div className="relative">
-            {/* Left Scroll Indicator Gradient & Arrow on Small Screens */}
+            {/* Left Scroll Indicator & Arrow on Small Screens */}
             {tabsCanScrollLeft && (
               <div
                 onClick={() => {
@@ -1869,9 +1869,9 @@ export default function DashboardPage() {
                     tabsContainerRef.current.scrollBy({ left: -140, behavior: 'smooth' });
                   }
                 }}
-                className="sm:hidden cursor-pointer absolute left-0 top-0 bottom-1 w-8 bg-gradient-to-r from-[var(--bg-main)] via-[var(--bg-main)]/90 to-transparent flex items-center justify-start pl-0.5 z-10 text-slate-400 select-none"
+                className="sm:hidden cursor-pointer absolute left-0 top-0 bottom-1 w-8 bg-[var(--bg-main)] flex items-center justify-start pl-0.5 z-10 text-slate-400 select-none"
               >
-                <span className="text-[13px] font-bold text-slate-300 animate-pulse">&lsaquo;</span>
+                <span className="text-[13px] font-bold text-slate-300">&lsaquo;</span>
               </div>
             )}
 
@@ -1916,7 +1916,7 @@ export default function DashboardPage() {
               })}
             </div>
 
-            {/* Right Scroll Indicator Gradient & Arrow on Small Screens */}
+            {/* Right Scroll Indicator & Arrow on Small Screens */}
             {tabsCanScrollRight && (
               <div
                 onClick={() => {
@@ -1924,9 +1924,9 @@ export default function DashboardPage() {
                     tabsContainerRef.current.scrollBy({ left: 140, behavior: 'smooth' });
                   }
                 }}
-                className="sm:hidden cursor-pointer absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-[var(--bg-main)] via-[var(--bg-main)]/90 to-transparent flex items-center justify-end pr-0.5 z-10 text-slate-400 select-none"
+                className="sm:hidden cursor-pointer absolute right-0 top-0 bottom-1 w-8 bg-[var(--bg-main)] flex items-center justify-end pr-0.5 z-10 text-slate-400 select-none"
               >
-                <span className="text-[13px] font-bold text-slate-300 animate-pulse">&rsaquo;</span>
+                <span className="text-[13px] font-bold text-slate-300">&rsaquo;</span>
               </div>
             )}
           </div>
@@ -2913,7 +2913,7 @@ export default function DashboardPage() {
               {hasUnsavedProperties && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[var(--bg-surface)]/95 backdrop-blur-md border border-[var(--color-accent)]/60 text-slate-100 px-5 py-3 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.45)] flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-200">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
                     <span className="text-xs font-minecraft font-bold tracking-wide">
                       You have unsaved changes!
                     </span>
@@ -4075,7 +4075,7 @@ export default function DashboardPage() {
               </label>
               <Dropdown
                 options={[
-                  { id: '', label: '⚡ Any Mod (Trigger whenever any mod updates)' },
+                  { id: '', label: 'Any Mod (Trigger whenever any mod updates)' },
                   ...installedMods.map((m) => {
                     const label = m.title ? `${m.title} (${m.filename})` : m.filename;
                     const val = m.slug || m.filename.replace(/\.jar$/i, '');
@@ -4270,7 +4270,7 @@ export default function DashboardPage() {
       >
         <div className="space-y-3.5 text-slate-300 text-xs">
           <div className="flex items-center gap-2.5 text-amber-400 font-minecraft font-bold">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
             Configuration Saved to server.properties
           </div>
           <p>
@@ -4679,7 +4679,7 @@ export default function DashboardPage() {
                 {hasDisclaimer ? (
                   <div className="bg-amber-950/60 border-2 border-amber-500/70 rounded-xl p-3.5 sm:p-4 space-y-2.5 text-amber-200 shadow-xl">
                     <div className="flex items-center gap-2 font-minecraft font-bold text-xs text-amber-400">
-                      <WardenIcon name="triangle-alert" size={18} className="text-amber-400 shrink-0 animate-pulse" />
+                      <WardenIcon name="triangle-alert" size={18} className="text-amber-400 shrink-0" />
                       <span>LOADER / VERSION MISMATCH DISCLAIMER</span>
                     </div>
 
@@ -4699,7 +4699,7 @@ export default function DashboardPage() {
                     </div>
 
                     <p className="text-[11px] leading-relaxed text-amber-100">
-                      ⚠️ <strong>Attention:</strong> Your server is detected as <strong className="text-white uppercase">{currentLoader}</strong>, but this modpack contains <strong className="text-white uppercase">{modpackLoader}</strong> mods.
+                      <strong>Attention:</strong> Your server is detected as <strong className="text-white uppercase">{currentLoader}</strong>, but this modpack contains <strong className="text-white uppercase">{modpackLoader}</strong> mods.
                     </p>
                     <p className="text-[10px] leading-relaxed text-amber-300 font-mono">
                       {currentLoader === 'vanilla' || currentLoader === 'unknown'
@@ -5015,9 +5015,9 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Hang Tight Live Notification Pulse */}
+              {/* Hang Tight Live Notification */}
               {hangTightText && (
-                <div className="flex items-center gap-2 text-[11px] font-mono text-amber-300 bg-amber-950/40 border border-amber-800/50 px-3 py-1.5 rounded-xl animate-pulse">
+                <div className="flex items-center gap-2 text-[11px] font-mono text-amber-300 bg-amber-950/40 border border-amber-800/50 px-3 py-1.5 rounded-xl">
                   <WardenIcon name="clock" size={13} className="text-amber-400 shrink-0" />
                   <span className="flex-1">{hangTightText}</span>
                 </div>
@@ -5088,9 +5088,9 @@ export default function DashboardPage() {
                       >
                         <span className="flex items-center gap-1.5 truncate">
                           {log.isError ? (
-                            <span className="text-amber-400 font-bold">⚠️</span>
+                            <WardenIcon name="triangle-alert" size={12} className="text-amber-400 shrink-0" />
                           ) : (
-                            <span className="text-[var(--color-accent)] font-bold">✓</span>
+                            <WardenIcon name="check" size={12} className="text-[var(--color-accent)] shrink-0" />
                           )}
                           <span className="truncate">{log.filename}</span>
                         </span>

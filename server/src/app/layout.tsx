@@ -367,7 +367,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </head>
         <body className="bg-[#0d0e11] text-slate-100 min-h-screen flex items-center justify-center font-sans">
           <div className="text-center space-y-3">
-            <div className="h-10 w-14 warden-logo-mask mx-auto animate-pulse" />
+            <div className="h-10 w-14 warden-logo-mask mx-auto" />
             <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-6 h-6 rounded-full" />
           </div>
         </body>
@@ -425,14 +425,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body suppressHydrationWarning className="bg-[var(--bg-main)] text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
         {/* Emergency Temp Recovery Warning Banner */}
         {isTempRecovery && (
-          <div className="bg-gradient-to-r from-red-950 via-amber-950 to-red-950 border-b border-red-500/50 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50 shadow-xl shadow-red-950/40">
+          <div className="bg-red-950 border-b border-red-800/80 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50">
             <div className="flex items-center gap-2.5 min-w-0">
               <WardenIcon name="triangle-alert" size={16} className="text-red-400 shrink-0" />
               <span className="font-minecraft text-xs font-bold text-red-300 tracking-wide uppercase">
                 EMERGENCY RECOVERY SESSION ACTIVE
               </span>
-              <span className="bg-red-950 text-red-200 border border-red-700 px-2 py-0.5 rounded text-[11px] font-mono font-bold">
-                ⏱ {tempTimeRemaining}
+              <span className="bg-red-900/60 text-red-200 border border-red-700 px-2 py-0.5 rounded text-[11px] font-mono font-bold">
+                {tempTimeRemaining}
               </span>
               <span className="text-xs text-amber-200/90 font-mono hidden md:inline">
                 Restricted to password reset &amp; account recovery.
@@ -454,7 +454,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Global Update Notification Banner */}
         {systemUpdate?.updateAvailable && dismissedCommit !== systemUpdate.latestCommit && (
-          <div className="bg-gradient-to-r from-emerald-950/95 via-slate-900/95 to-emerald-950/95 border-b border-emerald-500/40 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50 shadow-lg shadow-emerald-950/30">
+          <div className="bg-emerald-950 border-b border-emerald-800/80 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50">
             <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto">
               <WardenIcon name="download" size={15} className="text-emerald-400 shrink-0" />
               <span className="font-minecraft text-xs font-bold text-emerald-300 tracking-wide shrink-0">
@@ -465,7 +465,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   {systemUpdate.currentCommit}
                 </span>
                 <span className="text-slate-500 text-xs">→</span>
-                <span className="bg-emerald-950 text-emerald-300 border border-emerald-600/70 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
+                <span className="bg-emerald-900/60 text-emerald-300 border border-emerald-600/70 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
                   {systemUpdate.latestCommit}
                 </span>
               </div>
@@ -486,7 +486,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 variant="primary"
                 size="sm"
                 onClick={() => setShowUpdateModal(true)}
-                className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-minecraft text-xs shadow-md shadow-emerald-950/40"
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-minecraft text-xs"
               >
                 <WardenIcon name="download" size={13} className="text-black" />
                 Accept &amp; Update
@@ -575,12 +575,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       : 'bg-[var(--bg-card)] text-slate-300 border border-[var(--color-border)]'
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${isTempRecovery ? 'bg-red-400 animate-ping' : 'bg-[var(--color-accent)]'}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${isTempRecovery ? 'bg-red-400' : 'bg-[var(--color-accent)]'}`} />
                   <span className="font-bold truncate max-w-[70px] sm:max-w-[110px]">
                     {isTempRecovery ? 'Temp Admin' : currentUser?.username || 'Admin'}
                   </span>
                   {currentUser?.totpEnabled && (
-                    <span title="2FA Active" className="text-[10px]">🛡️</span>
+                    <span title="2FA Active" className="text-[9px] font-bold text-emerald-400 uppercase font-mono">[2FA]</span>
                   )}
                 </div>
 
@@ -752,10 +752,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   </span>
                 </div>
 
-                {/* Animated Progress Bar */}
-                <div className="w-full bg-slate-950 rounded-full h-3.5 overflow-hidden border border-slate-800 p-0.5">
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-950 rounded-full h-3 overflow-hidden border border-slate-800 p-0.5">
                   <div
-                    className="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 h-full rounded-full transition-all duration-500 shadow-sm shadow-emerald-500/50"
+                    className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                     style={{ width: `${Math.max(5, updateProgress.percent)}%` }}
                   />
                 </div>

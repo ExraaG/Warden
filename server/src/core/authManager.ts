@@ -266,9 +266,8 @@ export class AuthManager {
     console.log('║                                                                              ║');
     console.log(`║  Username: \x1b[32m${username.padEnd(65)}\x1b[0m║`);
     console.log(`║  Password: \x1b[33m\x1b[1m${rawPassword.padEnd(65)}\x1b[0m║`);
-    console.log('║                                                                              ║');
-    console.log('║  ⚡ \x1b[31m\x1b[1mEXPIRES IN: 15 MINUTES\x1b[0m (Single-Use Recovery Session)                     ║');
-    console.log('║  🔒 \x1b[36mPERMISSIONS:\x1b[0m Restricted strictly to Password Reset & 2FA Management.      ║');
+    console.log('║  \x1b[31m\x1b[1mEXPIRES IN: 15 MINUTES\x1b[0m (Single-Use Recovery Session)                        ║');
+    console.log('║  \x1b[36mPERMISSIONS:\x1b[0m Restricted strictly to Password Reset & 2FA Management.         ║');
     console.log('╚══════════════════════════════════════════════════════════════════════════════╝');
     console.log('\n');
 

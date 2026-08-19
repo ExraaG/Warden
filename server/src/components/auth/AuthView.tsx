@@ -258,18 +258,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0d0e11] bg-gradient-to-b from-[#111317] to-[#0a0b0d] flex items-center justify-center p-4 overflow-y-auto">
-      {/* Animated Subtle Background Glow */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[var(--color-accent)]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl" />
-      </div>
-
+    <div className="fixed inset-0 z-50 bg-[#0d0e11] flex items-center justify-center p-4 overflow-y-auto">
       <div className="w-full max-w-md relative z-10 my-auto">
-        <Card className="p-6 sm:p-8 bg-[var(--bg-surface)] border-[var(--color-border)] shadow-2xl space-y-6">
+        <Card className="p-6 sm:p-8 bg-[var(--bg-surface)] border-[var(--color-border)] space-y-6">
           {/* Logo & Header */}
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--color-accent)] shadow-lg shadow-[var(--color-accent)]/10 mb-1">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--color-accent)] mb-1">
               <WardenIcon name="server" size={24} />
             </div>
             <h1 className="font-minecraft text-xl sm:text-2xl font-bold text-slate-100 tracking-wider uppercase">
@@ -617,15 +611,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   Warden can generate a temporary single-use recovery login directly inside the server terminal / Docker logs.
                 </p>
                 <div className="bg-[#0a0b0d] p-2.5 rounded border border-[var(--color-border)] text-[10px] text-slate-400 space-y-1">
-                  <div>⚡ <span className="text-amber-300 font-semibold">15-Minute Expiration:</span> Credentials automatically expire.</div>
-                  <div>🔒 <span className="text-emerald-300 font-semibold">Restricted:</span> Access is strictly limited to Password Reset &amp; 2FA management.</div>
+                  <div><span className="text-amber-300 font-semibold">15-Minute Expiration:</span> Credentials automatically expire.</div>
+                  <div><span className="text-emerald-300 font-semibold">Restricted:</span> Access is strictly limited to Password Reset &amp; 2FA management.</div>
                 </div>
               </div>
 
               {emergencyTriggered ? (
                 <div className="bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-lg p-3.5 text-center space-y-2">
                   <div className="text-xs font-bold text-slate-100 font-mono">
-                    ✓ Emergency Account Generated in Logs!
+                    Emergency Account Generated in Logs
                   </div>
                   <p className="text-[11px] text-slate-300 font-mono">
                     Check your server console or run <code className="text-emerald-400 bg-black/40 px-1 py-0.5 rounded">docker compose logs</code> to read your temporary credentials.
