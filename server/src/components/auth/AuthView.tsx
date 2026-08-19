@@ -453,7 +453,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                 className="w-full font-minecraft text-xs justify-center py-2 mt-1"
               >
                 <WardenIcon name="check" size={14} className="text-[#0d0e11]" />
-                {want2FAInSetup ? 'Continue to 2FA Setup' : 'Create Account'}
+                Create Account
               </Button>
             </form>
           )}
