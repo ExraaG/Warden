@@ -1,13 +1,16 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { config } from '../config.js';
-import { DetectionState, JobLog, ScheduledTask, WardenSettings } from '@warden/shared';
+import { DetectionState, JobLog, ScheduledTask, WardenSettings, WardenUser } from '@warden/shared';
 
 interface StorageData {
   settings: WardenSettings;
   serverDetections: Record<string, DetectionState>;
   jobLogs: JobLog[];
   customTasks: ScheduledTask[];
+  users: WardenUser[];
+  authSecret?: string;
 }
 
 const DEFAULT_SETTINGS: WardenSettings = {
@@ -32,6 +35,7 @@ export class Storage {
     this.filePath = path.join(this.dataDir, 'warden_storage.json');
     this.ensureDirs();
     this.data = this.load();
+    this.cleanupExpiredUsers();
   }
 
   private ensureDirs(): void {
@@ -55,6 +59,8 @@ export class Storage {
           serverDetections: parsed.serverDetections || {},
           jobLogs: parsed.jobLogs || [],
           customTasks: parsed.customTasks || loadedSettings.customTasks || [],
+          users: Array.isArray(parsed.users) ? parsed.users : [],
+          authSecret: parsed.authSecret || crypto.randomBytes(32).toString('hex'),
         };
       }
     } catch (error) {
@@ -65,6 +71,8 @@ export class Storage {
       serverDetections: {},
       jobLogs: [],
       customTasks: [],
+      users: [],
+      authSecret: crypto.randomBytes(32).toString('hex'),
     };
   }
 
@@ -156,7 +164,90 @@ export class Storage {
   public getBackupsDir(): string {
     return path.join(this.dataDir, 'backups');
   }
+
+  // ── AUTH & USER METHODS ──
+
+  public getAuthSecret(): string {
+    if (!this.data.authSecret) {
+      this.data.authSecret = crypto.randomBytes(32).toString('hex');
+      this.save();
+    }
+    return this.data.authSecret;
+  }
+
+  public getUsers(): WardenUser[] {
+    this.cleanupExpiredUsers();
+    return [...(this.data.users || [])];
+  }
+
+  public getHasUsers(): boolean {
+    this.cleanupExpiredUsers();
+    return (this.data.users || []).some((u) => u.role === 'admin');
+  }
+
+  public getUserByUsername(username: string): WardenUser | undefined {
+    this.cleanupExpiredUsers();
+    const cleanUsername = username.trim().toLowerCase();
+    return (this.data.users || []).find(
+      (u) => u.username.toLowerCase() === cleanUsername
+    );
+  }
+
+  public getUserById(id: string): WardenUser | undefined {
+    this.cleanupExpiredUsers();
+    return (this.data.users || []).find((u) => u.id === id);
+  }
+
+  public createUser(user: WardenUser): WardenUser {
+    if (!this.data.users) this.data.users = [];
+    // Remove any existing user with same ID or username
+    this.data.users = this.data.users.filter(
+      (u) => u.id !== user.id && u.username.toLowerCase() !== user.username.toLowerCase()
+    );
+    this.data.users.push(user);
+    this.save();
+    return user;
+  }
+
+  public updateUser(id: string, partial: Partial<WardenUser>): WardenUser | undefined {
+    if (!this.data.users) this.data.users = [];
+    const index = this.data.users.findIndex((u) => u.id === id);
+    if (index === -1) return undefined;
+    this.data.users[index] = {
+      ...this.data.users[index],
+      ...partial,
+      updatedAt: new Date().toISOString(),
+    };
+    this.save();
+    return this.data.users[index];
+  }
+
+  public deleteUser(id: string): boolean {
+    if (!this.data.users) return false;
+    const initialLen = this.data.users.length;
+    this.data.users = this.data.users.filter((u) => u.id !== id);
+    if (this.data.users.length !== initialLen) {
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  public cleanupExpiredUsers(): void {
+    if (!this.data.users) return;
+    const now = Date.now();
+    const beforeCount = this.data.users.length;
+    this.data.users = this.data.users.filter((u) => {
+      if (!u.expiresAt) return true;
+      const exp = new Date(u.expiresAt).getTime();
+      return exp > now;
+    });
+    if (this.data.users.length !== beforeCount) {
+      this.save();
+    }
+  }
 }
 
 export const db = new Storage();
+
 

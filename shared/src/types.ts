@@ -250,5 +250,80 @@ export interface CreateServerPayload {
   autoStart?: boolean;
 }
 
+// ── AUTHENTICATION & SECURITY TYPES ──
 
+export type WardenUserRole = 'admin' | 'temp_recovery';
 
+export interface WardenUser {
+  id: string;
+  username: string;
+  passwordHash: string;
+  role: WardenUserRole;
+  totpEnabled: boolean;
+  totpSecret?: string;
+  recoveryCodes: string[];
+  createdAt: string;
+  updatedAt: string;
+  expiresAt?: string;
+}
+
+export interface WardenUserPublic {
+  id: string;
+  username: string;
+  role: WardenUserRole;
+  totpEnabled: boolean;
+  createdAt: string;
+  isTempRecovery?: boolean;
+  expiresAt?: string;
+}
+
+export interface AuthStatusResponse {
+  hasUsers: boolean;
+  authenticated: boolean;
+  user?: WardenUserPublic;
+  isTempRecovery?: boolean;
+  expiresAt?: string;
+}
+
+export interface LoginPayload {
+  username: string;
+  password: string;
+  totpCode?: string;
+  recoveryCode?: string;
+}
+
+export interface SetupPayload {
+  username: string;
+  password: string;
+  enableTotp?: boolean;
+  totpSecret?: string;
+  totpCode?: string;
+}
+
+export interface SetupResponse {
+  user: WardenUserPublic;
+  token: string;
+  recoveryCodes?: string[];
+}
+
+export interface TwoFactorGenerateResponse {
+  secret: string;
+  otpauthUrl: string;
+  qrCodeDataUrl: string;
+}
+
+export interface TwoFactorEnablePayload {
+  secret: string;
+  totpCode: string;
+}
+
+export interface TwoFactorEnableResponse {
+  success: boolean;
+  recoveryCodes: string[];
+}
+
+export interface ResetPasswordPayload {
+  currentPassword?: string;
+  newPassword: string;
+  resetTotp?: boolean;
+}

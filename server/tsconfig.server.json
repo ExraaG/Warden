@@ -20,7 +20,8 @@
     "src/adapters/**/*.ts",
     "src/detection/**/*.ts",
     "src/jobs/**/*.ts",
-    "src/routes/**/*.ts"
+    "src/routes/**/*.ts",
+    "src/core/**/*.ts"
   ],
   "exclude": ["node_modules", "src/app", "src/components"]
 }

@@ -5,11 +5,13 @@ import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Dropdown, DropdownOption } from '../components/ui/Dropdown';
-import { WardenServer } from '@warden/shared';
+import { WardenServer, AuthStatusResponse, WardenUserPublic } from '@warden/shared';
 import { WardenIcon, WardenIconName } from '../components/ui/WardenIcon';
 import { ToastContainer, showToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
+import { PasswordInput } from '../components/ui/PasswordInput';
+import { AuthView } from '../components/auth/AuthView';
 
 export interface SystemUpdateInfo {
   updateAvailable: boolean;
@@ -25,6 +27,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const [servers, setServers] = useState<WardenServer[]>([]);
   const [selectedServerId, setSelectedServerId] = useState<string>('');
+
+  // Authentication State
+  const [authStatus, setAuthStatus] = useState<AuthStatusResponse>({
+    hasUsers: true,
+    authenticated: false,
+  });
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<WardenUserPublic | null>(null);
+  const [isTempRecovery, setIsTempRecovery] = useState<boolean>(false);
+  const [tempExpiresAt, setTempExpiresAt] = useState<string | undefined>(undefined);
+  const [tempTimeRemaining, setTempTimeRemaining] = useState<string>('15:00');
+
+  // Emergency Password Reset Modal State
+  const [showEmergencyResetModal, setShowEmergencyResetModal] = useState<boolean>(false);
+  const [emergencyNewPassword, setEmergencyNewPassword] = useState<string>('');
+  const [emergencyConfirmPassword, setEmergencyConfirmPassword] = useState<string>('');
+  const [emergencyResetTotp, setEmergencyResetTotp] = useState<boolean>(true);
+  const [emergencyResetting, setEmergencyResetting] = useState<boolean>(false);
 
   // Global GitHub Update State
   const [systemUpdate, setSystemUpdate] = useState<SystemUpdateInfo | null>(null);
@@ -157,6 +177,108 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }, 1500);
   };
 
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/v1/auth/status');
+      const data = await res.json();
+      if (data.success && data.data) {
+        setAuthStatus(data.data);
+        if (data.data.authenticated && data.data.user) {
+          setCurrentUser(data.data.user);
+          setIsTempRecovery(Boolean(data.data.isTempRecovery));
+          setTempExpiresAt(data.data.expiresAt);
+        } else {
+          setCurrentUser(null);
+          setIsTempRecovery(false);
+          setTempExpiresAt(undefined);
+        }
+      }
+    } catch (err) {
+      console.warn('[Warden] Auth status check failed:', err);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/v1/auth/logout', { method: 'POST' });
+      setAuthStatus((prev) => ({ ...prev, authenticated: false, user: undefined }));
+      setCurrentUser(null);
+      setIsTempRecovery(false);
+      setTempExpiresAt(undefined);
+      showToast('Logged out successfully.', 'info');
+    } catch {}
+  };
+
+  // 15-Minute Emergency Recovery Countdown Timer
+  useEffect(() => {
+    if (!isTempRecovery || !tempExpiresAt) return;
+
+    const updateTimer = () => {
+      const remainingMs = new Date(tempExpiresAt).getTime() - Date.now();
+      if (remainingMs <= 0) {
+        setTempTimeRemaining('00:00');
+        showToast('Emergency recovery session has expired.', 'error');
+        setAuthStatus((prev) => ({ ...prev, authenticated: false, user: undefined }));
+        setCurrentUser(null);
+        setIsTempRecovery(false);
+        setTempExpiresAt(undefined);
+        return;
+      }
+
+      const mins = Math.floor(remainingMs / 60000);
+      const secs = Math.floor((remainingMs % 60000) / 1000);
+      setTempTimeRemaining(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [isTempRecovery, tempExpiresAt]);
+
+  const handleEmergencyPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (emergencyNewPassword !== emergencyConfirmPassword) {
+      showToast('Passwords do not match.', 'error');
+      return;
+    }
+    if (emergencyNewPassword.length < 4) {
+      showToast('Password must be at least 4 characters long.', 'error');
+      return;
+    }
+
+    setEmergencyResetting(true);
+    try {
+      const res = await fetch('/api/v1/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          newPassword: emergencyNewPassword,
+          resetTotp: emergencyResetTotp,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to reset password.');
+      }
+
+      showToast('Master password successfully reset! Please log in.', 'success');
+      setShowEmergencyResetModal(false);
+      setEmergencyNewPassword('');
+      setEmergencyConfirmPassword('');
+      setAuthStatus({ hasUsers: true, authenticated: false });
+      setCurrentUser(null);
+      setIsTempRecovery(false);
+      setTempExpiresAt(undefined);
+    } catch (err: any) {
+      showToast(err.message || 'Password reset failed.', 'error');
+    } finally {
+      setEmergencyResetting(false);
+    }
+  };
+
   const loadServers = () => {
     fetch('/api/v1/servers')
       .then((res) => res.json())
@@ -175,16 +297,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   };
 
   useEffect(() => {
-    // Check for updates on every page / website load
+    checkAuth();
     checkUpdates();
     loadServers();
 
     const handleUpdate = () => loadServers();
     const handleTriggerUpdateModal = () => setShowUpdateModal(true);
+    const handleAuthChanged = () => checkAuth();
 
     window.addEventListener('warden_server_updated', handleUpdate);
     window.addEventListener('warden_server_changed', handleUpdate);
     window.addEventListener('warden_open_update_modal', handleTriggerUpdateModal);
+    window.addEventListener('warden_auth_changed', handleAuthChanged);
 
     // Periodic check every 5 minutes in background
     const updateInterval = setInterval(checkUpdates, 5 * 60 * 1000);
@@ -194,6 +318,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       window.removeEventListener('warden_server_updated', handleUpdate);
       window.removeEventListener('warden_server_changed', handleUpdate);
       window.removeEventListener('warden_open_update_modal', handleTriggerUpdateModal);
+      window.removeEventListener('warden_auth_changed', handleAuthChanged);
       clearInterval(updateInterval);
       clearInterval(serverInterval);
     };
@@ -233,6 +358,53 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     { href: '/settings', label: 'Settings', icon: 'settings' },
   ];
 
+  if (authLoading) {
+    return (
+      <html lang="en" className="dark" data-theme="emerald" suppressHydrationWarning>
+        <head>
+          <title>Warden - Minecraft Server &amp; Mod Ops</title>
+          <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+        </head>
+        <body className="bg-[#0d0e11] text-slate-100 min-h-screen flex items-center justify-center font-sans">
+          <div className="text-center space-y-3">
+            <div className="h-10 w-14 warden-logo-mask mx-auto animate-pulse" />
+            <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-6 h-6 rounded-full" />
+          </div>
+        </body>
+      </html>
+    );
+  }
+
+  if (!authStatus.authenticated || !authStatus.hasUsers) {
+    return (
+      <html lang="en" className="dark" data-theme="emerald" suppressHydrationWarning>
+        <head>
+          <title>Warden - Minecraft Server &amp; Mod Ops</title>
+          <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+        </head>
+        <body className="bg-[#0d0e11] text-slate-100 min-h-screen flex flex-col font-sans">
+          <AuthView
+            authStatus={authStatus}
+            onAuthenticated={(user, isTemp, expiresAt) => {
+              setAuthStatus({
+                hasUsers: true,
+                authenticated: true,
+                user,
+                isTempRecovery: isTemp,
+                expiresAt,
+              });
+              setCurrentUser(user);
+              setIsTempRecovery(Boolean(isTemp));
+              setTempExpiresAt(expiresAt);
+              loadServers();
+            }}
+          />
+          <ToastContainer />
+        </body>
+      </html>
+    );
+  }
+
   return (
     <html lang="en" className="dark" data-theme="emerald" suppressHydrationWarning>
       <head>
@@ -251,6 +423,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body suppressHydrationWarning className="bg-[var(--bg-main)] text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
+        {/* Emergency Temp Recovery Warning Banner */}
+        {isTempRecovery && (
+          <div className="bg-gradient-to-r from-red-950 via-amber-950 to-red-950 border-b border-red-500/50 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50 shadow-xl shadow-red-950/40">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <WardenIcon name="triangle-alert" size={16} className="text-red-400 shrink-0" />
+              <span className="font-minecraft text-xs font-bold text-red-300 tracking-wide uppercase">
+                EMERGENCY RECOVERY SESSION ACTIVE
+              </span>
+              <span className="bg-red-950 text-red-200 border border-red-700 px-2 py-0.5 rounded text-[11px] font-mono font-bold">
+                ⏱ {tempTimeRemaining}
+              </span>
+              <span className="text-xs text-amber-200/90 font-mono hidden md:inline">
+                Restricted to password reset &amp; account recovery.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setShowEmergencyResetModal(true)}
+                className="bg-red-500 hover:bg-red-400 text-black font-bold font-minecraft text-xs"
+              >
+                <WardenIcon name="edit" size={13} className="text-black" />
+                Reset Master Password &amp; 2FA
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Global Update Notification Banner */}
         {systemUpdate?.updateAvailable && dismissedCommit !== systemUpdate.latestCommit && (
           <div className="bg-gradient-to-r from-emerald-950/95 via-slate-900/95 to-emerald-950/95 border-b border-emerald-500/40 px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 z-50 shadow-lg shadow-emerald-950/30">
@@ -320,7 +521,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             )}
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto">
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
             {/* Desktop Server Switcher */}
             {dropdownOptions.length > 0 && (
               <div className="hidden sm:block">
@@ -363,12 +564,126 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   </Link>
                 );
               })}
+
+              {/* User Profile & Logout */}
+              <div className="flex items-center gap-1 shrink-0 pl-1.5 sm:pl-2 sm:border-l sm:border-white/10">
+                <div
+                  title={isTempRecovery ? 'Temporary Emergency Session' : `Logged in as ${currentUser?.username || 'Admin'}`}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-mono ${
+                    isTempRecovery
+                      ? 'bg-red-950/60 text-red-300 border border-red-700/60'
+                      : 'bg-[var(--bg-card)] text-slate-300 border border-[var(--color-border)]'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isTempRecovery ? 'bg-red-400 animate-ping' : 'bg-[var(--color-accent)]'}`} />
+                  <span className="font-bold truncate max-w-[70px] sm:max-w-[110px]">
+                    {isTempRecovery ? 'Temp Admin' : currentUser?.username || 'Admin'}
+                  </span>
+                  {currentUser?.totpEnabled && (
+                    <span title="2FA Active" className="text-[10px]">🛡️</span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  title="Sign Out"
+                  className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/30 rounded-md transition-colors border border-transparent hover:border-red-800/40"
+                >
+                  <WardenIcon name="power" size={13} />
+                </button>
+              </div>
             </nav>
           </div>
         </header>
 
         {/* Main Content Area */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 pt-1 sm:pt-2 pb-6">{children}</main>
+
+        {/* Emergency Master Password Reset Modal */}
+        <Modal
+          isOpen={showEmergencyResetModal}
+          onClose={() => !emergencyResetting && setShowEmergencyResetModal(false)}
+          title="Reset Master Administrator Password"
+          maxWidth="md"
+        >
+          <form onSubmit={handleEmergencyPasswordReset} className="space-y-4">
+            <div className="bg-red-950/30 border border-red-500/40 rounded-lg p-3 text-xs text-red-200 font-mono leading-relaxed space-y-1">
+              <div className="font-bold text-red-300">Set New Administrator Password</div>
+              <p className="text-[11px] text-red-200/80">
+                This will update the master admin password and terminate the temporary 15-minute emergency recovery session.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
+                New Master Password
+              </label>
+              <PasswordInput
+                required
+                value={emergencyNewPassword}
+                onChange={(e) => setEmergencyNewPassword(e.target.value)}
+                placeholder="Enter new master password"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
+                Confirm New Password
+              </label>
+              <PasswordInput
+                required
+                value={emergencyConfirmPassword}
+                onChange={(e) => setEmergencyConfirmPassword(e.target.value)}
+                placeholder="Repeat new master password"
+              />
+            </div>
+
+            <div
+              onClick={() => setEmergencyResetTotp(!emergencyResetTotp)}
+              className="flex items-center gap-2 pt-1 cursor-pointer select-none group"
+            >
+              <div
+                className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                  emergencyResetTotp
+                    ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]'
+                    : 'border-[var(--color-border)] bg-[var(--bg-main)] group-hover:border-[var(--color-accent)]/50'
+                }`}
+              >
+                {emergencyResetTotp && (
+                  <svg className="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <span className="text-xs text-slate-300 group-hover:text-slate-100 transition-colors font-mono">
+                Also reset and disable previous 2FA (Recommended if lost)
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={emergencyResetting}
+                onClick={() => setShowEmergencyResetModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                isLoading={emergencyResetting}
+                className="bg-red-500 hover:bg-red-400 text-black font-bold font-minecraft text-xs"
+              >
+                <WardenIcon name="check" size={13} className="text-black" />
+                Reset &amp; End Emergency Session
+              </Button>
+            </div>
+          </form>
+        </Modal>
 
         {/* Global Self-Update Modal */}
         <Modal

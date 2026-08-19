@@ -19,40 +19,65 @@ import {
   ServerLoader,
 } from '@warden/shared';
 
+import { AuthManager } from '../core/authManager.js';
+import { extractToken } from './auth.js';
+
 export const apiRouter = Router();
 
 // Auth Middleware protecting /api/v1 routes
 const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const settings = db.getSettings();
-  const validKey = config.wardenApiKey || 'warden_secret_key_change_me';
-
-  const providedHeader = req.header('X-Warden-API-Key');
-  const authHeader = req.header('Authorization');
-
-  let key = providedHeader;
-  if (!key && authHeader && authHeader.startsWith('Bearer ')) {
-    key = authHeader.substring(7);
-  }
-
-  const host = req.headers.host || '';
-  const referer = req.headers.referer || '';
-  const isBrowser =
-    req.headers['sec-fetch-site'] === 'same-origin' ||
-    Boolean(referer && host && referer.includes(host)) ||
-    Boolean(req.headers['user-agent']?.includes('Mozilla'));
-
-  if (isBrowser || config.devFixtureMode || !settings.wardenApiKeySet) {
+  // If no users have been set up yet, allow access to proceed with initial setup
+  if (!db.getHasUsers()) {
     return next();
   }
 
-  if (!key || key !== validKey) {
-    return res.status(401).json({
-      success: false,
-      error: 'Unauthorized: Invalid or missing Warden API Key.',
-    } as ApiResponse<null>);
+  // 1. Check for valid JWT token via httpOnly cookie or Authorization Bearer header
+  const token = extractToken(req);
+  if (token) {
+    const payload = AuthManager.verifyToken(token);
+    if (payload) {
+      (req as any).user = payload;
+
+      // If user is in 15-minute Emergency Temp Recovery mode, allow read-only/status info but block modifying server operations
+      if (payload.role === 'temp_recovery') {
+        const isSafeRoute =
+          req.method === 'GET' ||
+          req.path.startsWith('/v1/auth') ||
+          req.path.startsWith('/auth') ||
+          req.path === '/health';
+
+        if (!isSafeRoute) {
+          return res.status(403).json({
+            success: false,
+            error:
+              'Forbidden: Emergency recovery mode is restricted strictly to Account & Password Management. Please reset your admin password to restore full access.',
+          } as ApiResponse<null>);
+        }
+      }
+
+      return next();
+    }
   }
 
-  next();
+  // 2. Check for configured Warden API Key (for external automation/scripts)
+  const validKey = config.wardenApiKey;
+  if (validKey) {
+    const providedHeader = req.header('X-Warden-API-Key');
+    const authHeader = req.header('Authorization');
+    let key = providedHeader;
+    if (!key && authHeader && authHeader.startsWith('Bearer ')) {
+      key = authHeader.substring(7);
+    }
+    if (key && key === validKey) {
+      return next();
+    }
+  }
+
+  // 3. Reject unauthorized access
+  return res.status(401).json({
+    success: false,
+    error: 'Unauthorized: Please log in to access this resource.',
+  } as ApiResponse<null>);
 };
 
 // Health Check Endpoint

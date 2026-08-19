@@ -1,9 +1,11 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import { parse } from 'url';
 import next from 'next';
 import { config } from './config.js';
 import { apiRouter } from './routes/api.js';
+import { authRouter } from './routes/auth.js';
 import { updateJobRunner } from './jobs/cron.js';
 
 const appDir = typeof __dirname !== 'undefined' ? path.resolve(__dirname, '..') : path.resolve(process.cwd(), 'server');
@@ -18,6 +20,10 @@ async function bootstrap() {
 
   app.use(express.json({ limit: '150mb' }));
   app.use(express.urlencoded({ limit: '150mb', extended: true }));
+  app.use(cookieParser());
+
+  // Mount Auth router directly
+  app.use('/api/v1/auth', authRouter);
 
   // Mount API router under /api
   app.use('/api', apiRouter);
