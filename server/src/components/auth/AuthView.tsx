@@ -262,11 +262,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
       <div className="w-full max-w-sm relative z-10 my-auto">
         <Card className="p-6 bg-[var(--bg-surface)] border-[var(--color-border)] space-y-5">
           {/* Official Logo */}
-          <div className="text-center">
+          <div className="text-center pb-1">
             <img
-              src="/WARDENLOGO.svg"
+              src="/warden_logo.png"
               alt="Warden"
-              className="h-11 mx-auto object-contain select-none"
+              className="h-8 mx-auto object-contain select-none"
             />
           </div>
 

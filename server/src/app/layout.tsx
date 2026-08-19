@@ -367,7 +367,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </head>
         <body className="bg-[#0d0e11] text-slate-100 min-h-screen flex items-center justify-center font-sans">
           <div className="text-center space-y-3">
-            <img src="/WARDENLOGO.svg" alt="Warden" className="h-10 mx-auto object-contain select-none" />
+            <img src="/warden_logo.png" alt="Warden" className="h-10 mx-auto object-contain select-none" />
             <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-5 h-5 rounded-full" />
           </div>
         </body>
@@ -501,7 +501,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Brand Logo */}
             <Link href="/" className="flex items-center group shrink-0">
               <img
-                src="/WARDENLOGO.svg"
+                src="/warden_logo.png"
                 alt="Warden"
                 className="h-6 sm:h-7 object-contain select-none opacity-90 group-hover:opacity-100 transition-opacity"
               />
