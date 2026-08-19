@@ -258,10 +258,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0d0e11] flex items-start sm:items-center justify-center p-4 pt-14 sm:pt-0 overflow-y-auto">
-      <div className="w-full max-w-sm relative z-10 sm:-translate-y-12 my-auto">
-        {/* Official Logo Outside UI Box */}
-        <div className="text-center mb-4">
+    <div className="fixed inset-0 z-50 bg-[#0d0e11] flex items-center justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-sm relative z-10 my-auto">
+        {/* Official Logo Moved Further Up Above the UI Box */}
+        <div className="text-center mb-6 sm:mb-8">
           <img
             src="/warden_logo.png"
             alt="Warden"
