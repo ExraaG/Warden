@@ -33,8 +33,12 @@ export const apiRouter = Router();
 function hasServerAccess(user: any, server: WardenServer): boolean {
   if (!user || user.role === 'admin') return true;
   if (server.ownerId === user.id) return true;
-  if (server.allowedUserIds && server.allowedUserIds.includes(user.id)) return true;
-  return false;
+  const policy = server.accessPolicy || 'specific';
+  if (policy === 'all') return true;
+  if (policy === 'all_except') {
+    return !server.excludedUserIds?.includes(user.id);
+  }
+  return server.allowedUserIds?.includes(user.id) || false;
 }
 
 // Auth Middleware protecting /api/v1 routes
@@ -839,7 +843,7 @@ apiRouter.delete('/v1/users/:id', authMiddleware, async (req: Request, res: Resp
 // 31. Manage Server Access & Permissions (Owner or Admin Only)
 apiRouter.post('/v1/servers/:id/access', authMiddleware, async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { allowedUserIds } = req.body as ServerAccessPayload;
+  const { accessPolicy, allowedUserIds, excludedUserIds } = req.body as ServerAccessPayload;
   const user = (req as any).user;
 
   try {
@@ -855,7 +859,11 @@ apiRouter.post('/v1/servers/:id/access', authMiddleware, async (req: Request, re
       } as ApiResponse<null>);
     }
 
-    const updated = await serverManager.updateServerAccess(id, Array.isArray(allowedUserIds) ? allowedUserIds : []);
+    const updated = await serverManager.updateServerAccess(id, {
+      accessPolicy,
+      allowedUserIds: Array.isArray(allowedUserIds) ? allowedUserIds : undefined,
+      excludedUserIds: Array.isArray(excludedUserIds) ? excludedUserIds : undefined,
+    });
     res.json({ success: true, data: updated } as ApiResponse<WardenServer>);
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);

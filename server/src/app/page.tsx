@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { WardenServer, ServerLoader, ScheduledTask, WardenUserPublic } from '@warden/shared';
+import { WardenServer, ServerLoader, ScheduledTask, WardenUserPublic, ServerAccessPolicy } from '@warden/shared';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -28,7 +28,9 @@ export default function DashboardPage() {
   // User Accounts & Server Access State
   const [currentUser, setCurrentUser] = useState<WardenUserPublic | null>(null);
   const [usersList, setUsersList] = useState<WardenUserPublic[]>([]);
+  const [serverAccessPolicy, setServerAccessPolicy] = useState<ServerAccessPolicy>('specific');
   const [serverAllowedUsers, setServerAllowedUsers] = useState<string[]>([]);
+  const [serverExcludedUsers, setServerExcludedUsers] = useState<string[]>([]);
   const [savingServerAccess, setSavingServerAccess] = useState<boolean>(false);
 
   // Create Server Modal State & Options
@@ -654,6 +656,8 @@ export default function DashboardPage() {
         if (res.success && res.data) {
           setServer(res.data);
           setServerAllowedUsers(Array.isArray(res.data.allowedUserIds) ? res.data.allowedUserIds : []);
+          setServerExcludedUsers(Array.isArray(res.data.excludedUserIds) ? res.data.excludedUserIds : []);
+          setServerAccessPolicy(res.data.accessPolicy || 'specific');
           if (res.data.stats?.uptimeSeconds) {
             setLiveUptime(res.data.stats.uptimeSeconds);
           }
@@ -1433,9 +1437,33 @@ export default function DashboardPage() {
   };
 
   const handleToggleUserAccess = (userId: string) => {
-    setServerAllowedUsers((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
+    if (serverAccessPolicy === 'all_except') {
+      setServerExcludedUsers((prev) =>
+        prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+      );
+    } else {
+      setServerAllowedUsers((prev) =>
+        prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+      );
+    }
+  };
+
+  const handleSelectAllUsers = () => {
+    const allOtherIds = usersList.filter((u) => u.id !== server?.ownerId).map((u) => u.id);
+    if (serverAccessPolicy === 'all_except') {
+      setServerExcludedUsers([]);
+    } else {
+      setServerAllowedUsers(allOtherIds);
+    }
+  };
+
+  const handleDeselectAllUsers = () => {
+    const allOtherIds = usersList.filter((u) => u.id !== server?.ownerId).map((u) => u.id);
+    if (serverAccessPolicy === 'all_except') {
+      setServerExcludedUsers(allOtherIds);
+    } else {
+      setServerAllowedUsers([]);
+    }
   };
 
   const handleSaveServerAccess = async () => {
@@ -1445,7 +1473,11 @@ export default function DashboardPage() {
       const res = await fetch(`/api/v1/servers/${serverId}/access`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ allowedUserIds: serverAllowedUsers }),
+        body: JSON.stringify({
+          accessPolicy: serverAccessPolicy,
+          allowedUserIds: serverAllowedUsers,
+          excludedUserIds: serverExcludedUsers,
+        }),
       }).then((r) => r.json());
       if (res.success) {
         showToast('Server access permissions updated successfully!', 'success');
@@ -3565,15 +3597,126 @@ export default function DashboardPage() {
 
                 {/* Collaborator User Selection */}
                 {(currentUser?.role === 'admin' || server?.ownerId === currentUser?.id) ? (
-                  <div className="space-y-3 pt-2">
-                    <div className="text-xs font-semibold text-slate-200">
-                      Authorized Accounts
-                    </div>
-                    <p className="text-[11px] text-slate-400 font-mono">
-                      Check the accounts that are permitted to view and manage this server:
-                    </p>
+                  <div className="space-y-4 pt-1">
+                    {/* Access Policy Selector */}
+                    <div className="space-y-2">
+                      <div className="text-xs font-semibold text-slate-200 font-mono">
+                        Access Policy Mode
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setServerAccessPolicy('specific')}
+                          className={`p-3 rounded-lg border text-left transition-all ${
+                            serverAccessPolicy === 'specific'
+                              ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] shadow-sm'
+                              : 'bg-[var(--bg-main)] border-[var(--color-border)] hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <WardenIcon
+                              name="users"
+                              size={14}
+                              className={serverAccessPolicy === 'specific' ? 'text-[var(--color-accent)]' : 'text-slate-400'}
+                            />
+                            <span className="text-xs font-bold text-slate-100 font-mono">
+                              Specific Users
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-mono mt-1 leading-relaxed">
+                            Only checked accounts have access.
+                          </p>
+                        </button>
 
-                    {usersList.filter((u) => u.id !== server?.ownerId).length === 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setServerAccessPolicy('all')}
+                          className={`p-3 rounded-lg border text-left transition-all ${
+                            serverAccessPolicy === 'all'
+                              ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] shadow-sm'
+                              : 'bg-[var(--bg-main)] border-[var(--color-border)] hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <WardenIcon
+                              name="server"
+                              size={14}
+                              className={serverAccessPolicy === 'all' ? 'text-[var(--color-accent)]' : 'text-slate-400'}
+                            />
+                            <span className="text-xs font-bold text-slate-100 font-mono">
+                              All Users (Public)
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-mono mt-1 leading-relaxed">
+                            Every registered user has access.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setServerAccessPolicy('all_except')}
+                          className={`p-3 rounded-lg border text-left transition-all ${
+                            serverAccessPolicy === 'all_except'
+                              ? 'bg-[var(--accent-dim)] border-[var(--color-accent)] shadow-sm'
+                              : 'bg-[var(--bg-main)] border-[var(--color-border)] hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <WardenIcon
+                              name="triangle-alert"
+                              size={14}
+                              className={serverAccessPolicy === 'all_except' ? 'text-[var(--color-accent)]' : 'text-slate-400'}
+                            />
+                            <span className="text-xs font-bold text-slate-100 font-mono">
+                              All Users Except...
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-mono mt-1 leading-relaxed">
+                            All users have access except checked accounts.
+                          </p>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick Selection & List Header */}
+                    {serverAccessPolicy !== 'all' && (
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="text-xs font-semibold text-slate-200">
+                          {serverAccessPolicy === 'all_except'
+                            ? 'Excluded / Blocked Accounts'
+                            : 'Authorized Collaborators'}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleSelectAllUsers}
+                            className="text-[11px] font-mono text-[var(--color-accent)] hover:underline"
+                          >
+                            {serverAccessPolicy === 'all_except' ? 'Clear Exclusions' : 'Select All'}
+                          </button>
+                          <span className="text-slate-600 text-xs">|</span>
+                          <button
+                            type="button"
+                            onClick={handleDeselectAllUsers}
+                            className="text-[11px] font-mono text-slate-400 hover:text-slate-200 hover:underline"
+                          >
+                            {serverAccessPolicy === 'all_except' ? 'Exclude All' : 'Deselect All'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {serverAccessPolicy === 'all' ? (
+                      <div className="p-4 bg-[var(--bg-main)] rounded-lg border border-[var(--color-accent)]/30 text-xs text-slate-300 font-mono flex items-center gap-3">
+                        <WardenIcon name="server" size={16} className="text-[var(--color-accent)] shrink-0" />
+                        <div>
+                          <div className="font-bold text-slate-100">Public Server Mode Enabled</div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            All current and future registered user accounts can see, monitor, and manage this server.
+                          </div>
+                        </div>
+                      </div>
+                    ) : usersList.filter((u) => u.id !== server?.ownerId).length === 0 ? (
                       <div className="p-4 bg-[var(--bg-main)] rounded-lg border border-[var(--color-border)] text-xs text-slate-400 font-mono text-center">
                         No other user accounts found in the system. Create additional user accounts in System Settings.
                       </div>
@@ -3582,7 +3725,14 @@ export default function DashboardPage() {
                         {usersList
                           .filter((u) => u.id !== server?.ownerId)
                           .map((u) => {
-                            const isAllowed = serverAllowedUsers.includes(u.id);
+                            const isExcluded = serverExcludedUsers.includes(u.id);
+                            const isAllowed =
+                              serverAccessPolicy === 'all_except'
+                                ? !isExcluded
+                                : serverAllowedUsers.includes(u.id);
+                            const isChecked =
+                              serverAccessPolicy === 'all_except' ? isExcluded : isAllowed;
+
                             return (
                               <label
                                 key={u.id}
@@ -3595,7 +3745,7 @@ export default function DashboardPage() {
                                 <div className="flex items-center gap-3">
                                   <input
                                     type="checkbox"
-                                    checked={isAllowed}
+                                    checked={isChecked}
                                     onChange={() => handleToggleUserAccess(u.id)}
                                     className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[var(--color-accent)] focus:ring-[var(--color-accent)] cursor-pointer"
                                   />
@@ -3613,7 +3763,13 @@ export default function DashboardPage() {
                                       </span>
                                     </div>
                                     <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                                      {isAllowed ? 'Has full server management access' : 'No access to this server'}
+                                      {serverAccessPolicy === 'all_except'
+                                        ? isExcluded
+                                          ? 'Explicitly excluded from this server'
+                                          : 'Has access to this server'
+                                        : isAllowed
+                                        ? 'Has access to this server'
+                                        : 'No access to this server'}
                                     </div>
                                   </div>
                                 </div>
@@ -3622,10 +3778,10 @@ export default function DashboardPage() {
                                   className={`text-[10px] font-mono px-2 py-0.5 rounded ${
                                     isAllowed
                                       ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
-                                      : 'bg-slate-900 text-slate-500 border border-slate-800'
+                                      : 'bg-red-950/60 text-red-400 border border-red-900/60'
                                   }`}
                                 >
-                                  {isAllowed ? 'Granted' : 'Revoked'}
+                                  {isAllowed ? 'Permitted' : 'Blocked'}
                                 </span>
                               </label>
                             );

@@ -14,6 +14,7 @@ import {
   InstalledMod,
   CreateServerPayload,
   ServerLoader,
+  ServerAccessPolicy,
 } from '@warden/shared';
 
 export interface ServerMeta {
@@ -234,7 +235,9 @@ export class ServerManager {
     const statInfo = await fs.promises.stat(dir).catch(() => null);
     const primaryAdmin = db.getUsers().find(u => u.role === 'admin')?.id || 'admin';
     const ownerId = savedMeta?.ownerId || primaryAdmin;
+    const accessPolicy: ServerAccessPolicy = savedMeta?.accessPolicy || 'specific';
     const allowedUserIds: string[] = Array.isArray(savedMeta?.allowedUserIds) ? savedMeta.allowedUserIds : [];
+    const excludedUserIds: string[] = Array.isArray(savedMeta?.excludedUserIds) ? savedMeta.excludedUserIds : [];
 
     return {
       id: serverId,
@@ -244,7 +247,9 @@ export class ServerManager {
       detection,
       stats,
       ownerId,
+      accessPolicy,
       allowedUserIds,
+      excludedUserIds,
       createdAt: statInfo?.birthtime?.toISOString() || new Date().toISOString(),
       updatedAt: statInfo?.mtime?.toISOString() || new Date().toISOString(),
     };
@@ -971,9 +976,18 @@ export class ServerManager {
   }
 
   /**
-   * Update allowed user IDs for a server
+   * Update allowed/excluded user IDs and access policy for a server
    */
-  public async updateServerAccess(serverId: string, allowedUserIds: string[]): Promise<WardenServer> {
+  public async updateServerAccess(
+    serverId: string,
+    payload:
+      | {
+          accessPolicy?: ServerAccessPolicy;
+          allowedUserIds?: string[];
+          excludedUserIds?: string[];
+        }
+      | string[]
+  ): Promise<WardenServer> {
     const dir = this.getServerDir(serverId);
     if (!fs.existsSync(dir)) {
       throw new Error(`Server directory ${serverId} does not exist`);
@@ -985,7 +999,13 @@ export class ServerManager {
         meta = JSON.parse(await fs.promises.readFile(metaPath, 'utf8'));
       } catch {}
     }
-    meta.allowedUserIds = allowedUserIds;
+    if (Array.isArray(payload)) {
+      meta.allowedUserIds = payload;
+    } else {
+      if (payload.accessPolicy !== undefined) meta.accessPolicy = payload.accessPolicy;
+      if (payload.allowedUserIds !== undefined) meta.allowedUserIds = payload.allowedUserIds;
+      if (payload.excludedUserIds !== undefined) meta.excludedUserIds = payload.excludedUserIds;
+    }
     meta.updatedAt = new Date().toISOString();
     await fs.promises.writeFile(metaPath, JSON.stringify(meta, null, 2), 'utf8');
 

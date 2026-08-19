@@ -16,10 +16,10 @@ interface AuthViewProps {
 }
 
 export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated }) => {
-  // Mode: 'login' | 'setup' | 'setup_2fa' | 'setup_recovery_codes' | 'emergency_info'
+  // Mode: 'login' | 'register' | 'setup' | 'setup_2fa' | 'setup_recovery_codes' | 'emergency_info'
   const isInitialSetup = !authStatus.hasUsers;
   const [mode, setMode] = useState<
-    'login' | 'setup' | 'setup_2fa' | 'setup_recovery_codes' | 'emergency_info'
+    'login' | 'register' | 'setup' | 'setup_2fa' | 'setup_recovery_codes' | 'emergency_info'
   >(isInitialSetup ? 'setup' : 'login');
 
   // Form states
@@ -159,7 +159,73 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
     }
   };
 
-  // ── 3. VERIFY 2FA IN SETUP ──
+  // ── 2B. HANDLE USER REGISTRATION (SIGN UP) ──
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
+
+    if (password.length < 4) {
+      setErrorMessage('Password must be at least 4 characters long.');
+      return;
+    }
+
+    // If user checked 2FA during signup, generate the secret & QR code
+    if (want2FAInSetup && !setup2FAData) {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/v1/auth/register/generate-2fa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: username.trim() }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Failed to generate 2FA QR code');
+        }
+
+        setSetup2FAData(data.data);
+        setMode('setup_2fa');
+      } catch (err: any) {
+        setErrorMessage('Failed to generate 2FA QR code: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Execute registration without 2FA
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: username.trim(),
+          password,
+          enableTotp: false,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Registration failed.');
+      }
+
+      showToast(`Account created! Welcome, ${data.data.user.username}!`, 'success');
+      onAuthenticated(data.data.user);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Registration failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── 3. VERIFY 2FA IN SETUP / REGISTRATION ──
   const handleVerifySetup2FA = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!setup2FAData || !totpCode) {
@@ -171,7 +237,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
     setErrorMessage(null);
 
     try {
-      const res = await fetch('/api/v1/auth/setup', {
+      const endpoint = authStatus.hasUsers ? '/api/v1/auth/register' : '/api/v1/auth/setup';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -259,7 +326,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0d0e11] flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-sm relative z-10 my-auto">
+      <div className="w-full max-w-[425px] relative z-10 my-auto">
         {/* Official Logo Moved Further Up Above the UI Box */}
         <div className="text-center mb-6 sm:mb-8">
           <img
@@ -325,14 +392,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                         setUseRecoveryCode(false);
                         setRecoveryCode('');
                       }}
-                      className={`py-1.5 px-2 rounded text-[11px] font-mono transition-colors flex items-center justify-center gap-1.5 ${
+                      className={`py-1.5 px-1.5 sm:px-2 rounded text-[10.5px] sm:text-[11px] font-mono transition-colors flex items-center justify-center gap-1 whitespace-nowrap overflow-hidden ${
                         !useRecoveryCode
                           ? 'bg-[var(--color-accent)] text-[#0d0e11] font-bold shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      <WardenIcon name="binary" size={12} className={!useRecoveryCode ? 'text-[#0d0e11]' : 'text-slate-400'} />
-                      <span>6-Digit Code</span>
+                      <WardenIcon name="binary" size={12} className={`shrink-0 ${!useRecoveryCode ? 'text-[#0d0e11]' : 'text-slate-400'}`} />
+                      <span className="whitespace-nowrap truncate">6-Digit Code</span>
                     </button>
                     <button
                       type="button"
@@ -340,14 +407,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                         setUseRecoveryCode(true);
                         setTotpCode('');
                       }}
-                      className={`py-1.5 px-2 rounded text-[11px] font-mono transition-colors flex items-center justify-center gap-1.5 ${
+                      className={`py-1.5 px-1.5 sm:px-2 rounded text-[10.5px] sm:text-[11px] font-mono transition-colors flex items-center justify-center gap-1 whitespace-nowrap overflow-hidden ${
                         useRecoveryCode
                           ? 'bg-[var(--color-accent)] text-[#0d0e11] font-bold shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      <WardenIcon name="code" size={12} className={useRecoveryCode ? 'text-[#0d0e11]' : 'text-slate-400'} />
-                      <span>Recovery Code</span>
+                      <WardenIcon name="code" size={12} className={`shrink-0 ${useRecoveryCode ? 'text-[#0d0e11]' : 'text-slate-400'}`} />
+                      <span className="whitespace-nowrap truncate">Recovery Code</span>
                     </button>
                   </div>
 
@@ -410,12 +477,144 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   Lost 2FA / Password? <span className="underline">Account Recovery</span>
                 </button>
               </div>
+
+              {/* Sign Up Switcher */}
+              <div className="pt-3 text-center border-t border-[var(--color-border)]/60">
+                <span className="text-xs text-slate-400 font-mono">Don&apos;t have an account? </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage(null);
+                    setUsername('');
+                    setPassword('');
+                    setConfirmPassword('');
+                    setWant2FAInSetup(false);
+                    setMode('register');
+                  }}
+                  className="text-xs text-[var(--color-accent)] hover:underline font-minecraft font-bold tracking-wide transition-colors"
+                >
+                  Sign Up
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ════════ MODE: USER REGISTRATION (SIGN UP) ════════ */}
+          {mode === 'register' && (
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="space-y-1 pb-1">
+                <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wide font-minecraft flex items-center gap-2">
+                  <WardenIcon name="users" size={15} className="text-[var(--color-accent)]" />
+                  Create an Account
+                </h3>
+                <p className="text-[11px] text-slate-400 font-mono">
+                  Sign up for access to your assigned Warden servers.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="PlayerOne"
+                  className="w-full h-9 sm:h-10 bg-[var(--bg-main)] hover:bg-[var(--bg-card)] border border-[var(--color-border)] px-3 rounded-md text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/60 focus:border-[var(--color-accent)] font-mono transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
+                  Password
+                </label>
+                <PasswordInput
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
+                  Confirm Password
+                </label>
+                <PasswordInput
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                />
+              </div>
+
+              {/* Optional 2FA Checkbox */}
+              <div
+                onClick={() => setWant2FAInSetup(!want2FAInSetup)}
+                className="flex items-center gap-2 pt-0.5 cursor-pointer select-none group"
+              >
+                <div
+                  className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                    want2FAInSetup
+                      ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[#0d0e11]'
+                      : 'border-[var(--color-border)] bg-[var(--bg-main)] group-hover:border-[var(--color-accent)]/50'
+                  }`}
+                >
+                  {want2FAInSetup && (
+                    <svg className="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-xs text-slate-300 group-hover:text-slate-100 transition-colors font-mono">
+                  Enable 2FA (Authenticator App)
+                </span>
+              </div>
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                isLoading={loading}
+                className="w-full font-minecraft text-xs justify-center py-2.5 mt-1"
+              >
+                <WardenIcon name="check" size={14} className="text-[#0d0e11]" />
+                Create Account &amp; Log In
+              </Button>
+
+              {/* Already have an account? */}
+              <div className="pt-2 text-center border-t border-[var(--color-border)]/60">
+                <span className="text-xs text-slate-400 font-mono">Already have an account? </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage(null);
+                    setMode('login');
+                  }}
+                  className="text-xs text-[var(--color-accent)] hover:underline font-minecraft font-bold tracking-wide transition-colors"
+                >
+                  Log In
+                </button>
+              </div>
             </form>
           )}
 
           {/* ════════ MODE: FIRST-TIME SETUP ════════ */}
           {mode === 'setup' && (
             <form onSubmit={handleSetup} className="space-y-4">
+              <div className="space-y-1 pb-1">
+                <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wide font-minecraft flex items-center gap-2">
+                  <WardenIcon name="triangle-alert" size={15} className="text-[var(--color-accent)]" />
+                  Initial Setup
+                </h3>
+                <p className="text-[11px] text-slate-400 font-mono">
+                  Create your master administrator account.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-[11px] font-semibold uppercase text-slate-300 mb-1 font-mono">
                   Username
@@ -530,7 +729,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setMode('setup')}
+                  onClick={() => setMode(authStatus.hasUsers ? 'register' : 'setup')}
                   className="flex-1 font-mono text-xs inline-flex items-center justify-center gap-1.5"
                 >
                   <WardenIcon name="arrow-left" size={13} className="text-slate-400" />
@@ -628,16 +827,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
               </div>
 
               {/* Option 1: Use Backup Recovery Code */}
-              <div className="p-3.5 bg-[var(--bg-main)] rounded-lg border border-[var(--color-border)] space-y-2.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded bg-[var(--bg-card)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent)] shrink-0">
-                    <WardenIcon name="code" size={14} />
+              <div className="p-4 bg-[var(--bg-main)] rounded-lg border border-[var(--color-border)] space-y-3">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--bg-card)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent)] shrink-0 mt-0.5">
+                    <WardenIcon name="code" size={15} />
                   </div>
-                  <div>
+                  <div className="space-y-0.5 min-w-0 flex-1">
                     <div className="text-xs font-bold text-slate-100 font-mono">
                       Backup Recovery Code
                     </div>
-                    <div className="text-[10px] text-slate-400 font-mono">
+                    <div className="text-[11px] text-slate-400 font-mono leading-relaxed">
                       Log in with one of your saved 16-character backup codes
                     </div>
                   </div>
@@ -660,16 +859,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ authStatus, onAuthenticated 
               </div>
 
               {/* Option 2: Emergency Console Access */}
-              <div className="p-3.5 bg-[var(--bg-main)] rounded-lg border border-red-900/40 space-y-2.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded bg-red-950/40 border border-red-800/40 flex items-center justify-center text-red-400 shrink-0">
-                    <WardenIcon name="terminal-square" size={14} />
+              <div className="p-4 bg-[var(--bg-main)] rounded-lg border border-red-900/40 space-y-3">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-lg bg-red-950/40 border border-red-800/40 flex items-center justify-center text-red-400 shrink-0 mt-0.5">
+                    <WardenIcon name="terminal-square" size={15} />
                   </div>
-                  <div>
+                  <div className="space-y-0.5 min-w-0 flex-1">
                     <div className="text-xs font-bold text-slate-100 font-mono">
                       Emergency Console Credentials
                     </div>
-                    <div className="text-[10px] text-slate-400 font-mono">
+                    <div className="text-[11px] text-slate-400 font-mono leading-relaxed">
                       Print 15-minute temporary credentials to server logs
                     </div>
                   </div>

@@ -8,6 +8,7 @@ import {
   LoginPayload,
   SetupPayload,
   SetupResponse,
+  RegisterPayload,
   TwoFactorGenerateResponse,
   TwoFactorEnablePayload,
   TwoFactorEnableResponse,
@@ -209,6 +210,109 @@ authRouter.post('/setup', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: error?.message || 'Failed to complete initial setup.',
+    });
+  }
+});
+
+// ── 2B. GENERATE 2FA FOR REGISTRATION ──
+authRouter.post('/register/generate-2fa', async (req: Request, res: Response) => {
+  try {
+    const username = (req.body.username || 'user').trim();
+    const result = await AuthManager.generateTotpSecret(username);
+    res.json({
+      success: true,
+      data: result as TwoFactorGenerateResponse,
+    });
+  } catch (error: any) {
+    console.error('[Auth] Register 2FA generate error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate 2FA QR code for registration.',
+    });
+  }
+});
+
+// ── 2C. USER SIGN-UP / REGISTRATION ──
+authRouter.post('/register', async (req: Request, res: Response) => {
+  try {
+    const { username, password, enableTotp, totpSecret, totpCode } =
+      req.body as RegisterPayload;
+
+    if (!username || !username.trim() || !password || password.length < 4) {
+      return res.status(400).json({
+        success: false,
+        error: 'Username and a password (at least 4 characters) are required.',
+      });
+    }
+
+    const cleanUsername = username.trim();
+    const existing = db.getUserByUsername(cleanUsername);
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        error: 'Username is already taken. Please choose another username.',
+      });
+    }
+
+    let isTotpEnabled = false;
+    let validSecret = '';
+    let recoveryCodes: string[] = [];
+    let hashedRecoveryCodes: string[] = [];
+
+    if (enableTotp) {
+      if (!totpSecret || !totpCode) {
+        return res.status(400).json({
+          success: false,
+          error: '2FA code and secret are required when enabling 2FA.',
+        });
+      }
+
+      const isValidTotp = AuthManager.verifyTotp(totpCode, totpSecret);
+      if (!isValidTotp) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid 2FA verification code. Please check your authenticator app.',
+        });
+      }
+
+      isTotpEnabled = true;
+      validSecret = totpSecret;
+      const codes = await AuthManager.generateRecoveryCodes(8);
+      recoveryCodes = codes.plainCodes;
+      hashedRecoveryCodes = codes.hashedCodes;
+    }
+
+    const passwordHash = await AuthManager.hashPassword(password);
+    const newUser: WardenUser = {
+      id: `usr_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
+      username: cleanUsername,
+      passwordHash,
+      role: 'user',
+      totpEnabled: isTotpEnabled,
+      totpSecret: isTotpEnabled ? validSecret : undefined,
+      recoveryCodes: hashedRecoveryCodes,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    db.createUser(newUser);
+
+    const token = AuthManager.generateToken(newUser);
+    setAuthCookie(res, token);
+
+    res.json({
+      success: true,
+      data: {
+        user: AuthManager.toPublicUser(newUser),
+        token,
+        recoveryCodes: isTotpEnabled ? recoveryCodes : undefined,
+      } as SetupResponse,
+    });
+  } catch (error: any) {
+    console.error('[Auth] Register error:', error);
+    res.status(500).json({
+      success: false,
+      error: error?.message || 'Failed to complete registration.',
     });
   }
 });

@@ -43,6 +43,8 @@ export interface ServerStats {
   uptimeSeconds: number;
 }
 
+export type ServerAccessPolicy = 'specific' | 'all' | 'all_except';
+
 export interface WardenServer {
   id: string;
   name: string;
@@ -54,7 +56,9 @@ export interface WardenServer {
   createdAt: string;
   updatedAt: string;
   ownerId?: string;
+  accessPolicy?: ServerAccessPolicy;
   allowedUserIds?: string[];
+  excludedUserIds?: string[];
 }
 
 export interface InstalledMod {
@@ -269,7 +273,9 @@ export interface UpdateUserPayload {
 }
 
 export interface ServerAccessPayload {
-  allowedUserIds: string[];
+  accessPolicy?: ServerAccessPolicy;
+  allowedUserIds?: string[];
+  excludedUserIds?: string[];
 }
 
 export interface WardenUser {
@@ -308,6 +314,14 @@ export interface LoginPayload {
   password: string;
   totpCode?: string;
   recoveryCode?: string;
+}
+
+export interface RegisterPayload {
+  username: string;
+  password: string;
+  enableTotp?: boolean;
+  totpSecret?: string;
+  totpCode?: string;
 }
 
 export interface SetupPayload {
