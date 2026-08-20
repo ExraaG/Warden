@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     isManualClick = true;
     setActiveLink(targetId);
 
-    const headerOffset = 80;
+    const headerOffset = 72;
     const elementPosition = targetEl.getBoundingClientRect().top;
     const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
@@ -193,9 +193,11 @@ document.addEventListener('DOMContentLoaded', () => {
       history.pushState(null, null, '#' + targetId);
     }
 
-    setTimeout(() => {
+    if (window.manualClickTimeout) clearTimeout(window.manualClickTimeout);
+    window.manualClickTimeout = setTimeout(() => {
       isManualClick = false;
-    }, 800);
+      setActiveLink(targetId);
+    }, 1000);
   }
 
   // Intercept all internal anchor clicks for smooth scrolling
@@ -219,16 +221,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateActiveNav() {
     if (isManualClick) return;
-    let currentId = '';
-    const scrollPos = window.scrollY + 120;
 
-    for (const id of linkTargetIds) {
-      const el = document.getElementById(id);
-      if (el) {
-        const top = el.getBoundingClientRect().top + window.scrollY;
-        if (top <= scrollPos) {
-          currentId = id;
-        }
+    const elements = linkTargetIds
+      .map((id) => document.getElementById(id))
+      .filter(Boolean)
+      .sort((a, b) => a.offsetTop - b.offsetTop);
+
+    const scrollPos = window.scrollY + 100;
+    let currentId = elements[0]?.id || '';
+
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements[i];
+      if (el.offsetTop <= scrollPos) {
+        currentId = el.id;
+      } else {
+        break;
       }
     }
 

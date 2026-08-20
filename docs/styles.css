@@ -302,16 +302,19 @@ body {
   text-decoration: none;
   font-size: 13px;
   border-left: 2px solid transparent;
+  background: transparent !important;
   transition: color 0.1s ease, border-color 0.1s ease;
 }
 
 .sidebar-link:hover {
   color: var(--text-bright);
+  background: transparent !important;
 }
 
 .sidebar-link.active {
-  color: var(--color-accent);
-  border-left-color: var(--color-accent);
+  color: var(--color-accent) !important;
+  border-left-color: var(--color-accent) !important;
+  background: transparent !important;
   font-weight: 700;
 }
 
@@ -330,7 +333,7 @@ body {
   flex: 1;
   display: flex;
   justify-content: center;
-  padding: 40px 48px 80px;
+  padding: 40px 48px 80vh;
   max-width: calc(100vw - var(--sidebar-width));
 }
 
