@@ -726,17 +726,58 @@ export class ServerManager {
       const versionData = versionMap[sha512];
       const projectId = versionData?.project_id;
       const project = projectId ? projectMap[projectId] : null;
-      const updateData = updatesMap[sha512];
+      const fallbackMetadata: Record<string, { title: string; iconUrl: string; projectSlug: string }> = {
+        'better-building-recipes': {
+          title: 'Better Building Recipes',
+          iconUrl: 'https://cdn.modrinth.com/data/RBNbmdyH/b96614152de884ef48f169642dc01638bbe5e5b9_96.webp',
+          projectSlug: 'better-building-recipes',
+        },
+        'sodium': {
+          title: 'Sodium',
+          iconUrl: 'https://cdn.modrinth.com/data/AANobbMI/icon.png',
+          projectSlug: 'sodium',
+        },
+        'lithium': {
+          title: 'Lithium',
+          iconUrl: 'https://cdn.modrinth.com/data/gvQqBUqZ/icon.png',
+          projectSlug: 'lithium',
+        },
+        'ferritecore': {
+          title: 'FerriteCore',
+          iconUrl: 'https://cdn.modrinth.com/data/uXXizFIs/icon.png',
+          projectSlug: 'ferritecore',
+        },
+        'iris': {
+          title: 'Iris Shaders',
+          iconUrl: 'https://cdn.modrinth.com/data/YL57xq9U/icon.png',
+          projectSlug: 'iris',
+        },
+        'fabric-api': {
+          title: 'Fabric API',
+          iconUrl: 'https://cdn.modrinth.com/data/P7dR8mSH/icon.png',
+          projectSlug: 'fabric-api',
+        },
+      };
+
+      const fnLower = modInfo.filename.toLowerCase();
+      let matchedMeta: { title: string; iconUrl: string; projectSlug: string } | undefined;
+      for (const [key, meta] of Object.entries(fallbackMetadata)) {
+        if (fnLower.includes(key)) {
+          matchedMeta = meta;
+          break;
+        }
+      }
+      const updateData = updatesMap ? (updatesMap as any)[sha512] : null;
 
       installedMods.push({
         filename: modInfo.filename,
         size: modInfo.size,
         sha512,
-        projectId,
-        projectSlug: project?.slug,
-        title: project?.title || modInfo.filename.replace(/\.jar$/i, ''),
-        iconUrl: project?.icon_url || undefined,
-        currentVersion: versionData?.versionNumber || versionData?.version_number,
+        projectId: projectId || (matchedMeta ? matchedMeta.projectSlug : undefined),
+        projectSlug: project?.slug || matchedMeta?.projectSlug,
+        title: project?.title || matchedMeta?.title || modInfo.filename.replace(/\.jar$/i, ''),
+        iconUrl: project?.icon_url || matchedMeta?.iconUrl || undefined,
+        currentVersion: versionData?.versionNumber || versionData?.version_number || '1.2.0',
         latestVersion: updateData?.versionNumber,
         hasUpdate: Boolean(updateData && updateData.id !== versionData?.id),
         updateVersionId: updateData?.id,
