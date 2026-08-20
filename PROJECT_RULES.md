@@ -48,27 +48,40 @@ Warden/
 3. **Official Logo**: Always use the official Warden logo from `docs/assets/warden_logo.png` (`/warden_logo.png`). Never place generic standalone icons inside decorative boxes with separate AI-style text titles underneath.
 4. **No Gradients or Glow Effects**: Do not use decorative CSS gradients (e.g., `bg-gradient-to-...`, gradient text) or glowing drop-shadows. Use solid, clean, high-contrast dark palette colors and crisp borders.
    - *Exception*: The top "New Update Available" notification banner in `server/src/app/layout.tsx` retains its emerald-to-slate gradient and border accent.
-5. **No Flashing or Pulsing Dots**: Do not add flashing, pulsing, or pinging animations (e.g., `animate-ping`, `animate-pulse` on status dots). Use solid indicators.
+5. **No Flashing, Pulsing, or Status Dots**: Do not add flashing, pulsing, or pinging animations (e.g., `animate-ping`, `animate-pulse`). Use **no dots at all** on status pills, badges, or usernames.
 6. **No Fluff Text or Placeholder Subtitles**: Avoid filler text (e.g. "Create Master Administrator Account", "Authentication Required", "End-to-end Encrypted Session"). Keep forms, headers, and cards strictly functional, direct, clean, and normal.
 7. **Clean Header Badges**: Account badge in the header must show username only. Do not attach colored status dots or useless tags (like `[2FA]`) next to usernames.
 8. **Responsive Adaptiveness**: Ensure layouts adjust seamlessly across Desktop (1920x1080), Tablet (768x1024), and Mobile (390x844) viewports without text overlap or horizontal overflow.
 
 ---
 
-## 4. Branch & Feature Policies (`dev` vs `main`)
+## 4. Git Remotes & Branch Policies (`private/dev` vs `origin/main`)
+
+### Git Remote Architecture:
+- **`private` Remote (`https://github.com/ExraaG/Warden-Dev.git`)**:
+  - Contains the active, private **`dev`** branch.
+  - **CRITICAL**: ONLY push `dev` to `private dev`. **NEVER** push `dev` to public `origin`.
+- **`origin` Remote (`https://github.com/ExraaG/Warden.git`)**:
+  - The public production repository.
+  - Contains ONLY the release-ready **`main`** branch.
 
 ### Feature Scope on `dev` Branch:
 - **Developer & Testing Lab**:
   - Global Server Purge (`DELETE /api/v1/servers/batch/all?scope=all`) — admin only.
   - Global User Purge (`DELETE /api/v1/users/batch/all`) — with option to retain current admin.
   - Full System Factory Reset (`POST /api/v1/system/dev-reset`) — returns Warden to first-time setup.
-  - **Rule**: These developer wipe tools are exclusively for rapid testing on the `dev` branch. When merging `dev` into `main`, remove developer wipe tools from `main`.
+  - Internal AI Agent Docs (`PROJECT_RULES.md`, `AGENTS.md`, `.agents/`).
 
-### Feature Scope on `main` Branch:
-- **User Server Danger Zone**:
-  - Standard users and server owners can delete all their own servers (`DELETE /api/v1/servers/batch/all?scope=own`).
-  - Must require explicit typed confirmation: `DELETE ALL MY SERVERS`.
-- **Human Confirmation**: Automated 4 AM mod updates must remain suspended until the server owner confirms the detected loader & Minecraft version.
+### Release to `main` Workflow:
+1. Run `./scripts/merge-dev-to-main.sh` which automatically:
+   - Merges `dev` into `main`.
+   - Strips the Developer & Testing Lab UI card and dev-reset endpoints from `main`.
+   - Removes `PROJECT_RULES.md` & `AGENTS.md` and appends them to `.gitignore` on `main`.
+   - Builds and verifies production Next.js bundle.
+2. Push `main` to the public repository:
+   ```bash
+   git push origin main
+   ```
 
 ---
 
@@ -117,4 +130,4 @@ graphify update .
 2. **Automated End-to-End Verification**:
    - For web changes: Test and capture screenshots using Puppeteer/Chrome or browser subagent on port `:22313`.
    - For mobile changes: Compile bundle, build APK, install to attached device via ADB, launch activity, and capture screenshot.
-3. **Commit & Push Discipline**: When ready to push, verify `git status`, stage relevant files, commit with descriptive conventional commit messages, and push to `origin dev`.
+3. **Commit & Push Discipline**: When ready to push, verify `git status`, stage relevant files, commit with descriptive conventional commit messages, and push **ONLY** to `private dev`.

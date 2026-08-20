@@ -4,10 +4,14 @@ Refer to [`PROJECT_RULES.md`](./PROJECT_RULES.md) for full architectural guideli
 
 ## Quick Rule Summary
 - **Port**: Warden runs on port **`:22313`**.
+- **Git & Remotes Policy**:
+  - `dev` branch is strictly **PRIVATE**. ONLY push `dev` to `private` (`https://github.com/ExraaG/Warden-Dev.git`).
+  - NEVER push `dev` to public `origin` (`ExraaG/Warden`).
+  - Production releases: run `./scripts/merge-dev-to-main.sh` and push `main` to `origin main`.
 - **UI Constraints**:
   - No emojis anywhere in the UI.
   - Use `/warden_logo.png` for branding.
-  - No CSS gradients, glowing drop-shadows, or pulsing/flashing animations.
+  - No CSS gradients, glowing drop-shadows, or pulsing/flashing animations (no dots at all).
   - No marketing fluff text or fake subtitles.
   - Clean username in header (no dots, no fake 2FA tags).
 - **Branch Policy**:
