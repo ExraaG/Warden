@@ -62,6 +62,11 @@
 html {
   scroll-behavior: smooth;
   color-scheme: dark;
+  scroll-padding-top: 80px;
+}
+
+[id] {
+  scroll-margin-top: 80px;
 }
 
 body {

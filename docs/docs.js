@@ -1,19 +1,19 @@
 /**
  * Warden Documentation — Interactive Script
- * Search modal, code copy, tab switcher, lightbox, and scrollspy.
+ * Search modal, code copy, smooth scrolling, lightbox, and scrollspy.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   // ── 1. SEARCH INDEX & MODAL ──
   const searchIndex = [];
-  const sections = document.querySelectorAll('.doc-section, h2[id], h3[id]');
+  const sections = document.querySelectorAll('.doc-section, h2[id], h3[id], div[id]');
 
   sections.forEach((sec) => {
-    const title = sec.getAttribute('data-title') || sec.innerText.split('\n')[0].trim();
+    const title = sec.getAttribute('data-title') || sec.querySelector('h2, h3')?.innerText.trim() || sec.innerText.split('\n')[0].trim();
     const id = sec.id || sec.getAttribute('id');
     const parentSection = sec.closest('.doc-section');
     const group = parentSection?.getAttribute('data-group') || 'Documentation';
-    if (id && title) {
+    if (id && title && title.length < 60) {
       searchIndex.push({
         id,
         title,
@@ -74,13 +74,25 @@ document.addEventListener('DOMContentLoaded', () => {
     searchResults.innerHTML = matches
       .map(
         (m, idx) => `
-        <a href="#${m.id}" class="search-item ${idx === 0 ? 'selected' : ''}" onclick="document.getElementById('searchModalBackdrop').classList.remove('open')">
+        <a href="#${m.id}" class="search-item ${idx === 0 ? 'selected' : ''}">
           <div class="search-item-title">${m.title}</div>
           <div class="search-item-section">${m.group} • #${m.id}</div>
         </a>
       `
       )
       .join('');
+
+    // Attach click handlers to newly created search items
+    searchResults.querySelectorAll('.search-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        const href = item.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          e.preventDefault();
+          closeSearch();
+          scrollToTarget(href.slice(1));
+        }
+      });
+    });
   }
 
   searchInput?.addEventListener('input', (e) => {
@@ -111,26 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ── 3. CODE BLOCK TAB SWITCHING ──
-  document.querySelectorAll('.code-tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      const wrapper = tab.closest('.code-block-wrapper');
-      const targetPane = tab.getAttribute('data-pane');
-
-      wrapper.querySelectorAll('.code-tab').forEach((t) => t.classList.remove('active'));
-      tab.classList.add('active');
-
-      wrapper.querySelectorAll('.code-pane').forEach((pane) => {
-        if (pane.id === targetPane) {
-          pane.style.display = 'block';
-        } else {
-          pane.style.display = 'none';
-        }
-      });
-    });
-  });
-
-  // ── 4. LIGHTBOX MODAL ──
+  // ── 3. LIGHTBOX MODAL ──
   const lightboxModal = document.getElementById('lightboxModal');
   const lightboxImg = document.getElementById('lightboxImg');
 
@@ -147,11 +140,10 @@ document.addEventListener('DOMContentLoaded', () => {
     lightboxModal.classList.remove('open');
   });
 
-  // ── 5. SCROLLSPY & ACTIVE SIDEBAR LINK ──
+  // ── 4. SCROLLSPY & SMOOTH NAVIGATION ──
   const navLinks = document.querySelectorAll('.sidebar-link');
   const tocLinks = document.querySelectorAll('.toc-link');
 
-  // Track all link target IDs
   const linkTargetIds = Array.from(
     new Set([
       ...Array.from(navLinks).map((l) => l.getAttribute('href')?.replace('#', '')),
@@ -180,16 +172,47 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Handle immediate click selection
-  document.querySelectorAll('.sidebar-link, .toc-link').forEach((link) => {
-    link.addEventListener('click', () => {
-      const targetId = link.getAttribute('href')?.replace('#', '');
+  function scrollToTarget(targetId) {
+    if (!targetId) return;
+    const targetEl = document.getElementById(targetId);
+    if (!targetEl) return;
+
+    isManualClick = true;
+    setActiveLink(targetId);
+
+    const headerOffset = 80;
+    const elementPosition = targetEl.getBoundingClientRect().top;
+    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+    window.scrollTo({
+      top: Math.max(0, offsetPosition),
+      behavior: 'smooth',
+    });
+
+    if (history.pushState) {
+      history.pushState(null, null, '#' + targetId);
+    }
+
+    setTimeout(() => {
+      isManualClick = false;
+    }, 800);
+  }
+
+  // Intercept all internal anchor clicks for smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      const href = link.getAttribute('href');
+      if (!href || href === '#') return;
+      const targetId = href.slice(1);
       if (targetId) {
-        isManualClick = true;
-        setActiveLink(targetId);
-        setTimeout(() => {
-          isManualClick = false;
-        }, 800);
+        e.preventDefault();
+        scrollToTarget(targetId);
+
+        // Close mobile drawer if open
+        if (window.innerWidth <= 860) {
+          const sidebar = document.getElementById('docsSidebar');
+          sidebar?.classList.remove('open');
+        }
       }
     });
   });
@@ -217,20 +240,11 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('scroll', updateActiveNav, { passive: true });
   updateActiveNav();
 
-  // ── 6. MOBILE SIDEBAR DRAWER ──
+  // ── 5. MOBILE SIDEBAR DRAWER ──
   const mobileToggle = document.getElementById('mobileMenuToggle');
   const sidebar = document.getElementById('docsSidebar');
 
   mobileToggle?.addEventListener('click', () => {
     sidebar?.classList.toggle('open');
-  });
-
-  // Close sidebar on link click on mobile
-  navLinks.forEach((link) => {
-    link.addEventListener('click', () => {
-      if (window.innerWidth <= 860) {
-        sidebar?.classList.remove('open');
-      }
-    });
   });
 });
