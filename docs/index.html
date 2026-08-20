@@ -380,7 +380,7 @@ PORT=22313 npm start</code></pre>
             Warden provides native 1-click server creation for all major Minecraft modloaders and platforms:
           </p>
 
-          <div class="card-grid">
+          <div class="card-grid" id="supported-loaders">
             <div class="feature-card">
               <div class="feature-card-title font-minecraft" style="color: #38bdf8;">Fabric</div>
               <div class="feature-card-desc">Direct Fabric Meta API integration. Auto-downloads Fabric Loader and Fabric Intermediary mappings for any Minecraft version.</div>
@@ -474,6 +474,13 @@ PORT=22313 npm start</code></pre>
             </ul>
           </div>
 
+          <div id="player-bans" style="margin-top: 32px;">
+            <h3 class="sub-heading">Player &amp; IP Bans</h3>
+            <p>
+              Ban disruptive players by UUID or blacklist incoming network IP addresses directly from the moderation UI.
+            </p>
+          </div>
+
           <div id="skin-rendering" style="margin-top: 32px;">
             <h3 class="sub-heading">Skin Avatar Rendering</h3>
             <p>
@@ -498,6 +505,13 @@ PORT=22313 npm start</code></pre>
             <h3 class="sub-heading">Timezone Auto-Detection &amp; Manual Override</h3>
             <p>
               Warden automatically detects the server host's system timezone (e.g. <code>Europe/Vienna</code>) using <code>Intl.DateTimeFormat</code>. You can customize the active timezone anytime via <em>"Wrong Timezone? Change it here"</em> in Settings.
+            </p>
+          </div>
+
+          <div id="custom-cron-tasks" style="margin-top: 32px;">
+            <h3 class="sub-heading">Custom Cron &amp; Event Tasks</h3>
+            <p>
+              Configure custom scheduled tasks, daily maintenance routines, and automatic command execution via cron expressions or update triggers.
             </p>
           </div>
         </section>
@@ -663,7 +677,7 @@ PORT=22313 npm start</code></pre>
           </p>
 
           <div class="card-grid">
-            <div class="feature-card">
+            <div class="feature-card" id="mobile-notifications">
               <div class="feature-card-title">Real-Time Push Alerts</div>
               <div class="feature-card-desc">Receive instant notifications when a server crashes, restarts, or completes an automated mod update.</div>
             </div>
