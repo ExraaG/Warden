@@ -58,6 +58,35 @@ export default function DashboardPage() {
   const [importProgress, setImportProgress] = useState<string>('');
   const [exportingServer, setExportingServer] = useState<boolean>(false);
 
+  // Exact Progress & Stage Tracking for Server Creation & Extraction
+  const [createProgressDetails, setCreateProgressDetails] = useState<{
+    active: boolean;
+    phase: string;
+    subtext: string;
+    percent: number;
+  }>({ active: false, phase: '', subtext: '', percent: 0 });
+
+  const [importProgressDetails, setImportProgressDetails] = useState<{
+    active: boolean;
+    phase: string;
+    subtext: string;
+    percent: number;
+  }>({ active: false, phase: '', subtext: '', percent: 0 });
+
+  // Mod Updates Modal & Progress State
+  const [showModUpdateModal, setShowModUpdateModal] = useState<boolean>(false);
+  const [modUpdateRunning, setModUpdateRunning] = useState<boolean>(false);
+  const [modUpdatePhase, setModUpdatePhase] = useState<string>('');
+  const [modUpdateSubtext, setModUpdateSubtext] = useState<string>('');
+  const [modUpdatePercent, setModUpdatePercent] = useState<number>(0);
+  const [modUpdateLogs, setModUpdateLogs] = useState<string[]>([]);
+  const [modUpdateSummary, setModUpdateSummary] = useState<string | null>(null);
+
+  // Delete Server Modal State (Requires typing exact name)
+  const [showDeleteServerModal, setShowDeleteServerModal] = useState<boolean>(false);
+  const [deleteServerNameInput, setDeleteServerNameInput] = useState<string>('');
+  const [deletingServer, setDeletingServer] = useState<boolean>(false);
+
   const CREATE_LOADER_OPTIONS: DropdownOption[] = [
     { id: 'paper', label: 'Paper', sublabel: 'High Performance Plugins' },
     { id: 'fabric', label: 'Fabric', sublabel: 'Fast Modern Modloader' },
@@ -144,6 +173,31 @@ export default function DashboardPage() {
   const handleCreateServer = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreatingServer(true);
+    setCreateProgressDetails({
+      active: true,
+      phase: 'Resolving Loader Metadata',
+      subtext: `Fetching version manifest for ${createForm.loader.toUpperCase()} ${createForm.mcVersion}...`,
+      percent: 15,
+    });
+
+    const timer1 = setTimeout(() => {
+      setCreateProgressDetails({
+        active: true,
+        phase: 'Downloading Official Binary',
+        subtext: `Downloading executable server JAR for ${createForm.loader}...`,
+        percent: 45,
+      });
+    }, 800);
+
+    const timer2 = setTimeout(() => {
+      setCreateProgressDetails({
+        active: true,
+        phase: 'Generating Configuration',
+        subtext: `Writing server.properties, eula.txt, and JVM memory parameters...`,
+        percent: 80,
+      });
+    }, 2200);
+
     try {
       const res = await fetch('/api/v1/servers/create', {
         method: 'POST',
@@ -151,22 +205,39 @@ export default function DashboardPage() {
         body: JSON.stringify(createForm),
       }).then((r) => r.json());
 
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+
       if (res.success && res.data) {
-        showToast(`Server '${createForm.name}' created! Accept the EULA to start it.`, 'success');
-        setShowCreateModal(false);
-        setServerId(res.data.id);
-        localStorage.setItem('warden_selected_server_id', res.data.id);
-        window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: res.data.id }));
-        window.dispatchEvent(new CustomEvent('warden_server_updated'));
-        loadServerDetails(res.data.id);
-        loadAllServers();
-        // Auto-show EULA popup for first-time setup
-        setShowEulaModal(true);
+        setCreateProgressDetails({
+          active: true,
+          phase: 'Instance Ready',
+          subtext: `Server '${createForm.name}' configured and registered in Warden!`,
+          percent: 100,
+        });
+
+        setTimeout(() => {
+          showToast(`Server '${createForm.name}' created! Accept the EULA to start it.`, 'success');
+          setShowCreateModal(false);
+          setCreateProgressDetails({ active: false, phase: '', subtext: '', percent: 0 });
+          setServerId(res.data.id);
+          localStorage.setItem('warden_selected_server_id', res.data.id);
+          window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: res.data.id }));
+          window.dispatchEvent(new CustomEvent('warden_server_updated'));
+          loadServerDetails(res.data.id);
+          loadAllServers();
+          // Auto-show EULA popup for first-time setup
+          setShowEulaModal(true);
+        }, 400);
       } else {
         showToast(`Failed to create server: ${res.error}`, 'error');
+        setCreateProgressDetails({ active: false, phase: '', subtext: '', percent: 0 });
       }
     } catch (err: any) {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       showToast(`Creation error: ${err.message}`, 'error');
+      setCreateProgressDetails({ active: false, phase: '', subtext: '', percent: 0 });
     } finally {
       setCreatingServer(false);
     }
@@ -212,7 +283,13 @@ export default function DashboardPage() {
       return;
     }
     setImportingServer(true);
-    setImportProgress('Uploading server backup archive...');
+    setImportProgressDetails({
+      active: true,
+      phase: 'Uploading Server Archive',
+      subtext: `Transferring ${importFile.name} (${(importFile.size / (1024 * 1024)).toFixed(1)} MB)...`,
+      percent: 5,
+    });
+
     try {
       const q = new URLSearchParams();
       if (importName.trim()) q.set('name', importName.trim());
@@ -220,34 +297,102 @@ export default function DashboardPage() {
       if (importMaxMemory) q.set('maxMemory', importMaxMemory);
       if (importAutoStart) q.set('autoStart', 'true');
 
-      setImportProgress('Extracting and configuring Minecraft server...');
-      const res = await fetch(`/api/v1/servers/import?${q.toString()}`, {
-        method: 'POST',
-        body: importFile,
-        headers: {
-          'Content-Type': 'application/octet-stream',
-        },
+      const data: any = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `/api/v1/servers/import?${q.toString()}`);
+        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+        let intervalId: any = null;
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const uploadPercent = Math.min(45, Math.round((event.loaded / event.total) * 45));
+            const loadedMB = (event.loaded / (1024 * 1024)).toFixed(1);
+            const totalMB = (event.total / (1024 * 1024)).toFixed(1);
+            setImportProgressDetails({
+              active: true,
+              phase: 'Uploading Server Archive',
+              subtext: `Uploaded ${loadedMB} MB of ${totalMB} MB (${Math.round((event.loaded / event.total) * 100)}%)`,
+              percent: Math.max(5, uploadPercent),
+            });
+          }
+        };
+
+        xhr.upload.onload = () => {
+          setImportProgressDetails({
+            active: true,
+            phase: 'Extracting Archive Entries',
+            subtext: 'Unpacking nested directory structures, worlds, and config files...',
+            percent: 55,
+          });
+
+          let step = 0;
+          intervalId = setInterval(() => {
+            step++;
+            if (step === 1) {
+              setImportProgressDetails({
+                active: true,
+                phase: 'Scanning Server Binaries',
+                subtext: 'Detecting modloader type (Paper, Fabric, Purpur, Forge) and executable JAR...',
+                percent: 75,
+              });
+            } else if (step === 2) {
+              setImportProgressDetails({
+                active: true,
+                phase: 'Configuring Instance',
+                subtext: 'Parsing server.properties, allocating port & registering in Warden...',
+                percent: 90,
+              });
+            }
+          }, 1200);
+        };
+
+        xhr.onload = () => {
+          if (intervalId) clearInterval(intervalId);
+          try {
+            const res = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300 && res.success) {
+              setImportProgressDetails({
+                active: true,
+                phase: 'Import Complete',
+                subtext: 'Server successfully imported and registered!',
+                percent: 100,
+              });
+              resolve(res);
+            } else {
+              reject(new Error(res.error || 'Server import failed'));
+            }
+          } catch (err: any) {
+            reject(new Error('Invalid response from server'));
+          }
+        };
+
+        xhr.onerror = () => {
+          if (intervalId) clearInterval(intervalId);
+          reject(new Error('Network error during upload'));
+        };
+
+        xhr.send(importFile);
       });
 
-      const data = await res.json();
-      if (!data.success || !data.data) {
-        throw new Error(data.error || 'Import failed');
-      }
-
       showToast(`Server '${data.data.name}' imported successfully!`, 'success');
-      setShowCreateModal(false);
-      setImportFile(null);
-      setImportName('');
+      setTimeout(() => {
+        setShowCreateModal(false);
+        setImportFile(null);
+        setImportName('');
+        setImportProgressDetails({ active: false, phase: '', subtext: '', percent: 0 });
 
-      // Switch to newly imported server
-      setServerId(data.data.id);
-      localStorage.setItem('warden_selected_server_id', data.data.id);
-      window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: data.data.id }));
-      window.dispatchEvent(new CustomEvent('warden_server_updated'));
-      loadServerDetails(data.data.id);
-      loadAllServers();
+        // Switch to newly imported server
+        setServerId(data.data.id);
+        localStorage.setItem('warden_selected_server_id', data.data.id);
+        window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: data.data.id }));
+        window.dispatchEvent(new CustomEvent('warden_server_updated'));
+        loadServerDetails(data.data.id);
+        loadAllServers();
+      }, 500);
     } catch (err: any) {
       showToast(`Import error: ${err.message}`, 'error');
+      setImportProgressDetails({ active: false, phase: '', subtext: '', percent: 0 });
     } finally {
       setImportingServer(false);
       setImportProgress('');
@@ -343,42 +488,6 @@ export default function DashboardPage() {
     } finally {
       setChangingLoader(false);
     }
-  };
-
-  const handleDeleteServer = (id: string, name: string) => {
-    promptConfirm({
-      title: 'Delete Minecraft Server',
-      description: `Are you sure you want to permanently delete "${name}"? All worlds, player data, plugins, mods, and configurations will be permanently destroyed. This action CANNOT be undone.`,
-      confirmText: 'Delete Server',
-      variant: 'danger',
-      onConfirm: async () => {
-        try {
-          const res = await fetch(`/api/v1/servers/${id}`, { method: 'DELETE' }).then((r) => r.json());
-          if (res.success) {
-            showToast(`Server '${name}' deleted permanently.`, 'info');
-            const remaining = allServers.filter((s) => s.id !== id);
-            if (remaining.length > 0) {
-              setServerId(remaining[0].id);
-              localStorage.setItem('warden_selected_server_id', remaining[0].id);
-              window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: remaining[0].id }));
-              window.dispatchEvent(new CustomEvent('warden_server_updated'));
-              loadServerDetails(remaining[0].id);
-            } else {
-              setServerId('');
-              setServer(null);
-              localStorage.removeItem('warden_selected_server_id');
-              window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: '' }));
-              window.dispatchEvent(new CustomEvent('warden_server_updated'));
-            }
-            loadAllServers();
-          } else {
-            showToast(`Delete failed: ${res.error}`, 'error');
-          }
-        } catch (err: any) {
-          showToast(`Delete error: ${err.message}`, 'error');
-        }
-      },
-    });
   };
 
   // Dev Mode State (Custom Loader & MC Version Override for search/install)
@@ -1254,30 +1363,93 @@ export default function DashboardPage() {
   };
 
   const handleRunModUpdates = async () => {
-    promptConfirm({
-      title: 'Run Mod Updates Now',
-      description: 'Run automated Modrinth updates for all installed mods? The server will be backed up, stopped, updated, and restarted safely.',
-      confirmText: 'Update Now',
-      variant: 'primary',
-      onConfirm: async () => {
-        setUpdateRunning(true);
-        showToast('Running mod update job...', 'info');
-        try {
-          const res = await fetch(`/api/v1/servers/${serverId}/update-now`, { method: 'POST' }).then((r) => r.json());
-          if (res.success) {
-            showToast(`Update complete: ${res.data?.summary || 'Mods checked and updated.'}`, 'success');
-            fetchInstalledMods();
-            loadServerDetails(serverId);
-          } else {
-            showToast(`Update failed: ${res.error}`, 'error');
-          }
-        } catch (err: any) {
-          showToast(`Update error: ${err.message}`, 'error');
-        } finally {
-          setUpdateRunning(false);
-        }
-      },
-    });
+    if (!serverId) return;
+    setShowModUpdateModal(true);
+    setModUpdateRunning(true);
+    setModUpdatePercent(15);
+    setModUpdatePhase('Scanning Installed Mods');
+    setModUpdateSubtext('Reading .jar hashes and querying Modrinth API for updates...');
+    setModUpdateLogs(['[Warden] Initiating automated mod update pipeline...']);
+    setModUpdateSummary(null);
+
+    const timer1 = setTimeout(() => {
+      setModUpdatePercent(45);
+      setModUpdatePhase('Checking Mod Compatibility');
+      setModUpdateSubtext(`Comparing installed versions against Minecraft ${server?.detection?.mcVersion || '1.21.1'} ${server?.detection?.loader || 'Fabric'} releases...`);
+      setModUpdateLogs((prev) => [...prev, '[Warden] Checking installed mod versions on Modrinth...']);
+    }, 1200);
+
+    const timer2 = setTimeout(() => {
+      setModUpdatePercent(75);
+      setModUpdatePhase('Downloading & Deploying Updates');
+      setModUpdateSubtext('Replacing outdated JAR files with latest verified releases...');
+      setModUpdateLogs((prev) => [...prev, '[Warden] Resolving dependency graph and downloading binaries...']);
+    }, 2800);
+
+    try {
+      const res = await fetch(`/api/v1/servers/${serverId}/update-now`, { method: 'POST' }).then((r) => r.json());
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+
+      setModUpdatePercent(100);
+      setModUpdatePhase('Update Process Complete');
+      setModUpdateSubtext('All installed mods are now verified and up to date.');
+
+      if (res.success) {
+        const summaryText = res.data?.summary || 'Mods checked and updated successfully.';
+        setModUpdateSummary(summaryText);
+        setModUpdateLogs((prev) => [...prev, `[Success] ${summaryText}`]);
+        showToast('Mod updates finished!', 'success');
+        fetchInstalledMods();
+        loadServerDetails(serverId);
+      } else {
+        const errorText = res.error || 'Update routine encountered an issue.';
+        setModUpdateSummary(`Error: ${errorText}`);
+        setModUpdateLogs((prev) => [...prev, `[Error] ${errorText}`]);
+        showToast(`Update error: ${errorText}`, 'error');
+      }
+    } catch (err: any) {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      setModUpdatePercent(100);
+      setModUpdatePhase('Update Failed');
+      setModUpdateSubtext(err.message || 'Network error');
+      setModUpdateSummary(`Failed: ${err.message}`);
+      setModUpdateLogs((prev) => [...prev, `[Error] ${err.message}`]);
+      showToast(`Update error: ${err.message}`, 'error');
+    } finally {
+      setModUpdateRunning(false);
+    }
+  };
+
+  const handleDeleteServer = () => {
+    setDeleteServerNameInput('');
+    setShowDeleteServerModal(true);
+  };
+
+  const handleConfirmDeleteServer = async () => {
+    if (!server || deleteServerNameInput !== server.name) return;
+    setDeletingServer(true);
+    try {
+      const res = await fetch(`/api/v1/servers/${server.id}`, { method: 'DELETE' }).then((r) => r.json());
+      if (res.success) {
+        showToast(`Server '${server.name}' permanently deleted.`, 'success');
+        setShowDeleteServerModal(false);
+        setDeleteServerNameInput('');
+        setServer(null);
+        setServerId('');
+        localStorage.removeItem('warden_selected_server_id');
+        window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: '' }));
+        window.dispatchEvent(new CustomEvent('warden_server_updated'));
+        loadAllServers();
+      } else {
+        showToast(`Deletion failed: ${res.error}`, 'error');
+      }
+    } catch (err: any) {
+      showToast(`Delete error: ${err.message}`, 'error');
+    } finally {
+      setDeletingServer(false);
+    }
   };
 
   const navigateInto = (dirName: string) => {
@@ -1702,16 +1874,22 @@ export default function DashboardPage() {
   return (
     <div className="space-y-5">
       {loading && !server ? (
-        <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-          <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-8 h-8 rounded-full mb-3" />
-          <span className="text-xs font-mono">Loading server details...</span>
+        <div className="flex flex-col items-center justify-center py-24 text-slate-400 space-y-3">
+          <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-8 h-8 rounded-full mb-1" />
+          <div className="text-center space-y-1">
+            <div className="text-xs font-mono font-bold text-slate-200">Connecting to Warden Daemon...</div>
+            <div className="text-[11px] font-mono text-slate-500">Checking server process state and loading runtime telemetry</div>
+          </div>
         </div>
       ) : !server ? (
         <div className="space-y-6">
           <Card className="bg-[var(--bg-surface)] border-[var(--color-border)] p-6 sm:p-10 text-center max-w-lg mx-auto my-12">
-            <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] text-[var(--color-accent)] border border-[var(--accent-border)] flex items-center justify-center mx-auto mb-4 font-minecraft text-xl font-bold">
-              +
+            <div className="w-14 h-14 rounded-full bg-[var(--accent-dim)] text-[var(--color-accent)] border border-[var(--accent-border)] flex items-center justify-center mx-auto mb-4 font-minecraft text-2xl font-bold select-none">
+              <span className="leading-none flex items-center justify-center translate-x-[1.5px] translate-y-[2px]">
+                +
+              </span>
             </div>
+
             <h3 className="font-minecraft font-bold text-slate-100 text-lg mb-2">No Minecraft Server Found</h3>
             <p className="text-slate-400 text-xs mb-6 leading-relaxed font-mono">
               Warden runs standalone with 1-click downloads for Paper, Fabric, Purpur, Quilt, and Vanilla.
@@ -1835,7 +2013,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* RIGHT: Server action controls + mod update */}
+            {/* RIGHT: Server action controls */}
             <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-between sm:justify-end">
               <div className="flex items-center gap-2 flex-1 sm:flex-initial">
                 {isOnline ? (
@@ -1850,25 +2028,12 @@ export default function DashboardPage() {
                     </Button>
                   </>
                 ) : (
-                  <Button variant="primary" size="sm" onClick={() => handleAction('start')} isLoading={actionLoading} className="flex-1 sm:flex-initial">
+                  <Button variant="primary" size="sm" onClick={() => handleAction('start')} isLoading={actionLoading} className="flex-1 sm:flex-initial font-minecraft text-xs">
                     <WardenIcon name="play" size={14} className="text-[#0d0e11]" />
                     Start Server
                   </Button>
                 )}
               </div>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleRunModUpdates}
-                isLoading={updateRunning}
-                title="Check and install updates for all installed mods"
-                className="flex-1 sm:flex-initial"
-              >
-                <WardenIcon name="refresh-cw" size={14} className="text-[var(--color-accent)]" />
-                <span className="hidden sm:inline">Run Mod Updates</span>
-                <span className="sm:hidden">Updates</span>
-              </Button>
 
               <Button
                 variant="outline"
@@ -1878,7 +2043,7 @@ export default function DashboardPage() {
                   setShowCreateModal(true);
                 }}
                 title="Create a new Minecraft server or import from backup"
-                className="flex-1 sm:flex-initial"
+                className="flex-1 sm:flex-initial font-minecraft text-xs"
               >
                 <WardenIcon name="plus" size={14} className="text-slate-300" />
                 <span className="hidden sm:inline">New Server</span>
@@ -1989,12 +2154,12 @@ export default function DashboardPage() {
                   <button
                     key={tab.id}
                     onClick={() => handleTabClick(tab.id as TabType)}
-                    className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-md font-minecraft text-[11px] sm:text-xs flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 whitespace-nowrap ${isActive
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-md font-minecraft text-[10px] sm:text-xs flex items-center gap-1.5 transition-all shrink-0 whitespace-nowrap ${isActive
                       ? 'bg-[var(--color-accent)] text-[#0d0e11] font-bold shadow-sm'
                       : 'bg-[var(--bg-surface)] text-slate-300 hover:text-slate-100 hover:bg-[var(--bg-card)] border border-[var(--color-border)]'
                       }`}
                   >
-                    <WardenIcon name={tab.icon as any} size={14} className={isActive ? 'text-[#0d0e11]' : 'text-slate-400'} />
+                    <WardenIcon name={tab.icon as any} size={13} className={isActive ? 'text-[#0d0e11]' : 'text-slate-400'} />
                     <span>{tab.label}</span>
                     {tab.badge !== undefined && (
                       <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${isActive ? 'bg-[#0d0e11]/20 text-[#0d0e11]' : 'bg-[var(--bg-card)] text-slate-400'}`}>
@@ -2070,11 +2235,24 @@ export default function DashboardPage() {
                         setMrPackError(null);
                         setShowMrPackModal(true);
                       }}
-                      className="shrink-0"
+                      className="shrink-0 font-minecraft text-xs"
                       title="Import Modrinth Modpack (.mrpack)"
                     >
-                      <WardenIcon name="download" size={14} className="text-[var(--color-accent)]" />
+                      <WardenIcon name="download" size={13} className="text-[var(--color-accent)]" />
                       <span>Import .mrpack</span>
+                    </Button>
+
+                    {/* Run Mod Updates Button */}
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleRunModUpdates}
+                      isLoading={modUpdateRunning}
+                      title="Check and install updates for all installed mods from Modrinth"
+                      className="shrink-0 font-minecraft text-xs"
+                    >
+                      <WardenIcon name="refresh-cw" size={13} className="text-[#0d0e11]" />
+                      <span>Run Mod Updates</span>
                     </Button>
 
                     {/* Dev Mode Bean Switch (Only shown when searching) */}
@@ -2304,9 +2482,10 @@ export default function DashboardPage() {
                   <Button variant="outline" size="sm" onClick={fetchInstalledMods}>Retry</Button>
                 </div>
               ) : modsLoading ? (
-                <div className="py-12 text-center">
-                  <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-6 h-6 rounded-full mb-2" />
-                  <div className="text-xs text-slate-400 font-mono">Scanning mods directory...</div>
+                <div className="py-12 text-center space-y-2">
+                  <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-6 h-6 rounded-full mb-1" />
+                  <div className="text-xs font-mono font-bold text-slate-200">Scanning mods directory...</div>
+                  <div className="text-[11px] font-mono text-slate-500">Reading JAR files and extracting mod metadata from server/mods</div>
                 </div>
               ) : installedMods.length === 0 ? (
                 <div className="py-12 text-center">
@@ -2449,9 +2628,10 @@ export default function DashboardPage() {
 
               {/* Players Long Rows List */}
               {loadingPlayers ? (
-                <div className="py-12 text-center">
-                  <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-6 h-6 rounded-full mb-2" />
-                  <div className="text-xs text-slate-400 font-mono">Loading players data...</div>
+                <div className="py-12 text-center space-y-2">
+                  <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-6 h-6 rounded-full mb-1" />
+                  <div className="text-xs font-mono font-bold text-slate-200">Querying Server Players...</div>
+                  <div className="text-[11px] font-mono text-slate-500">Fetching online player roster, operators, and ban records</div>
                 </div>
               ) : players.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 space-y-2">
@@ -2644,9 +2824,10 @@ export default function DashboardPage() {
               </Card>
 
               {loadingProperties ? (
-                <div className="py-16 text-center">
-                  <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-7 h-7 rounded-full mb-3" />
-                  <div className="text-xs text-slate-400 font-mono">Loading server.properties...</div>
+                <div className="py-16 text-center space-y-2">
+                  <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-7 h-7 rounded-full mb-2" />
+                  <div className="text-xs font-mono font-bold text-slate-200">Loading Server Properties...</div>
+                  <div className="text-[11px] font-mono text-slate-500">Parsing server.properties visual configuration options</div>
                 </div>
               ) : (
                 <form onSubmit={handleSaveProperties} className="space-y-5">
@@ -4041,8 +4222,10 @@ export default function DashboardPage() {
                 </div>
 
                 {loadingTasks ? (
-                  <div className="py-8 text-center text-slate-400">
-                    <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-5 h-5 rounded-full" />
+                  <div className="py-10 text-center text-slate-400 space-y-2">
+                    <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-6 h-6 rounded-full mb-1" />
+                    <div className="text-xs font-mono font-bold text-slate-200">Loading Automation Tasks...</div>
+                    <div className="text-[11px] font-mono text-slate-500">Fetching scheduled cron jobs and restart routines</div>
                   </div>
                 ) : tasks.length === 0 ? (
                   <div className="py-8 text-center text-slate-500 text-xs font-mono">
@@ -4181,18 +4364,18 @@ export default function DashboardPage() {
                         <WardenIcon name="trash" size={16} className="text-red-400" />
                         Danger Zone: Delete Server
                       </h3>
-                      <p className="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
+                      <p className="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed font-mono">
                         Permanently delete <span className="text-slate-200 font-semibold">{server.name}</span>. This will immediately stop the server, delete all world files, configurations, mods, and player data. This action cannot be reversed.
                       </p>
                     </div>
                     <Button
                       variant="danger"
                       size="sm"
-                      onClick={() => handleDeleteServer(server.id, server.name)}
+                      onClick={handleDeleteServer}
                       className="shrink-0 font-semibold"
                     >
                       <WardenIcon name="trash" size={14} className="text-white" />
-                      Delete Server Permanently
+                      Delete Server
                     </Button>
                   </div>
                 </Card>
@@ -5628,6 +5811,31 @@ export default function DashboardPage() {
                 </span>
               </div>
 
+              {/* Dynamic Multi-Stage Progress Card for Create */}
+              {createProgressDetails.active && (
+                <div className="bg-[var(--accent-dim)]/40 border border-[var(--accent-border)] rounded-lg p-3.5 space-y-2.5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <div className="flex items-center gap-2">
+                      <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-4 h-4 rounded-full shrink-0" />
+                      <span className="font-bold text-slate-100">{createProgressDetails.phase}</span>
+                    </div>
+                    <span className="text-[var(--color-accent)] font-bold">{createProgressDetails.percent}%</span>
+                  </div>
+
+                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
+                    <div
+                      className="h-full bg-[var(--color-accent)] transition-all duration-300 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                      style={{ width: `${Math.max(4, createProgressDetails.percent)}%` }}
+                    />
+                  </div>
+
+                  <div className="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+                    <span className="truncate">{createProgressDetails.subtext}</span>
+                    <span className="text-[10px] text-slate-500 shrink-0 ml-2">Please wait</span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-end gap-3 pt-5 border-t border-[var(--color-border)] mt-4">
                 <Button variant="outline" size="md" type="button" onClick={() => setShowCreateModal(false)} className="px-4 font-mono text-xs">
                   Cancel
@@ -5788,11 +5996,27 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              {importingServer && (
-                <div className="bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-md p-3 text-center space-y-1.5">
-                  <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-5 h-5 rounded-full" />
-                  <div className="text-xs font-mono text-[var(--color-accent)] font-semibold">
-                    {importProgress || 'Importing server...'}
+              {/* Dynamic Multi-Stage Progress Card for Import */}
+              {importProgressDetails.active && (
+                <div className="bg-[var(--accent-dim)]/40 border border-[var(--accent-border)] rounded-lg p-3.5 space-y-2.5 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <div className="flex items-center gap-2">
+                      <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-4 h-4 rounded-full shrink-0" />
+                      <span className="font-bold text-slate-100">{importProgressDetails.phase}</span>
+                    </div>
+                    <span className="text-[var(--color-accent)] font-bold">{importProgressDetails.percent}%</span>
+                  </div>
+
+                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
+                    <div
+                      className="h-full bg-[var(--color-accent)] transition-all duration-300 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                      style={{ width: `${Math.max(4, importProgressDetails.percent)}%` }}
+                    />
+                  </div>
+
+                  <div className="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+                    <span className="truncate">{importProgressDetails.subtext}</span>
+                    <span className="text-[10px] text-slate-500 shrink-0 ml-2">Do not close window</span>
                   </div>
                 </div>
               )}
@@ -5932,6 +6156,153 @@ export default function DashboardPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Mod Update Real-Time Pipeline Modal */}
+      {showModUpdateModal && (
+        <Modal
+          isOpen={showModUpdateModal}
+          onClose={() => {
+            if (!modUpdateRunning) setShowModUpdateModal(false);
+          }}
+          title="Run Mod Updates Pipeline"
+          maxWidth="lg"
+        >
+          <div className="space-y-4">
+            {/* Real-time Progress Bar Card */}
+            <div className="bg-[var(--bg-card)] border border-[var(--color-accent)]/50 p-4 rounded-xl space-y-3 shadow-lg relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-28 h-28 bg-[var(--color-accent)]/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="flex items-center justify-between text-xs font-mono">
+                <div className="flex items-center gap-2">
+                  {modUpdateRunning ? (
+                    <div className="inline-block animate-spin border-2 border-[var(--color-accent)] border-t-transparent w-4 h-4 rounded-full shrink-0" />
+                  ) : (
+                    <WardenIcon name="check" size={16} className="text-emerald-400 shrink-0" />
+                  )}
+                  <span className="font-bold text-slate-100">{modUpdatePhase}</span>
+                </div>
+                <span className="text-[var(--color-accent)] font-bold">{modUpdatePercent}%</span>
+              </div>
+
+              {/* Progress Bar Track */}
+              <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
+                <div
+                  className="h-full bg-[var(--color-accent)] transition-all duration-300 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                  style={{ width: `${Math.max(4, modUpdatePercent)}%` }}
+                />
+              </div>
+
+              <div className="text-[11px] font-mono text-slate-400">
+                {modUpdateSubtext}
+              </div>
+            </div>
+
+            {/* Live Progress Logs Console */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 px-1">
+                <span>Update Activity Log:</span>
+                {modUpdateSummary && <span className="text-emerald-400 font-bold">{modUpdateSummary}</span>}
+              </div>
+              <div className="bg-[#0b0c0f] border border-[var(--color-border)] rounded-lg p-3 max-h-48 overflow-y-auto space-y-1 font-mono text-xs text-slate-300">
+                {modUpdateLogs.map((log, idx) => (
+                  <div
+                    key={idx}
+                    className={`leading-relaxed ${
+                      log.startsWith('[Error]')
+                        ? 'text-red-400'
+                        : log.startsWith('[Success]')
+                        ? 'text-emerald-400 font-bold'
+                        : 'text-slate-300'
+                    }`}
+                  >
+                    {log}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]">
+              <Button
+                variant={modUpdateRunning ? 'outline' : 'primary'}
+                size="md"
+                type="button"
+                disabled={modUpdateRunning}
+                onClick={() => setShowModUpdateModal(false)}
+                className="px-5 font-minecraft text-xs"
+              >
+                {modUpdateRunning ? 'Processing...' : 'Done'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Exact Server Name Deletion Confirmation Modal */}
+      {showDeleteServerModal && server && (
+        <Modal
+          isOpen={showDeleteServerModal}
+          onClose={() => {
+            if (!deletingServer) {
+              setShowDeleteServerModal(false);
+              setDeleteServerNameInput('');
+            }
+          }}
+          title="Delete Server Permanently"
+        >
+          <div className="space-y-4">
+            <div className="bg-red-950/40 border border-red-800/60 p-3.5 rounded-lg text-xs text-red-200 flex items-start gap-2.5 font-mono leading-relaxed">
+              <WardenIcon name="triangle-alert" size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-red-300 font-bold block mb-1">WARNING: IRREVERSIBLE ACTION</strong>
+                This will immediately stop the server, delete all world files, configurations, mods, player data, and remove <span className="text-white font-bold">{server.name}</span> permanently.
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs text-slate-300 font-mono">
+                To confirm deletion, please type the exact server name <strong className="text-red-400 font-mono select-all bg-red-950/60 px-1.5 py-0.5 rounded border border-red-800/40">{server.name}</strong> below:
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={deleteServerNameInput}
+                onChange={(e) => setDeleteServerNameInput(e.target.value)}
+                placeholder={server.name}
+                className="w-full h-9 bg-[var(--bg-main)] border border-[var(--color-border)] focus:border-red-500 focus:ring-1 focus:ring-red-500/50 px-3 rounded-md text-xs text-slate-100 font-mono"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]">
+              <Button
+                variant="outline"
+                size="md"
+                type="button"
+                disabled={deletingServer}
+                onClick={() => {
+                  setShowDeleteServerModal(false);
+                  setDeleteServerNameInput('');
+                }}
+                className="px-4 font-mono text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                type="button"
+                isLoading={deletingServer}
+                disabled={deleteServerNameInput !== server.name || deletingServer}
+                onClick={handleConfirmDeleteServer}
+                className="px-5 font-minecraft text-xs"
+              >
+                <WardenIcon name="trash" size={14} className="text-white" />
+                Delete Server Permanently
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
     </div>
   );

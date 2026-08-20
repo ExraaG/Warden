@@ -511,25 +511,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
 
         {/* Seamless Header (Same background color as page) */}
-        <header className="bg-[var(--bg-main)] px-3 sm:px-6 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 sticky top-0 z-40 transition-colors border-b border-white/[0.04] sm:border-b-0">
-          <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
-            {/* Brand Logo */}
+        <header className="bg-[var(--bg-main)] px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-40 transition-colors border-b border-white/[0.04] w-full">
+          {/* Left: Brand Logo + Server Switcher */}
+          <div className="flex items-center gap-3 shrink-0">
             <Link href="/" className="flex items-center group shrink-0">
               <img
                 src="/warden_logo.png"
                 alt="Warden"
-                className="h-6 sm:h-7 object-contain select-none opacity-90 group-hover:opacity-100 transition-opacity"
+                width={140}
+                height={24}
+                className="h-6 w-auto shrink-0 object-contain select-none opacity-90 group-hover:opacity-100 transition-opacity"
               />
             </Link>
 
-            {/* Mobile Server Switcher */}
             {dropdownOptions.length > 0 && (
-              <div className="sm:hidden flex-1 max-w-[200px] ml-auto">
+              <div className="w-36 sm:w-44 shrink-0">
                 <Dropdown
                   options={dropdownOptions}
                   selectedId={selectedServerId}
                   onSelect={handleSelectServer}
-                  title="Select Server"
+                  title="Select Minecraft Server"
                   size="sm"
                   className="w-full"
                 />
@@ -537,26 +538,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             )}
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
-            {/* Desktop Server Switcher */}
-            {dropdownOptions.length > 0 && (
-              <div className="hidden sm:block">
-                <Dropdown
-                  options={dropdownOptions}
-                  selectedId={selectedServerId}
-                  onSelect={handleSelectServer}
-                  title="Select Minecraft Server"
-                  className="w-52 md:w-64 shrink min-w-[140px]"
-                />
-              </div>
-            )}
-
-            {/* Nav Links */}
-            <nav className="flex items-center gap-1 sm:gap-1.5 text-sm font-medium w-full sm:w-auto justify-between sm:justify-start flex-nowrap shrink-0">
+          {/* Right: Nav Links + User Profile */}
+          <div className="flex items-center gap-2 shrink-0">
+            <nav className="flex items-center gap-1 sm:gap-1.5 text-sm font-medium shrink-0 flex-nowrap">
               {systemUpdate?.updateAvailable && (
                 <button
                   onClick={() => setShowUpdateModal(true)}
-                  className="bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-500 hover:text-black font-minecraft text-[10px] sm:text-xs px-2 sm:px-2.5 py-1.5 rounded-md flex items-center gap-1.5 transition-all shrink-0"
+                  className="bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-500 hover:text-black font-minecraft text-[10px] sm:text-xs px-2 py-1 rounded-md flex items-center gap-1 transition-all shrink-0"
                   title="New update available on GitHub"
                 >
                   <WardenIcon name="download" size={11} className="text-emerald-400 shrink-0" />
@@ -569,29 +557,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex-1 sm:flex-initial text-center justify-center px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-md flex items-center gap-1.5 sm:gap-2 transition-all font-minecraft text-[10px] sm:text-xs shrink-0 whitespace-nowrap ${
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all font-minecraft text-[10px] sm:text-xs shrink-0 whitespace-nowrap ${
                       isActive
                         ? 'bg-[var(--accent-dim)] text-[var(--color-accent)] font-bold border border-[var(--accent-border)]'
                         : 'text-slate-400 hover:text-slate-200 hover:bg-[var(--accent-dim)]/20 border border-transparent'
                     }`}
                   >
-                    <WardenIcon name={item.icon} size={13} className={isActive ? 'text-[var(--color-accent)]' : 'text-slate-400'} />
+                    <WardenIcon name={item.icon} size={12} className={isActive ? 'text-[var(--color-accent)]' : 'text-slate-400'} />
                     <span className="whitespace-nowrap">{item.label}</span>
                   </Link>
                 );
               })}
 
               {/* User Profile & Logout */}
-              <div className="flex items-center gap-1 shrink-0 pl-1.5 sm:pl-2 sm:border-l sm:border-white/10">
+              <div className="flex items-center gap-1 shrink-0 pl-1.5 border-l border-white/10">
                 <div
                   title={isTempRecovery ? 'Temporary Emergency Session' : `Logged in as ${currentUser?.username || 'Admin'}`}
-                  className={`flex items-center px-2.5 py-1 rounded-md text-[10px] sm:text-[11px] font-mono ${
+                  className={`flex items-center px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-mono ${
                     isTempRecovery
                       ? 'bg-red-950/60 text-red-300 border border-red-700/60'
                       : 'bg-[var(--bg-card)] text-slate-300 border border-[var(--color-border)]'
                   }`}
                 >
-                  <span className="font-bold truncate max-w-[80px] sm:max-w-[120px]">
+                  <span className="font-bold truncate max-w-[70px] sm:max-w-[100px]">
                     {isTempRecovery ? 'Temp Admin' : currentUser?.username || 'Admin'}
                   </span>
                 </div>
@@ -600,9 +588,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   type="button"
                   onClick={handleLogout}
                   title="Log Out"
-                  className="group p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/30 rounded-md transition-all border border-transparent hover:border-red-800/40 flex items-center justify-center"
+                  className="group p-1 text-slate-400 hover:text-red-400 hover:bg-red-950/30 rounded-md transition-all border border-transparent hover:border-red-800/40 flex items-center justify-center shrink-0"
                 >
-                  <AnimatedLogOutIcon size={14} className="text-slate-400 group-hover:text-red-400" />
+                  <AnimatedLogOutIcon size={13} className="text-slate-400 group-hover:text-red-400" />
                 </button>
               </div>
             </nav>
