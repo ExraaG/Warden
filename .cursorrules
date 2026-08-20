@@ -1,0 +1,20 @@
+# Warden — Cursor IDE Rules
+
+See PROJECT_RULES.md for full architecture and development workflows.
+
+- **Port**: Warden runs on port :22313 (http://localhost:22313). Never assume :3000.
+- **Git Remotes**: dev branch is PRIVATE. ONLY push dev to private (https://github.com/ExraaG/Warden-Dev.git). NEVER push dev to public origin.
+- **UI Constraints**:
+  - NO emojis anywhere in the UI. Use SVG icons (WardenIcon).
+  - Use /warden_logo.png for branding.
+  - NO CSS gradients, glowing drop-shadows, or pulsing/flashing animations.
+  - NO dots on status pills, badges, or usernames (use no dots at all).
+  - NO marketing fluff text or fake subtitles.
+  - Clean username in header (no dots, no fake 2FA tags).
+- **Branch Policy**:
+  - Developer & Testing Lab tools (Global Server Purge, Global User Purge, Factory Reset) are on dev only.
+  - Run ./scripts/merge-dev-to-main.sh when releasing to main.
+  - "Delete All My Servers" (own servers only) with typed verification (DELETE ALL MY SERVERS) stays in main.
+- **Mobile Build**:
+  - Java 17 LTS required: JAVA_HOME=/usr/lib/jvm/java-17-openjdk.
+- **Knowledge Graph**: Run graphify update . after modifying code files.

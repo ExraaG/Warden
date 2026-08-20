@@ -71,11 +71,11 @@ if (fs.existsSync(apiPath)) {
 
 # 4. Remove internal agent rule files from main and add to .gitignore on main
 echo "--> Removing internal agent rules from git tracking on 'main'..."
-git rm -f --ignore-unmatch PROJECT_RULES.md AGENTS.md
+git rm -f --ignore-unmatch PROJECT_RULES.md AGENTS.md CLAUDE.md GEMINI.md .cursorrules .github/copilot-instructions.md
 
 # Ensure .gitignore on main ignores internal AI docs
 if ! grep -q "PROJECT_RULES.md" .gitignore; then
-  echo -e "\n# Internal AI & Agent docs (dev only)\nPROJECT_RULES.md\nAGENTS.md\nCLAUDE.md" >> .gitignore
+  echo -e "\n# Internal AI & Agent docs (dev only)\nPROJECT_RULES.md\nAGENTS.md\nCLAUDE.md\nGEMINI.md\n.cursorrules\n.github/copilot-instructions.md" >> .gitignore
 fi
 
 # 5. Validate build
