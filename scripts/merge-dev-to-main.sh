@@ -40,7 +40,6 @@ if (fs.existsSync(settingsPath)) {
   // Remove the Developer & Testing Lab card block cleanly
   const cardStart = content.indexOf("Developer & Testing Lab");
   if (cardStart !== -1) {
-    // Find the enclosing card or section
     const sectionStart = content.lastIndexOf("<div className=\"p-6 rounded-xl border border-rose-900", cardStart);
     if (sectionStart !== -1) {
       const sectionEnd = content.indexOf("</div>\n          )}", sectionStart);
@@ -70,16 +69,25 @@ if (fs.existsSync(apiPath)) {
 }
 '
 
-# 4. Validate build
+# 4. Remove internal agent rule files from main and add to .gitignore on main
+echo "--> Removing internal agent rules from git tracking on 'main'..."
+git rm -f --ignore-unmatch PROJECT_RULES.md AGENTS.md
+
+# Ensure .gitignore on main ignores internal AI docs
+if ! grep -q "PROJECT_RULES.md" .gitignore; then
+  echo -e "\n# Internal AI & Agent docs (dev only)\nPROJECT_RULES.md\nAGENTS.md\nCLAUDE.md" >> .gitignore
+fi
+
+# 5. Validate build
 echo "--> Verifying server build on 'main'..."
 cd server
 npm run build
 cd ..
 
-# 5. Commit cleaned main branch
-git add server/src/app/settings/page.tsx server/src/routes/api.ts
+# 6. Commit cleaned main branch
+git add server/src/app/settings/page.tsx server/src/routes/api.ts .gitignore
 if [ -n "$(git status --porcelain)" ]; then
-  git commit -m "chore(main): strip dev-only testing lab tools from production release"
+  git commit -m "chore(main): strip dev tools and internal agent docs from production release"
 fi
 
 echo "=== Merge to 'main' completed successfully! ==="
