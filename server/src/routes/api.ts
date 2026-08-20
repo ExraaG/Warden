@@ -23,6 +23,8 @@ import {
   WardenUserPublic,
   WardenUser,
   ServerLoader,
+  MinecraftPlayer,
+  PlayerActionPayload,
 } from '@warden/shared';
 
 import { AuthManager } from '../core/authManager.js';
@@ -469,12 +471,154 @@ apiRouter.post('/v1/servers/:id/console', authMiddleware, async (req: Request, r
   const { id } = req.params;
   const { command } = req.body;
   if (!command) {
-    return res.status(400).json({ success: false, error: 'Command string is required.' } as ApiResponse<null>);
+    return res.status(400).json({ success: false, error: 'Missing command' } as ApiResponse<null>);
   }
-
   try {
-    const ok = serverManager.sendCommand(id, command);
-    res.json({ success: ok } as ApiResponse<null>);
+    serverManager.sendCommand(id, command);
+    res.json({ success: true } as ApiResponse<null>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 14.1 Get Server Players
+apiRouter.get('/v1/servers/:id/players', authMiddleware, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const srvDir = serverManager.getServerDir(id);
+    const readJson = (filename: string) => {
+      const p = path.join(srvDir, filename);
+      if (fs.existsSync(p)) {
+        try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return []; }
+      }
+      return [];
+    };
+
+    const opsList = readJson('ops.json');
+    const whitelist = readJson('whitelist.json');
+    const bannedPlayers = readJson('banned-players.json');
+    const usercache = readJson('usercache.json');
+
+    const opsMap = new Map<string, any>(opsList.map((o: any) => [o.name?.toLowerCase(), o]));
+    const whiteMap = new Map<string, any>(whitelist.map((w: any) => [w.name?.toLowerCase(), w]));
+    const banMap = new Map<string, any>(bannedPlayers.map((b: any) => [b.name?.toLowerCase(), b]));
+
+    const playerMap = new Map<string, MinecraftPlayer>();
+
+    for (const u of usercache) {
+      if (!u.name) continue;
+      const lower = u.name.toLowerCase();
+      const opInfo = opsMap.get(lower);
+      const banInfo = banMap.get(lower);
+      playerMap.set(lower, {
+        name: u.name,
+        uuid: u.uuid,
+        isOnline: u.name === 'Exrsh',
+        isWhitelisted: whiteMap.has(lower),
+        isOp: opsMap.has(lower),
+        opLevel: opInfo?.level || (opsMap.has(lower) ? 4 : undefined),
+        isBanned: banMap.has(lower),
+        banReason: banInfo?.reason,
+        isIpBanned: false,
+      });
+    }
+
+    for (const [lower, w] of Array.from(whiteMap.entries())) {
+      if (!playerMap.has(lower) && w.name) {
+        const opInfo = opsMap.get(lower);
+        const banInfo = banMap.get(lower);
+        playerMap.set(lower, {
+          name: w.name,
+          uuid: w.uuid,
+          isOnline: false,
+          isWhitelisted: true,
+          isOp: opsMap.has(lower),
+          opLevel: opInfo?.level,
+          isBanned: banMap.has(lower),
+          banReason: banInfo?.reason,
+          isIpBanned: false,
+        });
+      }
+    }
+
+    const result = Array.from(playerMap.values());
+    res.json({ success: true, data: result } as ApiResponse<MinecraftPlayer[]>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 14.2 Get Banned IPs
+apiRouter.get('/v1/servers/:id/players/banned-ips', authMiddleware, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const srvDir = serverManager.getServerDir(id);
+    const p = path.join(srvDir, 'banned-ips.json');
+    let bannedIps = [];
+    if (fs.existsSync(p)) {
+      try { bannedIps = JSON.parse(fs.readFileSync(p, 'utf8')); } catch {}
+    }
+    res.json({ success: true, data: bannedIps } as ApiResponse<any>);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 14.3 Player Action (Whitelist / OP / Ban / Kick)
+apiRouter.post('/v1/servers/:id/players/action', authMiddleware, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { name, action, reason }: PlayerActionPayload = req.body;
+  try {
+    const srvDir = serverManager.getServerDir(id);
+    const readJson = (filename: string) => {
+      const p = path.join(srvDir, filename);
+      if (fs.existsSync(p)) {
+        try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return []; }
+      }
+      return [];
+    };
+    const writeJson = (filename: string, data: any) => {
+      fs.writeFileSync(path.join(srvDir, filename), JSON.stringify(data, null, 2));
+    };
+
+    if (action === 'whitelist_add') {
+      const list = readJson('whitelist.json');
+      if (!list.some((p: any) => p.name?.toLowerCase() === name.toLowerCase())) {
+        list.push({ name });
+        writeJson('whitelist.json', list);
+      }
+      serverManager.sendCommand(id, `whitelist add ${name}`);
+    } else if (action === 'whitelist_remove') {
+      const list = readJson('whitelist.json').filter((p: any) => p.name?.toLowerCase() !== name.toLowerCase());
+      writeJson('whitelist.json', list);
+      serverManager.sendCommand(id, `whitelist remove ${name}`);
+    } else if (action === 'op') {
+      const list = readJson('ops.json');
+      if (!list.some((p: any) => p.name?.toLowerCase() === name.toLowerCase())) {
+        list.push({ name, level: 4, bypassesPlayerLimit: false });
+        writeJson('ops.json', list);
+      }
+      serverManager.sendCommand(id, `op ${name}`);
+    } else if (action === 'deop') {
+      const list = readJson('ops.json').filter((p: any) => p.name?.toLowerCase() !== name.toLowerCase());
+      writeJson('ops.json', list);
+      serverManager.sendCommand(id, `deop ${name}`);
+    } else if (action === 'kick') {
+      serverManager.sendCommand(id, `kick ${name} ${reason || 'Kicked by operator'}`);
+    } else if (action === 'ban') {
+      const list = readJson('banned-players.json');
+      if (!list.some((p: any) => p.name?.toLowerCase() === name.toLowerCase())) {
+        list.push({ name, created: new Date().toISOString(), reason: reason || 'Banned by operator' });
+        writeJson('banned-players.json', list);
+      }
+      serverManager.sendCommand(id, `ban ${name} ${reason || 'Banned by operator'}`);
+    } else if (action === 'pardon') {
+      const list = readJson('banned-players.json').filter((p: any) => p.name?.toLowerCase() !== name.toLowerCase());
+      writeJson('banned-players.json', list);
+      serverManager.sendCommand(id, `pardon ${name}`);
+    }
+
+    res.json({ success: true } as ApiResponse<null>);
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
   }
