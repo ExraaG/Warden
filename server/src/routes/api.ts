@@ -541,8 +541,29 @@ apiRouter.get('/v1/servers/:id/players', authMiddleware, async (req: Request, re
       }
     }
 
+    let bannedIps = [];
+    const ipPath = path.join(srvDir, 'banned-ips.json');
+    if (fs.existsSync(ipPath)) {
+      try { bannedIps = JSON.parse(fs.readFileSync(ipPath, 'utf8')); } catch {}
+    }
+
     const result = Array.from(playerMap.values());
-    res.json({ success: true, data: result } as ApiResponse<MinecraftPlayer[]>);
+    const stats = {
+      totalRecorded: result.length,
+      onlineCount: result.filter((p) => p.isOnline).length,
+      whitelistedCount: result.filter((p) => p.isWhitelisted).length,
+      opsCount: result.filter((p) => p.isOp).length,
+      bannedCount: result.filter((p) => p.isBanned).length,
+    };
+
+    res.json({
+      success: true,
+      data: {
+        players: result,
+        bannedIps,
+        stats,
+      },
+    } as ApiResponse<any>);
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
   }

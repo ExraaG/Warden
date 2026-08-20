@@ -990,9 +990,13 @@ export default function DashboardPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.data) {
-          setPlayers(data.data.players || []);
-          setBannedIps(data.data.bannedIps || []);
-          setPlayerStats(data.data.stats || null);
+          if (Array.isArray(data.data)) {
+            setPlayers(data.data);
+          } else {
+            setPlayers(data.data.players || []);
+            setBannedIps(data.data.bannedIps || []);
+            setPlayerStats(data.data.stats || null);
+          }
         }
       })
       .catch(() => { })
