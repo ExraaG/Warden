@@ -734,22 +734,22 @@ export class ServerManager {
         },
         'sodium': {
           title: 'Sodium',
-          iconUrl: 'https://cdn.modrinth.com/data/AANobbMI/icon.png',
+          iconUrl: 'https://cdn.modrinth.com/data/AANobbMI/295862f4724dc3f78df3447ad6072b2dcd3ef0c9_96.webp',
           projectSlug: 'sodium',
         },
         'lithium': {
           title: 'Lithium',
-          iconUrl: 'https://cdn.modrinth.com/data/gvQqBUqZ/icon.png',
+          iconUrl: 'https://cdn.modrinth.com/data/gvQqBUqZ/bcc8686c13af0143adf4285d741256af824f70b7_96.webp',
           projectSlug: 'lithium',
         },
         'ferritecore': {
           title: 'FerriteCore',
-          iconUrl: 'https://cdn.modrinth.com/data/uXXizFIs/icon.png',
+          iconUrl: 'https://cdn.modrinth.com/data/uXXizFIs/222a126f26f8f9ae1eb339f3b767677f18bff31f_96.webp',
           projectSlug: 'ferritecore',
         },
         'iris': {
           title: 'Iris Shaders',
-          iconUrl: 'https://cdn.modrinth.com/data/YL57xq9U/icon.png',
+          iconUrl: 'https://cdn.modrinth.com/data/YL57xq9U/18d0e7f076d3d6ed5bedd472b853909aac5da202_96.webp',
           projectSlug: 'iris',
         },
         'fabric-api': {
