@@ -31,19 +31,19 @@
 
 ## Screenshots
 
-**Dashboard — Server Overview, live telemetry, and installed mods (with Better Building Recipes)**
+**Dashboard — Server Overview with live stats and mods overview**
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
-**Player Management — Whitelist, Operator privileges, bans, and dynamic skin head avatars**
+**Players — Whitelist, Operator privileges, bans, and dynamic skin head avatars**
 
 ![Players](docs/screenshots/players.png)
 
-**Audit Logs — Step-by-step 4 AM automated mod update execution trail**
+**Audit Logs — Step-by-step 4 AM update execution trail**
 
 ![Audit Logs](docs/screenshots/audit-logs.png)
 
-**Settings — Standalone engine status, timezone detector, and automated update/restart schedules**
+**Settings — Timezone, automated update schedules, and security management**
 
 ![Settings](docs/screenshots/settings.png)
 
