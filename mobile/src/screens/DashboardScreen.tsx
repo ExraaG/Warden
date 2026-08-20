@@ -213,7 +213,7 @@ export const DashboardScreen: React.FC = () => {
       {/* Telemetry Metrics Grid */}
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionHeaderTitle}>REAL-TIME TELEMETRY</Text>
-        <Text style={styles.liveIndicator}>● LIVE</Text>
+        <Text style={styles.liveIndicator}>LIVE</Text>
       </View>
 
       <View style={styles.statsGrid}>

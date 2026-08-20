@@ -70,7 +70,6 @@ export const SettingsScreen: React.FC = () => {
         <View style={styles.statusRow}>
           <Text style={styles.label}>SESSION STATUS</Text>
           <View style={styles.liveStatusPill}>
-            <View style={styles.liveDot} />
             <Text style={styles.liveStatusText}>ACTIVE THIN CLIENT</Text>
           </View>
         </View>
