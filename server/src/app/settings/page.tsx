@@ -62,6 +62,20 @@ export default function SettingsPage() {
   const [showRecoveryModal, setShowRecoveryModal] = useState<boolean>(false);
   const [regeneratingRecovery, setRegeneratingRecovery] = useState<boolean>(false);
 
+  // Dev & Testing Tools Modal State [Dev Branch]
+  const [showDevDeleteAllServersModal, setShowDevDeleteAllServersModal] = useState<boolean>(false);
+  const [devDeleteAllServersInput, setDevDeleteAllServersInput] = useState<string>('');
+  const [devDeletingAllServers, setDevDeletingAllServers] = useState<boolean>(false);
+
+  const [showDevDeleteAllUsersModal, setShowDevDeleteAllUsersModal] = useState<boolean>(false);
+  const [devDeleteAllUsersInput, setDevDeleteAllUsersInput] = useState<string>('');
+  const [devKeepCurrentAdmin, setDevKeepCurrentAdmin] = useState<boolean>(true);
+  const [devDeletingAllUsers, setDevDeletingAllUsers] = useState<boolean>(false);
+
+  const [showDevFactoryResetModal, setShowDevFactoryResetModal] = useState<boolean>(false);
+  const [devFactoryResetInput, setDevFactoryResetInput] = useState<string>('');
+  const [devExecutingFactoryReset, setDevExecutingFactoryReset] = useState<boolean>(false);
+
   const fetchAuthUser = async () => {
     try {
       const res = await fetch('/api/v1/auth/status').then((r) => r.json());
@@ -469,20 +483,20 @@ export default function SettingsPage() {
       <form onSubmit={handleSave} className="space-y-4 sm:space-y-6">
         {/* Engine Status Card */}
         <Card header="Orchestrator Engine Status" badge={<WardenIcon name="server" size={16} className="text-[var(--color-accent)]" />}>
-          <div className="space-y-3 text-sm font-mono text-xs">
-            <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border)]">
+          <div className="space-y-2.5 text-xs font-mono">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 border-b border-[var(--color-border)]">
               <span className="text-slate-400">Architecture</span>
               <span className="text-[var(--color-accent)] font-bold">Warden Standalone Native</span>
             </div>
-            <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border)]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 border-b border-[var(--color-border)]">
               <span className="text-slate-400">Process Manager</span>
               <span className="text-slate-200">Active (Node Child Process)</span>
             </div>
-            <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border)]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5 border-b border-[var(--color-border)]">
               <span className="text-slate-400">Supported Modloaders</span>
               <span className="text-slate-200">Paper, Fabric, Purpur, Quilt, Vanilla</span>
             </div>
-            <div className="flex items-center justify-between py-1.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1.5">
               <span className="text-slate-400">Storage Root</span>
               <span className="text-slate-300">/data/servers/</span>
             </div>
@@ -944,6 +958,106 @@ export default function SettingsPage() {
           </Card>
         )}
 
+        {/* Developer & Testing Lab Card [DEV BRANCH ONLY] */}
+        <Card
+          header="Developer & Testing Lab"
+          badge={
+            <span className="bg-amber-950/80 text-amber-300 border border-amber-600/50 px-2 py-0.5 rounded text-[10px] font-minecraft uppercase font-bold tracking-wider">
+              Dev Branch Only
+            </span>
+          }
+        >
+          <div className="space-y-4">
+            <div className="bg-amber-950/30 border border-amber-700/40 p-3 rounded-lg flex items-start gap-2.5 text-xs text-amber-200/90 font-mono leading-relaxed">
+              <WardenIcon name="triangle-alert" size={16} className="text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-amber-300 font-bold block mb-0.5">DEV TESTING CONTROLS</strong>
+                These tools allow fast bulk database wiping and server resetting while building and testing on the <code className="text-white bg-black/40 px-1 rounded">dev</code> branch. These controls will be removed before the release is merged to <code className="text-white bg-black/40 px-1 rounded">main</code>.
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+              {/* Action 1: Delete All Global Servers */}
+              <div className="p-3.5 bg-[var(--bg-main)] border border-red-900/40 rounded-lg flex flex-col justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold text-red-400 font-minecraft uppercase flex items-center gap-1.5 mb-1">
+                    <WardenIcon name="server" size={13} className="text-red-400" />
+                    Purge All Servers
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-mono leading-relaxed">
+                    Permanently delete every server instance across all users on this Warden installation.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    setDevDeleteAllServersInput('');
+                    setShowDevDeleteAllServersModal(true);
+                  }}
+                  className="font-minecraft text-xs w-full justify-center"
+                >
+                  <WardenIcon name="trash" size={13} className="text-white" />
+                  Purge All Servers
+                </Button>
+              </div>
+
+              {/* Action 2: Delete All Users */}
+              <div className="p-3.5 bg-[var(--bg-main)] border border-amber-900/40 rounded-lg flex flex-col justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold text-amber-400 font-minecraft uppercase flex items-center gap-1.5 mb-1">
+                    <WardenIcon name="users" size={13} className="text-amber-400" />
+                    Purge All Users
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-mono leading-relaxed">
+                    Delete user accounts from storage (with option to preserve active administrator session).
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDevDeleteAllUsersInput('');
+                    setShowDevDeleteAllUsersModal(true);
+                  }}
+                  className="font-minecraft text-xs w-full justify-center border-amber-800/60 text-amber-300 hover:bg-amber-950/40"
+                >
+                  <WardenIcon name="users" size={13} className="text-amber-400" />
+                  Purge All Users
+                </Button>
+              </div>
+
+              {/* Action 3: Factory Wipe Everything */}
+              <div className="p-3.5 bg-[var(--bg-main)] border border-red-950 rounded-lg flex flex-col justify-between gap-3 bg-red-950/20">
+                <div>
+                  <div className="text-xs font-bold text-red-300 font-minecraft uppercase flex items-center gap-1.5 mb-1">
+                    <WardenIcon name="triangle-alert" size={13} className="text-red-400" />
+                    Factory Reset
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-mono leading-relaxed">
+                    Completely wipe all servers and all users. Warden returns to the initial onboarding screen.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    setDevFactoryResetInput('');
+                    setShowDevFactoryResetModal(true);
+                  }}
+                  className="font-minecraft text-xs w-full justify-center bg-red-800 hover:bg-red-700"
+                >
+                  <WardenIcon name="trash" size={13} className="text-white" />
+                  Factory Reset
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Save Button */}
         <div className="flex justify-end gap-3 pt-2">
           <Button type="submit" variant="primary" isLoading={saving} className="px-6">
@@ -1270,6 +1384,293 @@ export default function SettingsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Dev Tool 1: Purge All Servers (Global) Modal */}
+      {showDevDeleteAllServersModal && (
+        <Modal
+          isOpen={showDevDeleteAllServersModal}
+          onClose={() => {
+            if (!devDeletingAllServers) {
+              setShowDevDeleteAllServersModal(false);
+              setDevDeleteAllServersInput('');
+            }
+          }}
+          title="[DEV] Purge All Servers Globally"
+        >
+          <div className="space-y-4">
+            <div className="bg-red-950/40 border border-red-800/60 p-3.5 rounded-lg text-xs text-red-200 flex items-start gap-2.5 font-mono leading-relaxed">
+              <WardenIcon name="triangle-alert" size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-red-300 font-bold block mb-1">GLOBAL SERVER PURGE</strong>
+                This will permanently delete <strong className="text-white">ALL Minecraft servers</strong> on this Warden host across all user accounts. Every world file, mod, configuration, and player file will be destroyed.
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs text-slate-300 font-mono">
+                To confirm global server purge, please type <strong className="text-red-400 font-mono select-all bg-red-950/60 px-1.5 py-0.5 rounded border border-red-800/40">DELETE ALL SERVERS GLOBAL</strong> below:
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={devDeleteAllServersInput}
+                onChange={(e) => setDevDeleteAllServersInput(e.target.value)}
+                placeholder="DELETE ALL SERVERS GLOBAL"
+                className="w-full h-9 bg-[var(--bg-main)] border border-[var(--color-border)] focus:border-red-500 focus:ring-1 focus:ring-red-500/50 px-3 rounded-md text-xs text-slate-100 font-mono"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]">
+              <Button
+                variant="outline"
+                size="md"
+                type="button"
+                disabled={devDeletingAllServers}
+                onClick={() => {
+                  setShowDevDeleteAllServersModal(false);
+                  setDevDeleteAllServersInput('');
+                }}
+                className="px-4 font-mono text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                type="button"
+                isLoading={devDeletingAllServers}
+                disabled={devDeleteAllServersInput !== 'DELETE ALL SERVERS GLOBAL' || devDeletingAllServers}
+                onClick={async () => {
+                  if (devDeleteAllServersInput !== 'DELETE ALL SERVERS GLOBAL') return;
+                  setDevDeletingAllServers(true);
+                  try {
+                    const res = await fetch('/api/v1/servers/batch/all?scope=all', { method: 'DELETE' }).then((r) => r.json());
+                    if (res.success) {
+                      const count = res.data?.deletedCount || 0;
+                      showToast(`Global server purge complete: ${count} servers deleted.`, 'success');
+                      setShowDevDeleteAllServersModal(false);
+                      setDevDeleteAllServersInput('');
+                      setServersList([]);
+                      localStorage.removeItem('warden_selected_server_id');
+                      window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: '' }));
+                      window.dispatchEvent(new CustomEvent('warden_server_updated'));
+                    } else {
+                      showToast(`Purge failed: ${res.error}`, 'error');
+                    }
+                  } catch (err: any) {
+                    showToast(`Error: ${err.message}`, 'error');
+                  } finally {
+                    setDevDeletingAllServers(false);
+                  }
+                }}
+                className="px-5 font-minecraft text-xs"
+              >
+                <WardenIcon name="trash" size={14} className="text-white" />
+                Purge All Servers (Global)
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Dev Tool 2: Purge All Users Modal */}
+      {showDevDeleteAllUsersModal && (
+        <Modal
+          isOpen={showDevDeleteAllUsersModal}
+          onClose={() => {
+            if (!devDeletingAllUsers) {
+              setShowDevDeleteAllUsersModal(false);
+              setDevDeleteAllUsersInput('');
+            }
+          }}
+          title="[DEV] Purge All User Accounts"
+        >
+          <div className="space-y-4">
+            <div className="bg-amber-950/40 border border-amber-800/60 p-3.5 rounded-lg text-xs text-amber-200 flex items-start gap-2.5 font-mono leading-relaxed">
+              <WardenIcon name="triangle-alert" size={16} className="text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-amber-300 font-bold block mb-1">USER DATABASE PURGE</strong>
+                This will delete user accounts from the Warden database.
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2.5 p-3 bg-[var(--bg-main)] border border-[var(--color-border)] rounded-lg cursor-pointer">
+              <input
+                type="checkbox"
+                checked={devKeepCurrentAdmin}
+                onChange={(e) => setDevKeepCurrentAdmin(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+              />
+              <div>
+                <div className="text-xs font-semibold text-slate-200">Preserve My Current Admin Account ({currentUser?.username})</div>
+                <div className="text-[10px] text-slate-400 font-mono">Keep your active session logged in while wiping all other accounts.</div>
+              </div>
+            </label>
+
+            <div className="space-y-2">
+              <label className="block text-xs text-slate-300 font-mono">
+                To confirm user purge, please type <strong className="text-amber-400 font-mono select-all bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/40">DELETE ALL USERS</strong> below:
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={devDeleteAllUsersInput}
+                onChange={(e) => setDevDeleteAllUsersInput(e.target.value)}
+                placeholder="DELETE ALL USERS"
+                className="w-full h-9 bg-[var(--bg-main)] border border-[var(--color-border)] focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 px-3 rounded-md text-xs text-slate-100 font-mono"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]">
+              <Button
+                variant="outline"
+                size="md"
+                type="button"
+                disabled={devDeletingAllUsers}
+                onClick={() => {
+                  setShowDevDeleteAllUsersModal(false);
+                  setDevDeleteAllUsersInput('');
+                }}
+                className="px-4 font-mono text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                type="button"
+                isLoading={devDeletingAllUsers}
+                disabled={devDeleteAllUsersInput !== 'DELETE ALL USERS' || devDeletingAllUsers}
+                onClick={async () => {
+                  if (devDeleteAllUsersInput !== 'DELETE ALL USERS') return;
+                  setDevDeletingAllUsers(true);
+                  try {
+                    const res = await fetch('/api/v1/users/batch/all', {
+                      method: 'DELETE',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ keepCurrentAdmin: devKeepCurrentAdmin }),
+                    }).then((r) => r.json());
+                    if (res.success) {
+                      const count = res.data?.deletedCount || 0;
+                      showToast(`User purge complete: ${count} users deleted.`, 'success');
+                      setShowDevDeleteAllUsersModal(false);
+                      setDevDeleteAllUsersInput('');
+                      if (!devKeepCurrentAdmin) {
+                        setTimeout(() => {
+                          window.location.href = '/';
+                        }, 600);
+                      } else {
+                        fetchUsers();
+                      }
+                    } else {
+                      showToast(`User purge failed: ${res.error}`, 'error');
+                    }
+                  } catch (err: any) {
+                    showToast(`Error: ${err.message}`, 'error');
+                  } finally {
+                    setDevDeletingAllUsers(false);
+                  }
+                }}
+                className="px-5 font-minecraft text-xs"
+              >
+                <WardenIcon name="trash" size={14} className="text-white" />
+                Purge Users
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Dev Tool 3: Factory Reset Modal */}
+      {showDevFactoryResetModal && (
+        <Modal
+          isOpen={showDevFactoryResetModal}
+          onClose={() => {
+            if (!devExecutingFactoryReset) {
+              setShowDevFactoryResetModal(false);
+              setDevFactoryResetInput('');
+            }
+          }}
+          title="[DEV] Factory Reset & Full Wipe"
+        >
+          <div className="space-y-4">
+            <div className="bg-red-950/60 border border-red-700 p-3.5 rounded-lg text-xs text-red-200 flex items-start gap-2.5 font-mono leading-relaxed">
+              <WardenIcon name="triangle-alert" size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-red-300 font-bold block mb-1">TOTAL FACTORY RESET</strong>
+                This will delete <strong className="text-white">ALL Minecraft servers</strong> and <strong className="text-white">ALL user accounts</strong>, returning Warden to the first-time setup state.
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs text-slate-300 font-mono">
+                To confirm factory wipe, please type <strong className="text-red-400 font-mono select-all bg-red-950/60 px-1.5 py-0.5 rounded border border-red-800/40">FACTORY PURGE WARDEN</strong> below:
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={devFactoryResetInput}
+                onChange={(e) => setDevFactoryResetInput(e.target.value)}
+                placeholder="FACTORY PURGE WARDEN"
+                className="w-full h-9 bg-[var(--bg-main)] border border-[var(--color-border)] focus:border-red-500 focus:ring-1 focus:ring-red-500/50 px-3 rounded-md text-xs text-slate-100 font-mono"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]">
+              <Button
+                variant="outline"
+                size="md"
+                type="button"
+                disabled={devExecutingFactoryReset}
+                onClick={() => {
+                  setShowDevFactoryResetModal(false);
+                  setDevFactoryResetInput('');
+                }}
+                className="px-4 font-mono text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                type="button"
+                isLoading={devExecutingFactoryReset}
+                disabled={devFactoryResetInput !== 'FACTORY PURGE WARDEN' || devExecutingFactoryReset}
+                onClick={async () => {
+                  if (devFactoryResetInput !== 'FACTORY PURGE WARDEN') return;
+                  setDevExecutingFactoryReset(true);
+                  try {
+                    const res = await fetch('/api/v1/system/dev-reset', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ resetServers: true, resetUsers: true, keepCurrentAdmin: false }),
+                    }).then((r) => r.json());
+                    if (res.success) {
+                      showToast('Factory purge complete. Redirecting to onboarding...', 'success');
+                      setShowDevFactoryResetModal(false);
+                      setDevFactoryResetInput('');
+                      localStorage.clear();
+                      setTimeout(() => {
+                        window.location.href = '/';
+                      }, 800);
+                    } else {
+                      showToast(`Factory reset failed: ${res.error}`, 'error');
+                    }
+                  } catch (err: any) {
+                    showToast(`Error: ${err.message}`, 'error');
+                  } finally {
+                    setDevExecutingFactoryReset(false);
+                  }
+                }}
+                className="px-5 font-minecraft text-xs bg-red-800 hover:bg-red-700"
+              >
+                <WardenIcon name="trash" size={14} className="text-white" />
+                Factory Purge Warden
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

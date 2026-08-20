@@ -870,3 +870,93 @@ apiRouter.post('/v1/servers/:id/access', authMiddleware, async (req: Request, re
   }
 });
 
+// 32. Bulk Delete Servers (Own Servers for users, or Global for Admins)
+apiRouter.delete('/v1/servers/batch/all', authMiddleware, async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const scope = (req.query.scope as string) || (req.body?.scope as string) || 'own';
+
+  if (scope === 'all' && (!user || user.role !== 'admin')) {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Only administrators can perform global server purges across all users.',
+    } as ApiResponse<null>);
+  }
+
+  try {
+    const ownerIdOnly = scope === 'own' && user ? user.id : undefined;
+    console.log(`[Warden API] Bulk deleting servers (Scope: ${scope}, Owner: ${ownerIdOnly || 'ALL'})...`);
+    const result = await serverManager.deleteAllServers({ ownerIdOnly });
+    res.json({
+      success: true,
+      data: { ...result, scope },
+    } as ApiResponse<any>);
+  } catch (err: any) {
+    console.error('[Warden API] Bulk server deletion failed:', err);
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 33. Bulk Delete Users (Admin Only)
+apiRouter.delete('/v1/users/batch/all', authMiddleware, async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Only administrators can perform bulk user account deletions.',
+    } as ApiResponse<null>);
+  }
+
+  const keepCurrentAdmin = req.body?.keepCurrentAdmin !== false && req.query.keepCurrentAdmin !== 'false';
+  const exceptUserId = keepCurrentAdmin ? user.id : undefined;
+
+  try {
+    console.log(`[Warden API] Bulk deleting user accounts (Keep Current Admin: ${keepCurrentAdmin})...`);
+    const deletedCount = db.deleteAllUsers(exceptUserId);
+    res.json({
+      success: true,
+      data: { deletedCount, keptUserId: exceptUserId },
+    } as ApiResponse<any>);
+  } catch (err: any) {
+    console.error('[Warden API] Bulk user deletion failed:', err);
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+// 34. Complete Dev / Testing Reset (Admin Only)
+apiRouter.post('/v1/system/dev-reset', authMiddleware, async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Only administrators can execute development resets.',
+    } as ApiResponse<null>);
+  }
+
+  const { resetServers, resetUsers, keepCurrentAdmin } = req.body || {};
+
+  try {
+    let deletedServers = 0;
+    let deletedUsers = 0;
+
+    if (resetServers) {
+      const sRes = await serverManager.deleteAllServers();
+      deletedServers = sRes.deletedCount;
+    }
+
+    if (resetUsers) {
+      const exceptUserId = keepCurrentAdmin ? user.id : undefined;
+      deletedUsers = db.deleteAllUsers(exceptUserId);
+    }
+
+    console.log(`[Warden API Dev Reset] Reset complete: ${deletedServers} servers, ${deletedUsers} users deleted.`);
+    res.json({
+      success: true,
+      data: { deletedServers, deletedUsers },
+    } as ApiResponse<any>);
+  } catch (err: any) {
+    console.error('[Warden API Dev Reset] Failed:', err);
+    res.status(500).json({ success: false, error: err.message } as ApiResponse<null>);
+  }
+});
+
+

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, ScrollView, StyleSheet, Alert, TouchableOpacity, RefreshControl } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { IconSearch, IconBox, IconTrash } from '../components/ui/Icons';
+import { IconSearch, IconBox, IconTrash, IconDownload, IconCheckCircle } from '../components/ui/Icons';
 import { wardenApi } from '../services/api';
 import { InstalledMod, ModrinthSearchItem } from '@warden/shared';
 
@@ -15,6 +15,7 @@ export const ModsScreen: React.FC = () => {
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ModrinthSearchItem[]>([]);
   const [searching, setSearching] = useState(false);
+  const [installingId, setInstallingId] = useState<string | null>(null);
 
   const loadMods = async () => {
     if (!selectedServerId) return;
@@ -34,10 +35,10 @@ export const ModsScreen: React.FC = () => {
   }, [selectedServerId]);
 
   const handleSearch = async () => {
-    if (!selectedServerId) return;
+    if (!selectedServerId || !query.trim()) return;
     setSearching(true);
     try {
-      const results = await wardenApi.searchMods(selectedServerId, query);
+      const results = await wardenApi.searchMods(selectedServerId, query.trim());
       setSearchResults(results);
     } catch (err: any) {
       Alert.alert('Search Error', err.message);
@@ -48,30 +49,21 @@ export const ModsScreen: React.FC = () => {
 
   const handleInstallMod = async (item: ModrinthSearchItem) => {
     if (!selectedServerId) return;
-    Alert.alert(
-      'Install Mod',
-      `Install ${item.title} and all required dependencies for ${activeServer?.detection.loader}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Install',
-          onPress: async () => {
-            try {
-              await wardenApi.installMod(selectedServerId, item.id, '');
-              Alert.alert('Success', `${item.title} installed successfully!`);
-              loadMods();
-            } catch (err: any) {
-              Alert.alert('Install Failed', err.message);
-            }
-          },
-        },
-      ]
-    );
+    setInstallingId(item.id);
+    try {
+      await wardenApi.installMod(selectedServerId, item.id, '');
+      Alert.alert('Installed', `${item.title} has been installed with required dependencies.`);
+      loadMods();
+    } catch (err: any) {
+      Alert.alert('Install Error', err.message);
+    } finally {
+      setInstallingId(null);
+    }
   };
 
   const handleDeleteMod = async (filename: string) => {
     if (!selectedServerId) return;
-    Alert.alert('Remove Mod', `Remove ${filename} from server?`, [
+    Alert.alert('Remove Mod', `Are you sure you want to remove ${filename}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -89,16 +81,21 @@ export const ModsScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Search Header */}
-      <Card title="MODRINTH SEARCH">
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadMods} tintColor="#34d399" />}
+    >
+      {/* Search Header Card */}
+      <Card title="MODRINTH REPOSITORY SEARCH" icon={<IconSearch size={16} color="#34d399" />}>
         <View style={styles.searchRow}>
           <TextInput
             style={styles.searchInput}
             value={query}
             onChangeText={setQuery}
-            placeholder="Search mods (Sodium, Waystones)..."
-            placeholderTextColor="#475569"
+            onSubmitEditing={handleSearch}
+            placeholder="Search mods & plugins (Sodium, Lithium)..."
+            placeholderTextColor="#64748b"
             autoCapitalize="none"
           />
           <Button
@@ -110,60 +107,99 @@ export const ModsScreen: React.FC = () => {
             icon={<IconSearch size={14} color="#090d16" />}
           />
         </View>
-        <Text style={styles.searchSub}>
-          FILTERED BY: {activeServer?.detection.loader.toUpperCase()} • MC {activeServer?.detection.mcVersion || 'ANY'}
-        </Text>
+        <View style={styles.filterPill}>
+          <Text style={styles.filterPillText}>
+            FILTERED FOR: {activeServer?.detection.loader.toUpperCase()} • MC {activeServer?.detection.mcVersion || 'LATEST'}
+          </Text>
+        </View>
       </Card>
 
-      {/* Search Results */}
+      {/* Search Results Section */}
       {searchResults.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>SEARCH RESULTS ({searchResults.length})</Text>
-          {searchResults.map((item) => (
-            <Card key={item.id}>
-              <Text style={styles.modTitle}>{item.title}</Text>
-              <Text style={styles.modAuthor}>by {item.author}</Text>
-              <Text style={styles.modDesc} numberOfLines={2}>{item.description}</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionTitle}>MODRINTH RESULTS ({searchResults.length})</Text>
+          </View>
+          {searchResults.map((item) => {
+            const isInstalling = installingId === item.id;
+            return (
+              <Card key={item.id} style={styles.resultCard}>
+                <View style={styles.resultHeader}>
+                  <View style={styles.resultTitleCol}>
+                    <Text style={styles.modTitle}>{item.title}</Text>
+                    <Text style={styles.modAuthor}>by {item.author}</Text>
+                  </View>
+                  <View style={styles.dlBadge}>
+                    <IconDownload size={11} color="#34d399" />
+                    <Text style={styles.dlText}>{item.downloads.toLocaleString()}</Text>
+                  </View>
+                </View>
 
-              <View style={styles.installRow}>
-                <Text style={styles.modMeta}>{item.downloads.toLocaleString()} DLs</Text>
-                <Button
-                  title="INSTALL"
-                  onPress={() => handleInstallMod(item)}
-                  variant="primary"
-                  size="sm"
-                />
-              </View>
-            </Card>
-          ))}
+                <Text style={styles.modDesc} numberOfLines={2}>
+                  {item.description}
+                </Text>
+
+                <View style={styles.installRow}>
+                  <View style={styles.compatPill}>
+                    <IconCheckCircle size={12} color="#34d399" />
+                    <Text style={styles.compatText}>Compatible</Text>
+                  </View>
+                  <Button
+                    title={isInstalling ? 'INSTALLING...' : 'INSTALL MOD'}
+                    onPress={() => handleInstallMod(item)}
+                    variant="primary"
+                    size="sm"
+                    loading={isInstalling}
+                    icon={<IconDownload size={13} color="#090d16" />}
+                  />
+                </View>
+              </Card>
+            );
+          })}
         </View>
       )}
 
-      {/* Installed Mods */}
+      {/* Installed Mods Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>INSTALLED MODS ({mods.length})</Text>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionTitle}>INSTALLED MODS ({mods.length})</Text>
+          <Text style={styles.sectionSub}>Server JAR Files</Text>
+        </View>
+
         {loading ? (
-          <Text style={styles.loadingText}>LOADING INSTALLED MODS...</Text>
+          <View style={styles.emptyState}>
+            <Text style={styles.loadingText}>Loading installed mods...</Text>
+          </View>
         ) : mods.length === 0 ? (
           <Card>
-            <Text style={styles.loadingText}>No mod .jar files found on server.</Text>
+            <View style={styles.emptyState}>
+              <IconBox size={32} color="#64748b" />
+              <Text style={styles.emptyTitle}>No Mods Installed</Text>
+              <Text style={styles.emptySub}>Search Modrinth above to install mods and plugins with 1 click.</Text>
+            </View>
           </Card>
         ) : (
           mods.map((mod) => (
-            <Card key={mod.filename}>
-              <View style={styles.installedRow}>
-                <View style={styles.installedInfo}>
-                  <View style={styles.filenameRow}>
-                    <IconBox size={16} color="#f59e0b" />
-                    <Text style={styles.filenameText} numberOfLines={1}>{mod.filename}</Text>
-                  </View>
+            <View key={mod.filename} style={styles.installedItem}>
+              <View style={styles.installedLeft}>
+                <View style={styles.modIconBox}>
+                  <IconBox size={16} color="#34d399" />
+                </View>
+                <View style={styles.installedTextCol}>
+                  <Text style={styles.filenameText} numberOfLines={1}>
+                    {mod.filename}
+                  </Text>
                   <Text style={styles.sizeText}>{(mod.size / (1024 * 1024)).toFixed(2)} MB</Text>
                 </View>
-                <TouchableOpacity onPress={() => handleDeleteMod(mod.filename)} style={styles.deleteBtn}>
-                  <IconTrash size={18} color="#ef4444" />
-                </TouchableOpacity>
               </View>
-            </Card>
+              <TouchableOpacity
+                onPress={() => handleDeleteMod(mod.filename)}
+                style={styles.deleteBtn}
+                activeOpacity={0.7}
+              >
+                <IconTrash size={16} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
           ))
         )}
       </View>
@@ -173,47 +209,175 @@ export const ModsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#090d16' },
-  content: { padding: 16 },
-  searchRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  content: { padding: 16, paddingBottom: 28 },
+  searchRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   searchInput: {
     flex: 1,
     backgroundColor: '#090d16',
     borderWidth: 1,
     borderColor: '#334155',
+    borderRadius: 8,
     color: '#f8fafc',
     fontFamily: 'monospace',
     fontSize: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  searchSub: { fontFamily: 'monospace', fontSize: 10, color: '#64748b' },
-  section: { marginTop: 12 },
+  filterPill: {
+    backgroundColor: 'rgba(52, 211, 153, 0.1)',
+    borderColor: 'rgba(52, 211, 153, 0.25)',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  filterPillText: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#34d399',
+    letterSpacing: 0.5,
+  },
+  section: { marginTop: 16 },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
   sectionTitle: {
     fontFamily: 'monospace',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#94a3b8',
-    marginBottom: 8,
     letterSpacing: 1,
   },
+  sectionSub: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#64748b',
+  },
+  resultCard: {
+    marginBottom: 10,
+  },
+  resultHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  resultTitleCol: { flex: 1, marginRight: 8 },
   modTitle: { fontFamily: 'monospace', fontSize: 14, fontWeight: 'bold', color: '#f8fafc' },
-  modAuthor: { fontFamily: 'monospace', fontSize: 10, color: '#f59e0b', marginTop: 1 },
-  modDesc: { fontFamily: 'monospace', fontSize: 11, color: '#94a3b8', marginTop: 4 },
+  modAuthor: { fontFamily: 'monospace', fontSize: 10, color: '#38bdf8', marginTop: 1 },
+  dlBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(52, 211, 153, 0.12)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  dlText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#34d399',
+  },
+  modDesc: { fontFamily: 'monospace', fontSize: 11, color: '#94a3b8', lineHeight: 16, marginBottom: 12 },
   installRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
-    paddingTop: 8,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#1e293b',
   },
-  modMeta: { fontFamily: 'monospace', fontSize: 10, color: '#64748b' },
-  loadingText: { fontFamily: 'monospace', fontSize: 12, color: '#64748b', textAlign: 'center', paddingVertical: 12 },
-  installedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  installedInfo: { flex: 1 },
-  filenameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  filenameText: { fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold', color: '#f8fafc', flex: 1 },
-  sizeText: { fontFamily: 'monospace', fontSize: 10, color: '#64748b', marginTop: 2 },
-  deleteBtn: { padding: 8 },
+  compatPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  compatText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#34d399',
+    fontWeight: 'bold',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 6,
+  },
+  emptyTitle: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#f8fafc',
+    marginTop: 6,
+  },
+  emptySub: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    color: '#64748b',
+    textAlign: 'center',
+  },
+  loadingText: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    color: '#64748b',
+  },
+  installedItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0e1526',
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  installedLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    marginRight: 10,
+  },
+  modIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: 'rgba(52, 211, 153, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  installedTextCol: {
+    flex: 1,
+  },
+  filenameText: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#f8fafc',
+  },
+  sizeText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  deleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+  },
 });

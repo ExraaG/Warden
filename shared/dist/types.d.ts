@@ -288,4 +288,15 @@ export interface ResetPasswordPayload {
     newPassword: string;
     resetTotp?: boolean;
 }
+export interface BatchDeleteServersPayload {
+    scope?: 'own' | 'all';
+}
+export interface BatchDeleteUsersPayload {
+    keepCurrentAdmin?: boolean;
+}
+export interface DevResetPayload {
+    resetServers?: boolean;
+    resetUsers?: boolean;
+    keepCurrentAdmin?: boolean;
+}
 //# sourceMappingURL=types.d.ts.map

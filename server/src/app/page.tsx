@@ -87,6 +87,11 @@ export default function DashboardPage() {
   const [deleteServerNameInput, setDeleteServerNameInput] = useState<string>('');
   const [deletingServer, setDeletingServer] = useState<boolean>(false);
 
+  // Delete All My Servers Modal State
+  const [showDeleteAllMyServersModal, setShowDeleteAllMyServersModal] = useState<boolean>(false);
+  const [deleteAllMyServersInput, setDeleteAllMyServersInput] = useState<string>('');
+  const [deletingAllMyServers, setDeletingAllMyServers] = useState<boolean>(false);
+
   const CREATE_LOADER_OPTIONS: DropdownOption[] = [
     { id: 'paper', label: 'Paper', sublabel: 'High Performance Plugins' },
     { id: 'fabric', label: 'Fabric', sublabel: 'Fast Modern Modloader' },
@@ -1449,6 +1454,37 @@ export default function DashboardPage() {
       showToast(`Delete error: ${err.message}`, 'error');
     } finally {
       setDeletingServer(false);
+    }
+  };
+
+  const handleDeleteAllMyServers = () => {
+    setDeleteAllMyServersInput('');
+    setShowDeleteAllMyServersModal(true);
+  };
+
+  const handleConfirmDeleteAllMyServers = async () => {
+    if (deleteAllMyServersInput !== 'DELETE ALL MY SERVERS') return;
+    setDeletingAllMyServers(true);
+    try {
+      const res = await fetch('/api/v1/servers/batch/all?scope=own', { method: 'DELETE' }).then((r) => r.json());
+      if (res.success) {
+        const count = res.data?.deletedCount || 0;
+        showToast(`All your servers (${count}) have been permanently deleted.`, 'success');
+        setShowDeleteAllMyServersModal(false);
+        setDeleteAllMyServersInput('');
+        setServer(null);
+        setServerId('');
+        localStorage.removeItem('warden_selected_server_id');
+        window.dispatchEvent(new CustomEvent('warden_server_changed', { detail: '' }));
+        window.dispatchEvent(new CustomEvent('warden_server_updated'));
+        loadAllServers();
+      } else {
+        showToast(`Deletion failed: ${res.error}`, 'error');
+      }
+    } catch (err: any) {
+      showToast(`Delete error: ${err.message}`, 'error');
+    } finally {
+      setDeletingAllMyServers(false);
     }
   };
 
@@ -4368,15 +4404,26 @@ export default function DashboardPage() {
                         Permanently delete <span className="text-slate-200 font-semibold">{server.name}</span>. This will immediately stop the server, delete all world files, configurations, mods, and player data. This action cannot be reversed.
                       </p>
                     </div>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={handleDeleteServer}
-                      className="shrink-0 font-semibold"
-                    >
-                      <WardenIcon name="trash" size={14} className="text-white" />
-                      Delete Server
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDeleteAllMyServers}
+                        className="font-mono text-xs border-red-800/60 text-red-300 hover:bg-red-950/40 hover:text-white"
+                      >
+                        <WardenIcon name="trash" size={13} className="text-red-400" />
+                        Delete All My Servers
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={handleDeleteServer}
+                        className="font-semibold"
+                      >
+                        <WardenIcon name="trash" size={14} className="text-white" />
+                        Delete Server
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               )}
@@ -6298,6 +6345,72 @@ export default function DashboardPage() {
               >
                 <WardenIcon name="trash" size={14} className="text-white" />
                 Delete Server Permanently
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete All My Servers Confirmation Modal */}
+      {showDeleteAllMyServersModal && (
+        <Modal
+          isOpen={showDeleteAllMyServersModal}
+          onClose={() => {
+            if (!deletingAllMyServers) {
+              setShowDeleteAllMyServersModal(false);
+              setDeleteAllMyServersInput('');
+            }
+          }}
+          title="Delete All My Servers"
+        >
+          <div className="space-y-4">
+            <div className="bg-red-950/40 border border-red-800/60 p-3.5 rounded-lg text-xs text-red-200 flex items-start gap-2.5 font-mono leading-relaxed">
+              <WardenIcon name="triangle-alert" size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-red-300 font-bold block mb-1">DANGER: BULK DELETION</strong>
+                This will immediately stop and permanently delete <strong className="text-white">ALL Minecraft servers</strong> owned by your account (<span className="text-[var(--color-accent)]">{currentUser?.username || 'Your Account'}</span>). All worlds, configs, mods, and data will be destroyed.
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs text-slate-300 font-mono">
+                To confirm bulk deletion, please type <strong className="text-red-400 font-mono select-all bg-red-950/60 px-1.5 py-0.5 rounded border border-red-800/40">DELETE ALL MY SERVERS</strong> below:
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={deleteAllMyServersInput}
+                onChange={(e) => setDeleteAllMyServersInput(e.target.value)}
+                placeholder="DELETE ALL MY SERVERS"
+                className="w-full h-9 bg-[var(--bg-main)] border border-[var(--color-border)] focus:border-red-500 focus:ring-1 focus:ring-red-500/50 px-3 rounded-md text-xs text-slate-100 font-mono"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]">
+              <Button
+                variant="outline"
+                size="md"
+                type="button"
+                disabled={deletingAllMyServers}
+                onClick={() => {
+                  setShowDeleteAllMyServersModal(false);
+                  setDeleteAllMyServersInput('');
+                }}
+                className="px-4 font-mono text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                type="button"
+                isLoading={deletingAllMyServers}
+                disabled={deleteAllMyServersInput !== 'DELETE ALL MY SERVERS' || deletingAllMyServers}
+                onClick={handleConfirmDeleteAllMyServers}
+                className="px-5 font-minecraft text-xs"
+              >
+                <WardenIcon name="trash" size={14} className="text-white" />
+                Delete All My Servers
               </Button>
             </div>
           </div>

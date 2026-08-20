@@ -422,6 +422,38 @@ export class ServerManager {
     db.removeServerDetection(serverId);
   }
 
+  public async deleteAllServers(options?: {
+    ownerIdOnly?: string;
+    exceptServerId?: string;
+  }): Promise<{ deletedCount: number; serverIds: string[] }> {
+    const servers = await this.getServers();
+    let targets = servers;
+
+    if (options?.ownerIdOnly) {
+      targets = targets.filter((s) => s.ownerId === options.ownerIdOnly);
+    }
+    if (options?.exceptServerId) {
+      targets = targets.filter((s) => s.id !== options.exceptServerId);
+    }
+
+    const deletedIds: string[] = [];
+    for (const s of targets) {
+      try {
+        await this.deleteServer(s.id);
+        deletedIds.push(s.id);
+      } catch (err) {
+        console.error(`[ServerManager] Failed to delete server ${s.id} during bulk deletion:`, err);
+      }
+    }
+
+    // If all servers globally were wiped, ensure detections map is also reset
+    if (!options?.ownerIdOnly && !options?.exceptServerId) {
+      db.clearAllServerDetections();
+    }
+
+    return { deletedCount: deletedIds.length, serverIds: deletedIds };
+  }
+
   public async changeLoader(
     serverId: string,
     loader: ServerLoader,

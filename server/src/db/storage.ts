@@ -233,6 +233,24 @@ export class Storage {
     return false;
   }
 
+  public clearAllServerDetections(): void {
+    this.data.serverDetections = {};
+    this.save();
+  }
+
+  public deleteAllUsers(exceptUserId?: string): number {
+    if (!this.data.users) return 0;
+    const initialLen = this.data.users.length;
+    if (exceptUserId) {
+      this.data.users = this.data.users.filter((u) => u.id === exceptUserId);
+    } else {
+      this.data.users = [];
+    }
+    const deletedCount = initialLen - this.data.users.length;
+    this.save();
+    return deletedCount;
+  }
+
   public cleanupExpiredUsers(): void {
     if (!this.data.users) return;
     const now = Date.now();

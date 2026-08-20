@@ -63,6 +63,18 @@ export class WardenApiClient {
     });
   }
 
+  public async deleteServer(serverId: string): Promise<any> {
+    return this.request<any>(`/api/v1/servers/${serverId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  public async deleteAllMyServers(): Promise<{ deletedCount: number }> {
+    return this.request<{ deletedCount: number }>('/api/v1/servers/batch/all?scope=own', {
+      method: 'DELETE',
+    });
+  }
+
   public async confirmLoader(serverId: string, loader: ServerLoader, mcVersion: string): Promise<any> {
     return this.request<any>(`/api/v1/servers/${serverId}/confirm-loader`, {
       method: 'POST',
