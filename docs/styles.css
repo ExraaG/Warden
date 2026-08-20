@@ -1,6 +1,7 @@
 /* ==========================================================================
    Warden Documentation — Stylesheet
    Flat Dark Ops-Tool Aesthetic: No gradients, No glow, No emojis.
+   Minecraft Font Everywhere
    Industrial Safety Amber (#f59e0b) & Emerald (#10b981) Accents
    ========================================================================== */
 
@@ -35,20 +36,10 @@
 
   --color-accent: #10b981;
   --color-accent-hover: #059669;
-  --color-accent-dim: rgba(16, 185, 129, 0.1);
-  --color-accent-border: rgba(16, 185, 129, 0.3);
 
   --color-amber: #f59e0b;
-  --color-amber-dim: rgba(245, 158, 11, 0.1);
-  --color-amber-border: rgba(245, 158, 11, 0.3);
-
   --color-blue: #38bdf8;
-  --color-blue-dim: rgba(56, 189, 248, 0.1);
-  --color-blue-border: rgba(56, 189, 248, 0.3);
-
   --color-red: #ef4444;
-  --color-red-dim: rgba(239, 68, 68, 0.1);
-  --color-red-border: rgba(239, 68, 68, 0.3);
 
   --text-main: #e2e8f0;
   --text-muted: #94a3b8;
@@ -74,11 +65,11 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Minecraft', 'JetBrains Mono', monospace;
   background-color: var(--bg-main);
   color: var(--text-main);
   line-height: 1.6;
-  font-size: 15px;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -86,12 +77,12 @@ body {
 
 /* Typography Classes */
 .font-minecraft {
-  font-family: 'Minecraft', 'Silkscreen', monospace;
+  font-family: 'Minecraft', monospace;
   letter-spacing: 0.5px;
 }
 
 .font-mono {
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: 'Minecraft', 'JetBrains Mono', monospace;
 }
 
 /* Scrollbars */
@@ -131,14 +122,15 @@ body {
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   text-decoration: none;
   color: var(--text-bright);
 }
 
 .header-brand img {
-  height: 28px;
-  width: auto;
+  height: 32px;
+  width: 32px;
+  object-fit: contain;
   display: block;
 }
 
@@ -152,31 +144,34 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--color-border);
   color: var(--color-accent);
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 
 .search-button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
   background: var(--bg-card);
   border: 1px solid var(--color-border);
   color: var(--text-muted);
-  padding: 6px 14px;
+  padding: 0 14px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .search-button:hover {
@@ -188,23 +183,26 @@ body {
 .search-shortcut {
   background: var(--bg-main);
   border: 1px solid var(--color-border);
-  padding: 2px 6px;
+  padding: 2px 5px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-dim);
 }
 
 .nav-link-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  height: 36px;
   color: var(--text-muted);
   text-decoration: none;
   font-size: 13px;
-  font-weight: 500;
-  padding: 6px 12px;
+  padding: 0 12px;
   border-radius: 6px;
   transition: all 0.15s ease;
+  box-sizing: border-box;
+  font-family: inherit;
 }
 
 .nav-link-btn:hover {
@@ -213,17 +211,21 @@ body {
 }
 
 .btn-primary-header {
+  height: 36px;
   background: var(--color-accent);
   color: #0d0e11 !important;
   font-weight: 700;
   border-radius: 6px;
-  padding: 6px 14px;
+  padding: 0 16px;
   text-decoration: none;
   font-size: 13px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   transition: background 0.15s ease;
+  box-sizing: border-box;
+  font-family: inherit;
 }
 
 .btn-primary-header:hover {
@@ -235,9 +237,11 @@ body {
   background: none;
   border: 1px solid var(--color-border);
   color: var(--text-muted);
-  padding: 8px;
+  padding: 6px;
   border-radius: 6px;
   cursor: pointer;
+  height: 36px;
+  width: 36px;
 }
 
 /* ==========================================================================
@@ -303,7 +307,7 @@ body {
 
 .sidebar-link.active {
   color: var(--color-accent);
-  background: var(--color-accent-dim);
+  background: rgba(16, 185, 129, 0.1);
   font-weight: 600;
 }
 
@@ -402,7 +406,7 @@ body {
 }
 
 h1.doc-title {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--text-bright);
   margin-bottom: 12px;
@@ -410,7 +414,7 @@ h1.doc-title {
 }
 
 h2.section-heading {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-bright);
   margin: 36px 0 16px;
@@ -420,14 +424,14 @@ h2.section-heading {
 }
 
 h3.sub-heading {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-bright);
   margin: 24px 0 12px;
 }
 
 p.lead {
-  font-size: 16px;
+  font-size: 15px;
   color: var(--text-muted);
   margin-bottom: 24px;
   line-height: 1.6;
@@ -455,7 +459,7 @@ li {
 a.doc-link {
   color: var(--color-blue);
   text-decoration: none;
-  border-bottom: 1px dotted var(--color-blue-border);
+  border-bottom: 1px dotted var(--color-border);
 }
 
 a.doc-link:hover {
@@ -463,13 +467,15 @@ a.doc-link:hover {
   border-bottom-style: solid;
 }
 
-/* Alert Boxes */
+/* Alert Boxes — Flat Dark */
 .alert-box {
-  padding: 16px 20px;
-  border-radius: 8px;
+  padding: 14px 18px;
+  border-radius: 6px;
   margin: 20px 0;
-  border: 1px solid;
-  font-size: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  font-size: 13px;
   display: flex;
   gap: 12px;
   align-items: flex-start;
@@ -477,36 +483,32 @@ a.doc-link:hover {
 
 .alert-box svg {
   flex-shrink: 0;
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 .alert-info {
-  background: var(--color-blue-dim);
-  border-color: var(--color-blue-border);
-  color: #bae6fd;
+  border-left-color: var(--color-blue);
+  color: var(--text-main);
 }
-.alert-info strong { color: #38bdf8; }
+.alert-info strong { color: var(--color-blue); }
 
 .alert-warning {
-  background: var(--color-amber-dim);
-  border-color: var(--color-amber-border);
-  color: #fde68a;
+  border-left-color: var(--color-amber);
+  color: var(--text-main);
 }
-.alert-warning strong { color: #f59e0b; }
+.alert-warning strong { color: var(--color-amber); }
 
 .alert-success {
-  background: var(--color-accent-dim);
-  border-color: var(--color-accent-border);
-  color: #a7f3d0;
+  border-left-color: var(--color-accent);
+  color: var(--text-main);
 }
-.alert-success strong { color: #10b981; }
+.alert-success strong { color: var(--color-accent); }
 
 .alert-danger {
-  background: var(--color-red-dim);
-  border-color: var(--color-red-border);
-  color: #fecaca;
+  border-left-color: var(--color-red);
+  color: var(--text-main);
 }
-.alert-danger strong { color: #ef4444; }
+.alert-danger strong { color: var(--color-red); }
 
 /* Cards & Grids */
 .card-grid {
@@ -519,8 +521,8 @@ a.doc-link:hover {
 .feature-card {
   background: var(--bg-card);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: 6px;
+  padding: 18px;
   transition: all 0.15s ease;
 }
 
@@ -530,27 +532,27 @@ a.doc-link:hover {
 }
 
 .feature-card-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background: var(--bg-main);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-accent);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .feature-card-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-bright);
   margin-bottom: 6px;
 }
 
 .feature-card-desc {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;
 }
@@ -559,7 +561,7 @@ a.doc-link:hover {
 .code-block-wrapper {
   background: var(--bg-code);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 6px;
   margin: 20px 0;
   overflow: hidden;
 }
@@ -619,22 +621,22 @@ a.doc-link:hover {
 }
 
 pre {
-  padding: 16px;
+  padding: 14px;
   overflow-x: auto;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: 'Minecraft', 'JetBrains Mono', monospace;
   font-size: 13px;
   line-height: 1.5;
   color: #f1f5f9;
 }
 
 code {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: 'Minecraft', 'JetBrains Mono', monospace;
   font-size: 13px;
   background: var(--bg-code);
   padding: 2px 6px;
   border-radius: 4px;
   border: 1px solid var(--color-border);
-  color: #38bdf8;
+  color: var(--color-blue);
 }
 
 pre code {
@@ -644,20 +646,11 @@ pre code {
   color: inherit;
 }
 
-/* Syntax Highlighting Colors */
-.tok-kw { color: #f43f5e; font-weight: 600; }
-.tok-fn { color: #38bdf8; }
-.tok-str { color: #34d399; }
-.tok-num { color: #fbbf24; }
-.tok-cmt { color: #64748b; font-style: italic; }
-.tok-prop { color: #a78bfa; }
-.tok-val { color: #f1f5f9; }
-
-/* API Card Component */
+/* API Card Component — Clean Text Only Badges */
 .api-endpoint {
   background: var(--bg-card);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 6px;
   margin: 16px 0;
   overflow: hidden;
 }
@@ -672,21 +665,23 @@ pre code {
 }
 
 .method-badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 800;
   text-transform: uppercase;
-  font-family: monospace;
+  font-family: 'Minecraft', monospace;
+  background: transparent;
+  border: none;
+  padding: 0;
+  letter-spacing: 0.5px;
 }
 
-.method-get { background: var(--color-blue-dim); color: #38bdf8; border: 1px solid var(--color-blue-border); }
-.method-post { background: var(--color-accent-dim); color: #10b981; border: 1px solid var(--color-accent-border); }
-.method-put { background: var(--color-amber-dim); color: #f59e0b; border: 1px solid var(--color-amber-border); }
-.method-delete { background: var(--color-red-dim); color: #ef4444; border: 1px solid var(--color-red-border); }
+.method-get { color: #38bdf8; }
+.method-post { color: #10b981; }
+.method-put { color: #f59e0b; }
+.method-delete { color: #ef4444; }
 
 .endpoint-path {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Minecraft', monospace;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-bright);
@@ -706,7 +701,7 @@ pre code {
 .screenshot-container {
   background: var(--bg-sidebar);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   margin: 24px 0;
   cursor: pointer;
@@ -724,12 +719,12 @@ pre code {
 }
 
 .screenshot-caption {
-  padding: 10px 16px;
+  padding: 8px 14px;
   background: var(--bg-card);
   border-top: 1px solid var(--color-border);
   font-size: 12px;
   color: var(--text-muted);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Minecraft', monospace;
 }
 
 /* Modal Lightbox */
@@ -754,9 +749,8 @@ pre code {
 .lightbox-img {
   max-width: 90vw;
   max-height: 90vh;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--color-border);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
 /* Search Modal */
@@ -781,18 +775,17 @@ pre code {
 .search-modal {
   background: var(--bg-card);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 6px;
   width: 100%;
   max-width: 600px;
   overflow: hidden;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
 .search-modal-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -801,9 +794,9 @@ pre code {
   background: none;
   border: none;
   color: var(--text-bright);
-  font-size: 15px;
+  font-size: 14px;
   outline: none;
-  font-family: inherit;
+  font-family: 'Minecraft', monospace;
 }
 
 .search-results {
@@ -815,7 +808,7 @@ pre code {
 .search-item {
   display: block;
   padding: 10px 14px;
-  border-radius: 6px;
+  border-radius: 4px;
   text-decoration: none;
   color: var(--text-muted);
   transition: all 0.1s ease;
@@ -827,7 +820,7 @@ pre code {
 }
 
 .search-item-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-bright);
 }
@@ -836,7 +829,7 @@ pre code {
   font-size: 11px;
   color: var(--color-accent);
   margin-top: 2px;
-  font-family: monospace;
+  font-family: 'Minecraft', monospace;
 }
 
 /* Footer */
@@ -847,7 +840,7 @@ pre code {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-dim);
 }
 
