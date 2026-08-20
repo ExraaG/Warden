@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warden Documentation — Standalone Minecraft Server Manager & Automation Engine</title>
+  <meta name="description" content="Official documentation for Warden: A lightweight, self-hosted standalone Minecraft server manager with 1-click creation, real-time console, Modrinth & .mrpack updates.">
+  <link rel="icon" type="image/png" href="assets/warden_logo.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ==========================================================================
+       Header / Navbar
+       ========================================================================== -->
+  <header class="site-header">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Navigation">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      <a href="#" class="header-brand">
+        <img src="assets/warden_logo.png" alt="Warden Logo">
+        <span class="brand-badge font-minecraft" style="color: var(--color-accent); font-size: 10px; padding: 2px 6px;">DOCS</span>
+        <span class="brand-badge font-mono" style="color: var(--text-dim); font-size: 10px; padding: 2px 6px;">v1.0.0</span>
+      </a>
+    </div>
+
+    <div class="header-actions">
+      <button class="search-button search-trigger">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>Search documentation...</span>
+        <span class="search-shortcut">⌘K</span>
+      </button>
+
+      <a href="#quickstart" class="nav-link-btn">Quickstart</a>
+      <a href="#api-reference" class="nav-link-btn">API</a>
+      <a href="#mobile-app" class="nav-link-btn">Mobile App</a>
+
+      <a href="https://github.com/ExraaG/Warden" target="_blank" rel="noopener noreferrer" class="nav-link-btn" title="GitHub Repository">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+        </svg>
+        <span>GitHub</span>
+      </a>
+
+      <a href="https://ko-fi.com/exraa" target="_blank" rel="noopener noreferrer" class="btn-primary-header font-minecraft">
+        Donate
+      </a>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       Main Layout
+       ========================================================================== -->
+  <div class="docs-container">
+
+    <!-- Sidebar Navigation -->
+    <aside id="docsSidebar" class="docs-sidebar">
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Overview
+        </div>
+        <ul class="sidebar-links">
+          <li><a href="#introduction" class="sidebar-link active">Introduction</a></li>
+          <li><a href="#key-features" class="sidebar-link">Key Features</a></li>
+          <li><a href="#architecture" class="sidebar-link">Architecture &amp; Process Model</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Installation &amp; Setup
+        </div>
+        <ul class="sidebar-links">
+          <li><a href="#quickstart" class="sidebar-link">Quickstart</a></li>
+          <li><a href="#docker-deployment" class="sidebar-link">Docker Compose</a></li>
+          <li><a href="#bare-metal" class="sidebar-link">Bare Metal (Node.js)</a></li>
+          <li><a href="#system-requirements" class="sidebar-link">System Requirements</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+          Server Management
+        </div>
+        <ul class="sidebar-links">
+          <li><a href="#server-creation" class="sidebar-link">1-Click Server Creation</a></li>
+          <li><a href="#supported-loaders" class="sidebar-link">Supported Modloaders</a></li>
+          <li><a href="#live-console" class="sidebar-link">Live Console &amp; Stdin</a></li>
+          <li><a href="#backups-export" class="sidebar-link">Backups &amp; Zip Export</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          Mods &amp; Modpacks
+        </div>
+        <ul class="sidebar-links">
+          <li><a href="#modrinth-integration" class="sidebar-link">Modrinth v2 API</a></li>
+          <li><a href="#automated-mod-updates" class="sidebar-link">4 AM Automated Updates</a></li>
+          <li><a href="#mrpack-importer" class="sidebar-link">.mrpack Modpack Importer</a></li>
+          <li><a href="#safety-engine" class="sidebar-link">Safety Engine &amp; Rollback</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          Players &amp; Permissions
+        </div>
+        <ul class="sidebar-links">
+          <li><a href="#player-roster" class="sidebar-link">Player Roster &amp; Whitelist</a></li>
+          <li><a href="#operator-levels" class="sidebar-link">Operator Privileges (OP 1-4)</a></li>
+          <li><a href="#player-bans" class="sidebar-link">Player &amp; IP Bans</a></li>
+          <li><a href="#skin-rendering" class="sidebar-link">Skin Avatar Rendering</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Automation &amp; Schedules
+        </div>
+        <ul class="sidebar-links">
+          <li><a href="#scheduled-restarts" class="sidebar-link">Automated Daily Restarts</a></li>
+          <li><a href="#timezone-detection" class="sidebar-link">Timezone Auto-Detection</a></li>
+          <li><a href="#custom-cron-tasks" class="sidebar-link">Custom Cron &amp; Event Tasks</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Security &amp; Auth
+        </div>
+        <ul class="sidebar-links">
+          <li><a href="#initial-setup" class="sidebar-link">Initial Setup &amp; Master User</a></li>
+          <li><a href="#totp-2fa" class="sidebar-link">Two-Factor Authentication (2FA)</a></li>
+          <li><a href="#recovery-codes" class="sidebar-link">Emergency Recovery Codes</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          Developer API
+        </div>
+        <ul class="sidebar-links">
+          <li><a href="#api-reference" class="sidebar-link">REST API Reference</a></li>
+          <li><a href="#api-auth" class="sidebar-link">API Authentication</a></li>
+          <li><a href="#api-endpoints" class="sidebar-link">Endpoint Specifications</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+          Android Companion
+        </div>
+        <ul class="sidebar-links">
+          <li><a href="#mobile-app" class="sidebar-link">Android Client Overview</a></li>
+          <li><a href="#mobile-notifications" class="sidebar-link">Push Notifications &amp; Alerts</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Documentation Content -->
+    <main class="docs-content-wrapper">
+      <div class="docs-content">
+
+        <!-- ════════ SECTION 1: INTRODUCTION ════════ -->
+        <section id="introduction" class="doc-section" data-title="Introduction" data-group="Overview">
+          <h1 class="doc-title font-minecraft">Warden Documentation</h1>
+          <p class="lead">
+            <strong>Warden</strong> is a modern, lightweight, 100% standalone Minecraft server manager, orchestrator, and automation engine. Built with Next.js 14, TypeScript, and a high-performance native Node.js process engine.
+          </p>
+
+          <div class="alert-box alert-info">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <div>
+              <strong>100% Standalone Architecture:</strong> Warden runs natively on port <code>:22313</code> without any external dependencies, third-party panels, or separate daemon microservices.
+            </div>
+          </div>
+
+          <div class="screenshot-container">
+            <img src="screenshots/dashboard.png" alt="Warden Dashboard Overview">
+            <div class="screenshot-caption">Figure 1.1: Warden Dashboard with real-time telemetry, live stats, and installed mods.</div>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 2: KEY FEATURES ════════ -->
+        <section id="key-features" class="doc-section" data-title="Key Features" data-group="Overview">
+          <h2 class="section-heading font-minecraft">Key Features</h2>
+
+          <div class="card-grid">
+            <div class="feature-card">
+              <div class="feature-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              </div>
+              <div class="feature-card-title">1-Click Server Creation</div>
+              <div class="feature-card-desc">Auto-downloads official server binaries directly from PaperMC, Fabric Meta, Purpur, Quilt, and Mojang APIs.</div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </div>
+              <div class="feature-card-title">4 AM Mod Update Engine</div>
+              <div class="feature-card-desc">Automated SHA-512 checksum lookups against Modrinth v2 API with automated pre-update safety backups and rollback.</div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+              </div>
+              <div class="feature-card-title">Player Administration</div>
+              <div class="feature-card-desc">Manage Whitelist, Operators (OP Level 1-4), Player/IP bans, and view live Minecraft head skin avatars.</div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              </div>
+              <div class="feature-card-title">Interactive Console</div>
+              <div class="feature-card-desc">Streaming live stdout/stderr log feed with quick command suggestions and instant stdin command dispatch.</div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              </div>
+              <div class="feature-card-title">Industrial Security &amp; 2FA</div>
+              <div class="feature-card-desc">Master password encryption, TOTP Authenticator 2FA, emergency recovery keys, and JWT session tokens.</div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+              </div>
+              <div class="feature-card-title">Android Companion</div>
+              <div class="feature-card-desc">Native mobile app for push notifications, crash alerts, mod update logs, and remote server power controls.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 3: ARCHITECTURE ════════ -->
+        <section id="architecture" class="doc-section" data-title="Architecture" data-group="Overview">
+          <h2 class="section-heading font-minecraft">Architecture &amp; Process Model</h2>
+          <p>
+            Warden utilizes a direct process management model. Each Minecraft server instance is executed as an isolated child process with managed I/O pipes (stdin, stdout, stderr).
+          </p>
+
+          <h3 class="sub-heading">Filesystem Storage Layout</h3>
+          <div class="code-block-wrapper">
+            <div class="code-header">
+              <span>Directory Structure</span>
+              <button class="copy-btn" data-target="code-tree">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy
+              </button>
+            </div>
+            <pre><code id="code-tree">/data
+├── warden_storage.json         # Master database: user accounts, 2FA, settings, cron jobs
+├── backups/                    # Automated pre-update backups &amp; safety archives
+│   └── survival-smp/
+└── servers/                    # Server root directory
+    ├── survival-smp/
+    │   ├── warden.json         # Server metadata, loader type, java version, memory allocation
+    │   ├── server.properties   # Minecraft server configuration
+    │   ├── server.jar          # Active server executable
+    │   ├── mods/               # Mod .jar files
+    │   ├── ops.json            # Operator list &amp; OP levels
+    │   ├── whitelist.json      # Whitelisted players
+    │   └── usercache.json      # Cached player UUIDs &amp; usernames
+    └── creative-hub/</code></pre>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 4: QUICKSTART ════════ -->
+        <section id="quickstart" class="doc-section" data-title="Quickstart" data-group="Installation">
+          <h2 class="section-heading font-minecraft">Quickstart Installation</h2>
+          <p>Deploy Warden in seconds using Docker Compose or directly on bare-metal Node.js.</p>
+
+          <div id="docker-deployment">
+            <h3 class="sub-heading">1. Docker Compose (Recommended)</h3>
+            <p>Create a <code>docker-compose.yml</code> file in your deployment directory:</p>
+
+            <div class="code-block-wrapper">
+              <div class="code-header">
+                <span>docker-compose.yml</span>
+                <button class="copy-btn" data-target="code-docker">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  Copy
+                </button>
+              </div>
+              <pre><code id="code-docker">version: '3.8'
+
+services:
+  warden:
+    image: exraag/warden:latest
+    container_name: warden
+    restart: unless-stopped
+    ports:
+      - "22313:22313"         # Warden Web GUI &amp; REST API
+      - "25565-25575:25565-25575" # Minecraft Server Ports
+    environment:
+      - PORT=22313
+      - JWT_SECRET=change_this_to_a_secure_random_string_32_chars
+      - TZ=Europe/Vienna
+    volumes:
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro</code></pre>
+            </div>
+
+            <p>Launch the container in detached mode:</p>
+            <div class="code-block-wrapper">
+              <div class="code-header">
+                <span>Terminal</span>
+                <button class="copy-btn" data-target="code-docker-run">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  Copy
+                </button>
+              </div>
+              <pre><code id="code-docker-run">docker compose up -d</code></pre>
+            </div>
+          </div>
+
+          <div id="bare-metal" style="margin-top: 36px;">
+            <h3 class="sub-heading">2. Bare Metal (Node.js &amp; Linux / macOS / Windows)</h3>
+            <div class="code-block-wrapper">
+              <div class="code-header">
+                <span>Terminal</span>
+                <button class="copy-btn" data-target="code-bare-metal">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  Copy
+                </button>
+              </div>
+              <pre><code id="code-bare-metal"># 1. Clone the repository
+git clone https://github.com/ExraaG/Warden.git
+cd Warden
+
+# 2. Install workspace dependencies
+npm install
+
+# 3. Build server and web application
+npm run build
+
+# 4. Start the standalone server on :22313
+PORT=22313 npm start</code></pre>
+            </div>
+          </div>
+
+          <div id="system-requirements" style="margin-top: 36px;">
+            <h3 class="sub-heading">System Requirements</h3>
+            <ul>
+              <li><strong>Node.js:</strong> v18.17.0 or v20+ LTS</li>
+              <li><strong>Java Runtimes:</strong> OpenJDK 17 LTS or OpenJDK 21 LTS (for Minecraft 1.20.5+)</li>
+              <li><strong>Memory:</strong> Minimum 1 GB RAM for Warden; + allocated RAM per Minecraft server (e.g. 4-8 GB)</li>
+              <li><strong>Operating System:</strong> Linux (Ubuntu, Debian, Fedora, Arch, Alpine), macOS, or Windows Server</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 5: SERVER MANAGEMENT ════════ -->
+        <section id="server-creation" class="doc-section" data-title="Server Management" data-group="Server Management">
+          <h2 class="section-heading font-minecraft">Server Management</h2>
+          <p>
+            Warden provides native 1-click server creation for all major Minecraft modloaders and platforms:
+          </p>
+
+          <div class="card-grid">
+            <div class="feature-card">
+              <div class="feature-card-title font-minecraft" style="color: #38bdf8;">Fabric</div>
+              <div class="feature-card-desc">Direct Fabric Meta API integration. Auto-downloads Fabric Loader and Fabric Intermediary mappings for any Minecraft version.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card-title font-minecraft" style="color: #f59e0b;">PaperMC</div>
+              <div class="feature-card-desc">Queries PaperMC v2 API for the latest stable build numbers and downloads official Paper server JARs.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card-title font-minecraft" style="color: #a78bfa;">Purpur</div>
+              <div class="feature-card-desc">High-performance Paper fork with extensive customization options. Auto-fetches latest builds from Purpur API.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card-title font-minecraft" style="color: #34d399;">Quilt &amp; Vanilla</div>
+              <div class="feature-card-desc">Direct Quilt Meta &amp; Mojang Version Manifest integration for official vanilla and modern modded servers.</div>
+            </div>
+          </div>
+
+          <div id="live-console" style="margin-top: 32px;">
+            <h3 class="sub-heading">Live Streaming Console</h3>
+            <p>
+              The Console tab provides real-time streaming output using WebSockets and Server-Sent Events with automatic color-coding of logs, timestamps, player chat, and server alerts.
+            </p>
+          </div>
+
+          <div id="backups-export" style="margin-top: 32px;">
+            <h3 class="sub-heading">Backups &amp; 1-Click Zip Export</h3>
+            <p>
+              Export entire server instances as compressed <code>.zip</code> archives with a single click. When a server is online, Warden automatically executes <code>save-all flush</code> to prevent world corruption before archiving.
+            </p>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 6: MODS & MODPACKS ════════ -->
+        <section id="modrinth-integration" class="doc-section" data-title="Mods &amp; Modpacks" data-group="Mods &amp; Modpacks">
+          <h2 class="section-heading font-minecraft">Mods &amp; .mrpack Ecosystem</h2>
+          <p>
+            Warden integrates directly with the <strong>Modrinth v2 API</strong>, allowing seamless mod discovery, automated version matching, dependency resolution, and batch updates.
+          </p>
+
+          <div id="automated-mod-updates">
+            <h3 class="sub-heading">4:00 AM Automated Mod Update Engine</h3>
+            <p>
+              Warden features an automated daily safety engine that scans installed <code>.jar</code> files, computes SHA-512 checksums, queries Modrinth for compatible updates, and applies them safely.
+            </p>
+
+            <div class="screenshot-container">
+              <img src="screenshots/audit-logs.png" alt="Audit Logs Timeline">
+              <div class="screenshot-caption">Figure 1.2: Audit Logs displaying step-by-step 4 AM automated update execution trail.</div>
+            </div>
+          </div>
+
+          <div id="safety-engine" style="margin-top: 32px;">
+            <h3 class="sub-heading">Safety Engine Workflow</h3>
+            <ol>
+              <li><strong>DETECTION_CHECK:</strong> Confirms active modloader (Fabric/Paper/Purpur) and Minecraft version.</li>
+              <li><strong>MODRINTH_HASH_BATCH:</strong> Submits SHA-512 hashes via <code>POST /v2/version_files/update</code>.</li>
+              <li><strong>DOWNLOAD_VERIFY:</strong> Downloads updated JARs and verifies SHA-512 integrity prior to disk write.</li>
+              <li><strong>SAFETY BACKUP:</strong> Creates pre-update backup archive in <code>/data/backups/{serverId}/</code>.</li>
+              <li><strong>CLEAN RESTART:</strong> Stops server, swaps JARs, verifies directory, and restarts with automatic health check.</li>
+            </ol>
+          </div>
+
+          <div id="mrpack-importer" style="margin-top: 32px;">
+            <h3 class="sub-heading">.mrpack Modpack Importer</h3>
+            <p>
+              Upload any Modrinth <code>.mrpack</code> file to preview dependencies, selective overrides, datapacks, and install full modpacks in one click.
+            </p>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 7: PLAYER ADMINISTRATION ════════ -->
+        <section id="player-roster" class="doc-section" data-title="Player Administration" data-group="Players &amp; Permissions">
+          <h2 class="section-heading font-minecraft">Player Administration</h2>
+          <p>
+            Manage server access, operator permissions, and security directly from the dedicated <strong>Players</strong> tab.
+          </p>
+
+          <div class="screenshot-container">
+            <img src="screenshots/players.png" alt="Player Management Roster">
+            <div class="screenshot-caption">Figure 1.3: Player Roster with live online status, operator badges, and avatar skins.</div>
+          </div>
+
+          <div id="operator-levels" style="margin-top: 32px;">
+            <h3 class="sub-heading">Operator Privileges (OP Levels 1–4)</h3>
+            <ul>
+              <li><strong>Level 1 (Bypass Spawn):</strong> Bypass spawn protection coordinates.</li>
+              <li><strong>Level 2 (Commands):</strong> Use basic cheat commands (<code>/gamemode</code>, <code>/give</code>, <code>/tp</code>) and command blocks.</li>
+              <li><strong>Level 3 (Moderator):</strong> Manage players (<code>/kick</code>, <code>/ban</code>, <code>/op</code>).</li>
+              <li><strong>Level 4 (Administrator):</strong> Full server control, including <code>/stop</code>, <code>/save-all</code>, and <code>/reload</code>.</li>
+            </ul>
+          </div>
+
+          <div id="skin-rendering" style="margin-top: 32px;">
+            <h3 class="sub-heading">Skin Avatar Rendering</h3>
+            <p>
+              Player avatars are rendered dynamically from official Minecraft usercache UUIDs and Mojang / Crafatar / MC-Heads skin pipelines without local image bloat.
+            </p>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 8: AUTOMATION & SCHEDULES ════════ -->
+        <section id="scheduled-restarts" class="doc-section" data-title="Automation &amp; Schedules" data-group="Automation &amp; Schedules">
+          <h2 class="section-heading font-minecraft">Automation &amp; Schedules</h2>
+          <p>
+            Keep your server healthy and performant with automated schedules for mod updates and daily restarts.
+          </p>
+
+          <div class="screenshot-container">
+            <img src="screenshots/settings.png" alt="Warden Settings & Schedules">
+            <div class="screenshot-caption">Figure 1.4: Settings view with timezone detector, automated mod updates, and restart triggers.</div>
+          </div>
+
+          <div id="timezone-detection" style="margin-top: 32px;">
+            <h3 class="sub-heading">Timezone Auto-Detection &amp; Manual Override</h3>
+            <p>
+              Warden automatically detects the server host's system timezone (e.g. <code>Europe/Vienna</code>) using <code>Intl.DateTimeFormat</code>. You can customize the active timezone anytime via <em>"Wrong Timezone? Change it here"</em> in Settings.
+            </p>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 9: SECURITY & AUTHENTICATION ════════ -->
+        <section id="initial-setup" class="doc-section" data-title="Security &amp; Auth" data-group="Security &amp; Auth">
+          <h2 class="section-heading font-minecraft">Security &amp; Authentication</h2>
+
+          <div id="totp-2fa">
+            <h3 class="sub-heading">Two-Factor Authentication (TOTP 2FA)</h3>
+            <p>
+              Warden supports standard RFC 6238 TOTP two-factor authentication compatible with Google Authenticator, Aegis, 1Password, and Bitwarden.
+            </p>
+          </div>
+
+          <div id="recovery-codes" style="margin-top: 24px;">
+            <h3 class="sub-heading">Emergency Recovery Codes</h3>
+            <p>
+              Upon enabling 2FA, Warden generates 10 hashed, single-use emergency recovery keys formatted as <code>XXXX-XXXX</code>. These allow account recovery if your authenticator device is lost.
+            </p>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 10: REST API REFERENCE ════════ -->
+        <section id="api-reference" class="doc-section" data-title="REST API Reference" data-group="Developer API">
+          <h2 class="section-heading font-minecraft">REST API Reference</h2>
+          <p class="lead">
+            Warden provides a full RESTful JSON API for automation, external dashboards, and mobile companion clients.
+          </p>
+
+          <div id="api-auth">
+            <h3 class="sub-heading">Authentication</h3>
+            <p>All authenticated endpoints require a Bearer token in the <code>Authorization</code> header or the secure HTTP-only cookie set upon login:</p>
+            <div class="code-block-wrapper">
+              <div class="code-header"><span>HTTP Header</span></div>
+              <pre><code>Authorization: Bearer &lt;YOUR_JWT_TOKEN&gt;</code></pre>
+            </div>
+          </div>
+
+          <div id="api-endpoints" style="margin-top: 32px;">
+            <h3 class="sub-heading">Core Endpoints</h3>
+
+            <!-- Endpoint: GET /api/v1/servers -->
+            <div class="api-endpoint">
+              <div class="api-endpoint-header">
+                <span class="method-badge method-get">GET</span>
+                <span class="endpoint-path">/api/v1/servers</span>
+                <span class="endpoint-desc">List all Minecraft servers</span>
+              </div>
+              <div class="api-endpoint-body">
+                <p>Returns an array of all configured servers, their loader, status, and telemetry.</p>
+                <div class="code-block-wrapper">
+                  <div class="code-header"><span>Response (200 OK)</span></div>
+                  <pre><code>{
+  "success": true,
+  "data": [
+    {
+      "id": "survival-smp",
+      "name": "Survival SMP",
+      "status": "online",
+      "detection": {
+        "loader": "fabric",
+        "mcVersion": "1.21.1",
+        "javaVersion": 17
+      },
+      "stats": {
+        "cpuPercent": 14.2,
+        "memoryBytes": 4080218931,
+        "maxMemoryBytes": 8589934592,
+        "onlinePlayers": 1,
+        "maxPlayers": 20,
+        "uptimeSeconds": 310942
+      }
+    }
+  ]
+}</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <!-- Endpoint: POST /api/v1/servers/:id/power -->
+            <div class="api-endpoint">
+              <div class="api-endpoint-header">
+                <span class="method-badge method-post">POST</span>
+                <span class="endpoint-path">/api/v1/servers/:id/power</span>
+                <span class="endpoint-desc">Control server power state</span>
+              </div>
+              <div class="api-endpoint-body">
+                <p>Send power actions: <code>start</code>, <code>stop</code>, <code>restart</code>, or <code>kill</code>.</p>
+                <div class="code-block-wrapper">
+                  <div class="code-header"><span>Request Body</span></div>
+                  <pre><code>{
+  "action": "restart"
+}</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <!-- Endpoint: GET /api/v1/servers/:id/players -->
+            <div class="api-endpoint">
+              <div class="api-endpoint-header">
+                <span class="method-badge method-get">GET</span>
+                <span class="endpoint-path">/api/v1/servers/:id/players</span>
+                <span class="endpoint-desc">Get player roster, whitelist &amp; OP records</span>
+              </div>
+              <div class="api-endpoint-body">
+                <div class="code-block-wrapper">
+                  <div class="code-header"><span>Response (200 OK)</span></div>
+                  <pre><code>{
+  "success": true,
+  "data": {
+    "players": [
+      {
+        "name": "Exrsh",
+        "uuid": "4566e69f-c907-425b-80a1-8d29f8c6ebf8",
+        "isOnline": true,
+        "isWhitelisted": true,
+        "isOp": true,
+        "opLevel": 4,
+        "isBanned": false
+      }
+    ],
+    "stats": {
+      "totalRecorded": 4,
+      "onlineCount": 1,
+      "whitelistedCount": 4,
+      "opsCount": 2,
+      "bannedCount": 0
+    }
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <!-- Endpoint: POST /api/v1/servers/:id/players/action -->
+            <div class="api-endpoint">
+              <div class="api-endpoint-header">
+                <span class="method-badge method-post">POST</span>
+                <span class="endpoint-path">/api/v1/servers/:id/players/action</span>
+                <span class="endpoint-desc">Execute player moderation action</span>
+              </div>
+              <div class="api-endpoint-body">
+                <p>Supported actions: <code>whitelist_add</code>, <code>whitelist_remove</code>, <code>op</code>, <code>deop</code>, <code>kick</code>, <code>ban</code>, <code>unban</code>, <code>ban_ip</code>, <code>unban_ip</code>.</p>
+                <div class="code-block-wrapper">
+                  <div class="code-header"><span>Request Body</span></div>
+                  <pre><code>{
+  "name": "GamerTag",
+  "action": "op",
+  "opLevel": 4
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 11: ANDROID COMPANION ════════ -->
+        <section id="mobile-app" class="doc-section" data-title="Android Companion" data-group="Android Companion">
+          <h2 class="section-heading font-minecraft">Android Companion Client</h2>
+          <p>
+            Warden features a native Android mobile application designed for remote server telemetry, push notifications, crash alerts, and on-the-go power control.
+          </p>
+
+          <div class="card-grid">
+            <div class="feature-card">
+              <div class="feature-card-title">Real-Time Push Alerts</div>
+              <div class="feature-card-desc">Receive instant notifications when a server crashes, restarts, or completes an automated mod update.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card-title">Remote Power Control</div>
+              <div class="feature-card-desc">Start, stop, and restart any server instance directly from your Android phone or tablet.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card-title">Live Telemetry Widget</div>
+              <div class="feature-card-desc">Monitor CPU, RAM, and active player counts across all your servers in real time.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ════════ FOOTER ════════ -->
+        <footer class="docs-footer">
+          <div>
+            &copy; 2026 Warden. Built with Next.js 14, TypeScript &amp; Node.js.
+          </div>
+          <div style="display: flex; gap: 16px;">
+            <a href="https://github.com/ExraaG/Warden" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://ko-fi.com/exraa" target="_blank" rel="noopener noreferrer">Ko-fi</a>
+            <a href="#quickstart">Quickstart</a>
+          </div>
+        </footer>
+
+      </div>
+
+      <!-- Right Table of Contents -->
+      <aside class="docs-toc">
+        <div class="toc-title">On this page</div>
+        <ul class="toc-list">
+          <li><a href="#introduction" class="toc-link">Introduction</a></li>
+          <li><a href="#key-features" class="toc-link">Key Features</a></li>
+          <li><a href="#architecture" class="toc-link">Architecture &amp; Process Model</a></li>
+          <li><a href="#quickstart" class="toc-link">Quickstart Installation</a></li>
+          <li><a href="#docker-deployment" class="toc-link toc-h3">Docker Compose</a></li>
+          <li><a href="#bare-metal" class="toc-link toc-h3">Bare Metal (Node.js)</a></li>
+          <li><a href="#server-creation" class="toc-link">Server Management</a></li>
+          <li><a href="#modrinth-integration" class="toc-link">Mods &amp; Modpacks</a></li>
+          <li><a href="#player-roster" class="toc-link">Player Administration</a></li>
+          <li><a href="#scheduled-restarts" class="toc-link">Automation &amp; Schedules</a></li>
+          <li><a href="#initial-setup" class="toc-link">Security &amp; 2FA</a></li>
+          <li><a href="#api-reference" class="toc-link">REST API Reference</a></li>
+          <li><a href="#mobile-app" class="toc-link">Android Companion</a></li>
+        </ul>
+      </aside>
+    </main>
+
+  </div>
+
+  <!-- Search Modal Backdrop -->
+  <div id="searchModalBackdrop" class="search-modal-backdrop">
+    <div class="search-modal">
+      <div class="search-modal-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--text-dim);">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search documentation, guides, or API endpoints..." autocomplete="off">
+        <span class="search-shortcut">ESC</span>
+      </div>
+      <div id="searchResults" class="search-results"></div>
+    </div>
+  </div>
+
+  <!-- Screenshot Lightbox Modal -->
+  <div id="lightboxModal" class="lightbox-modal">
+    <img id="lightboxImg" class="lightbox-img" src="" alt="Enlarged screenshot">
+  </div>
+
+  <script src="docs.js"></script>
+</body>
+</html>
