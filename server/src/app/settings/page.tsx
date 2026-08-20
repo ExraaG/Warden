@@ -17,6 +17,10 @@ export default function SettingsPage() {
   const [timezone, setTimezone] = useState<string>('Europe/Vienna');
   const [autoUpdateTime, setAutoUpdateTime] = useState<string>('04:00');
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState<boolean>(true);
+  const [autoRestartEnabled, setAutoRestartEnabled] = useState<boolean>(false);
+  const [autoRestartTime, setAutoRestartTime] = useState<string>('05:00');
+  const [showTimezoneEditor, setShowTimezoneEditor] = useState<boolean>(false);
+  const [detectedTimezone, setDetectedTimezone] = useState<string>('Europe/Vienna');
   const [saving, setSaving] = useState<boolean>(false);
   const [checkingUpdate, setCheckingUpdate] = useState<boolean>(false);
   const [updateInfo, setUpdateInfo] = useState<{
@@ -123,14 +127,18 @@ export default function SettingsPage() {
         }
       })
       .catch(() => {});
+    const browserTz = typeof Intl !== 'undefined' && Intl.DateTimeFormat ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'Europe/Vienna';
+    setDetectedTimezone(browserTz || 'Europe/Vienna');
     fetch('/api/v1/settings')
       .then((r) => r.json())
       .then((res) => {
         if (res.success && res.data) {
           setSettings(res.data);
-          setTimezone(res.data.timezone || 'Europe/Vienna');
+          setTimezone(res.data.timezone || browserTz || 'Europe/Vienna');
           setAutoUpdateTime(res.data.autoUpdateTime || '04:00');
           setAutoUpdateEnabled(res.data.autoUpdateEnabled !== false);
+          setAutoRestartEnabled(Boolean(res.data.autoRestartEnabled));
+          setAutoRestartTime(res.data.autoRestartTime || '05:00');
         }
       })
       .catch((err) => console.error('Error loading settings:', err));
@@ -450,6 +458,8 @@ export default function SettingsPage() {
           timezone,
           autoUpdateTime,
           autoUpdateEnabled,
+          autoRestartTime,
+          autoRestartEnabled,
         }),
       }).then((r) => r.json());
 
@@ -503,50 +513,118 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        {/* Automated Safety Updates Card */}
-        <Card header="Automated Mod Updates Schedule" badge={<WardenIcon name="clock" size={16} className="text-[var(--color-accent)]" />}>
+        {/* Automated Schedules & Timezone Card */}
+        <Card header="Automated Server Schedules" badge={<WardenIcon name="clock" size={16} className="text-[var(--color-accent)]" />}>
           <div className="space-y-4 text-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs font-semibold text-slate-200">Enable Automated Mod Updates</div>
-                <div className="text-[11px] text-slate-400">Automatically downloads updates from Modrinth with safety backup and rollback.</div>
+            {/* System Timezone with auto-detection */}
+            <div className="p-3.5 bg-[var(--bg-main)] border border-[var(--color-border)] rounded-lg space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <div className="text-xs font-semibold text-slate-200 uppercase font-minecraft">Active System Timezone</div>
+                  <div className="text-[11px] text-slate-400 font-mono">All automated jobs execute according to this timezone.</div>
+                </div>
+                <span className="bg-emerald-950 text-emerald-300 border border-emerald-800/60 px-2.5 py-1 rounded text-xs font-mono font-bold shrink-0 self-start sm:self-auto">
+                  {timezone || detectedTimezone}
+                </span>
               </div>
-              <input
-                type="checkbox"
-                checked={autoUpdateEnabled}
-                onChange={(e) => setAutoUpdateEnabled(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-              />
+
+              {!showTimezoneEditor ? (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowTimezoneEditor(true)}
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300 underline font-mono cursor-pointer"
+                  >
+                    Wrong Timezone? Change it here
+                  </button>
+                </div>
+              ) : (
+                <div className="pt-2.5 border-t border-[var(--color-border)] space-y-2">
+                  <label className="block text-[11px] font-semibold uppercase text-slate-400 font-mono">
+                    Custom Timezone Name
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                      placeholder="e.g. Europe/Vienna, America/New_York, UTC"
+                      className="flex-1 bg-[var(--bg-surface)] border border-[var(--color-border)] p-2 rounded text-xs text-slate-100 font-mono focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setTimezone(detectedTimezone);
+                        showToast(`Timezone set to detected: ${detectedTimezone}`, 'info');
+                      }}
+                      className="text-xs font-mono whitespace-nowrap"
+                    >
+                      Detect Mine ({detectedTimezone})
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Daily Execution Time (24h format)
-              </label>
-              <input
-                type="time"
-                value={autoUpdateTime}
-                onChange={(e) => setAutoUpdateTime(e.target.value)}
-                disabled={!autoUpdateEnabled}
-                className="w-full sm:w-48 bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono disabled:opacity-50"
-              />
-            </div>
-          </div>
-        </Card>
+            {/* 1. Automated Mod Updates */}
+            <div className="p-3.5 bg-[var(--bg-main)] border border-[var(--color-border)] rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold text-slate-200">Automated Mod Updates</div>
+                  <div className="text-[11px] text-slate-400 font-mono">Automatically checks Modrinth and updates modpacks with safety backup and rollback.</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoUpdateEnabled}
+                  onChange={(e) => setAutoUpdateEnabled(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                />
+              </div>
 
-        {/* Timezone Card */}
-        <Card header="System Timezone" badge={<WardenIcon name="clock" size={16} className="text-[var(--color-accent)]" />}>
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-              Timezone
-            </label>
-            <input
-              type="text"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              placeholder="e.g. Europe/Vienna, America/New_York, UTC"
-              className="w-full bg-[var(--bg-main)] border border-[var(--color-border)] p-2.5 rounded-md text-xs sm:text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 font-mono"
-            />
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1 font-mono">
+                  Daily Execution Time (24h format)
+                </label>
+                <input
+                  type="time"
+                  value={autoUpdateTime}
+                  onChange={(e) => setAutoUpdateTime(e.target.value)}
+                  disabled={!autoUpdateEnabled}
+                  className="w-full sm:w-48 bg-[var(--bg-surface)] border border-[var(--color-border)] p-2 rounded-md text-xs text-slate-100 font-mono disabled:opacity-40"
+                />
+              </div>
+            </div>
+
+            {/* 2. Automated Daily Server Restart */}
+            <div className="p-3.5 bg-[var(--bg-main)] border border-[var(--color-border)] rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold text-slate-200">Automated Daily Server Restarts</div>
+                  <div className="text-[11px] text-slate-400 font-mono">Safely restarts running Minecraft servers daily to clear memory leaks and keep ticks smooth.</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoRestartEnabled}
+                  onChange={(e) => setAutoRestartEnabled(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1 font-mono">
+                  Daily Execution Time (24h format)
+                </label>
+                <input
+                  type="time"
+                  value={autoRestartTime}
+                  onChange={(e) => setAutoRestartTime(e.target.value)}
+                  disabled={!autoRestartEnabled}
+                  className="w-full sm:w-48 bg-[var(--bg-surface)] border border-[var(--color-border)] p-2 rounded-md text-xs text-slate-100 font-mono disabled:opacity-40"
+                />
+              </div>
+            </div>
           </div>
         </Card>
 
@@ -958,7 +1036,6 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        {/* Developer & Testing Lab Card [DEV BRANCH ONLY] */}
         <Card
           header="Developer & Testing Lab"
           badge={
@@ -977,7 +1054,6 @@ export default function SettingsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
-              {/* Action 1: Delete All Global Servers */}
               <div className="p-3.5 bg-[var(--bg-main)] border border-red-900/40 rounded-lg flex flex-col justify-between gap-3">
                 <div>
                   <div className="text-xs font-bold text-red-400 font-minecraft uppercase flex items-center gap-1.5 mb-1">
@@ -1003,7 +1079,6 @@ export default function SettingsPage() {
                 </Button>
               </div>
 
-              {/* Action 2: Delete All Users */}
               <div className="p-3.5 bg-[var(--bg-main)] border border-amber-900/40 rounded-lg flex flex-col justify-between gap-3">
                 <div>
                   <div className="text-xs font-bold text-amber-400 font-minecraft uppercase flex items-center gap-1.5 mb-1">
@@ -1029,7 +1104,6 @@ export default function SettingsPage() {
                 </Button>
               </div>
 
-              {/* Action 3: Factory Wipe Everything */}
               <div className="p-3.5 bg-[var(--bg-main)] border border-red-950 rounded-lg flex flex-col justify-between gap-3 bg-red-950/20">
                 <div>
                   <div className="text-xs font-bold text-red-300 font-minecraft uppercase flex items-center gap-1.5 mb-1">
@@ -1581,7 +1655,6 @@ export default function SettingsPage() {
         </Modal>
       )}
 
-      {/* Dev Tool 3: Factory Reset Modal */}
       {showDevFactoryResetModal && (
         <Modal
           isOpen={showDevFactoryResetModal}

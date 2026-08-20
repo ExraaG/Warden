@@ -87,7 +87,6 @@ export default function DashboardPage() {
   const [deleteServerNameInput, setDeleteServerNameInput] = useState<string>('');
   const [deletingServer, setDeletingServer] = useState<boolean>(false);
 
-  // Delete All My Servers Modal State
   const [showDeleteAllMyServersModal, setShowDeleteAllMyServersModal] = useState<boolean>(false);
   const [deleteAllMyServersInput, setDeleteAllMyServersInput] = useState<string>('');
   const [deletingAllMyServers, setDeletingAllMyServers] = useState<boolean>(false);
@@ -6351,7 +6350,6 @@ export default function DashboardPage() {
         </Modal>
       )}
 
-      {/* Delete All My Servers Confirmation Modal */}
       {showDeleteAllMyServersModal && (
         <Modal
           isOpen={showDeleteAllMyServersModal}

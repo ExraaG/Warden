@@ -21,6 +21,9 @@ const DEFAULT_SETTINGS: WardenSettings = {
   autoUpdateEnabled: true,
   autoUpdateTime: '04:00',
   autoUpdateCron: '0 4 * * *',
+  autoRestartEnabled: false,
+  autoRestartTime: '05:00',
+  autoRestartCron: '0 5 * * *',
   schemaValidated: true,
   customTasks: [],
 };

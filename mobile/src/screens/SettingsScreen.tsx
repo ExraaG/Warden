@@ -56,7 +56,6 @@ export const SettingsScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Connection Info Card */}
       <Card
         title="WARDEN HOST CONNECTION"
         accent="emerald"
@@ -84,7 +83,6 @@ export const SettingsScreen: React.FC = () => {
         />
       </Card>
 
-      {/* Danger Zone: Bulk Operations */}
       <Card
         title="DANGER ZONE: BULK OPERATIONS"
         accent="red"
@@ -106,7 +104,6 @@ export const SettingsScreen: React.FC = () => {
         />
       </Card>
 
-      {/* App Info Card */}
       <Card title="WARDEN MOBILE CLIENT INFO" icon={<IconShield size={15} color="#38bdf8" />}>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Client Version</Text>
@@ -186,12 +183,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 12,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#34d399',
   },
   liveStatusText: {
     fontFamily: 'monospace',

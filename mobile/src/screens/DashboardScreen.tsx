@@ -117,7 +117,6 @@ export const DashboardScreen: React.FC = () => {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#34d399" />}
     >
-      {/* Top Header & Server Switcher */}
       <View style={styles.topHeader}>
         <View style={styles.brandRow}>
           <View style={styles.logoBadge}>
@@ -135,7 +134,6 @@ export const DashboardScreen: React.FC = () => {
         />
       </View>
 
-      {/* Unconfirmed Warning */}
       {!activeServer.detection.isConfirmed && (
         <View style={styles.warningBanner}>
           <IconAlert size={20} color="#f59e0b" />
@@ -148,7 +146,6 @@ export const DashboardScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Main Server Status & Controls Card */}
       <Card
         accent={activeServer.status === 'online' ? 'emerald' : 'none'}
         title="SERVER ORCHESTRATION"
@@ -168,7 +165,6 @@ export const DashboardScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Quick Power Actions Grid */}
         <View style={styles.actionsGrid}>
           <Button
             title="START"
@@ -210,14 +206,12 @@ export const DashboardScreen: React.FC = () => {
         />
       </Card>
 
-      {/* Telemetry Metrics Grid */}
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionHeaderTitle}>REAL-TIME TELEMETRY</Text>
         <Text style={styles.liveIndicator}>LIVE</Text>
       </View>
 
       <View style={styles.statsGrid}>
-        {/* CPU Utilization */}
         <View style={styles.statBox}>
           <View style={styles.statHeader}>
             <IconCpu size={16} color={getCpuColor(stats.cpuPercent)} />
@@ -236,7 +230,6 @@ export const DashboardScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Memory Allocation */}
         <View style={styles.statBox}>
           <View style={styles.statHeader}>
             <IconMemory size={16} color="#38bdf8" />
@@ -258,7 +251,6 @@ export const DashboardScreen: React.FC = () => {
       </View>
 
       <View style={styles.statsGrid}>
-        {/* Online Players */}
         <View style={styles.statBox}>
           <View style={styles.statHeader}>
             <IconUsers size={16} color="#a855f7" />
@@ -271,7 +263,6 @@ export const DashboardScreen: React.FC = () => {
           <Text style={styles.statSubText}>Active Connections</Text>
         </View>
 
-        {/* Uptime */}
         <View style={styles.statBox}>
           <View style={styles.statHeader}>
             <IconClock size={16} color="#94a3b8" />

@@ -55,7 +55,6 @@ function MainApp() {
           {renderScreen()}
         </View>
 
-        {/* Bottom Navigation Bar */}
         <View style={styles.bottomNav}>
           <TouchableOpacity
             style={[styles.navTab, activeTab === 'dashboard' && styles.activeNavTab]}

@@ -147,13 +147,16 @@ export interface ScheduledTask {
 
 
 export interface WardenSettings {
-  craftyUrl: string;
-  craftyApiKeySet: boolean;
+  craftyUrl?: string;
+  craftyApiKeySet?: boolean;
   wardenApiKeySet: boolean;
   timezone: string;
   autoUpdateEnabled?: boolean;
   autoUpdateTime?: string; // e.g. "04:00"
   autoUpdateCron?: string; // e.g. "0 4 * * *"
+  autoRestartEnabled?: boolean;
+  autoRestartTime?: string; // e.g. "05:00"
+  autoRestartCron?: string; // e.g. "0 5 * * *"
   schemaValidated: boolean;
   schemaLastSync?: string;
   customTasks?: ScheduledTask[];

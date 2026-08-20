@@ -59,7 +59,7 @@
 - **Safety Engine**:
   - Batch queries Modrinth via `POST /v2/version_files/update` using local SHA-512 hashes.
   - Pre-update safety backups of current server `mods` directory.
-  - **Server Export & Import (.zip)**: 1-click full server backup export and instant drag-and-drop import for existing servers from **Crafty Controller**, manual zip backups, or Warden exports. Automatically unrolls nested folders, auto-detects modloaders (Paper, Fabric, Purpur, Forge, Spigot), finds server JARs, and allocates ports.
+  - **Server Export & Import (.zip)**: 1-click full server backup export and instant drag-and-drop import for existing Minecraft servers, manual zip backups, or Warden exports. Automatically unrolls nested folders, auto-detects modloaders (Paper, Fabric, Purpur, Forge, Spigot), finds server JARs, and allocates ports.
 - **Single Docker Container Deployment**:
   - Runs Express API + Next.js frontend + Java OpenJDK runtime in a single lightweight unit mounting `./data:/data`.
 - **Android Companion App (Coming Soon)**:

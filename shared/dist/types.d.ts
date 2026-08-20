@@ -110,13 +110,16 @@ export interface ScheduledTask {
     lastStatus?: 'success' | 'failed';
 }
 export interface WardenSettings {
-    craftyUrl: string;
-    craftyApiKeySet: boolean;
+    craftyUrl?: string;
+    craftyApiKeySet?: boolean;
     wardenApiKeySet: boolean;
     timezone: string;
     autoUpdateEnabled?: boolean;
     autoUpdateTime?: string;
     autoUpdateCron?: string;
+    autoRestartEnabled?: boolean;
+    autoRestartTime?: string;
+    autoRestartCron?: string;
     schemaValidated: boolean;
     schemaLastSync?: string;
     customTasks?: ScheduledTask[];

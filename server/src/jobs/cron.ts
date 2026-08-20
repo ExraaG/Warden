@@ -51,6 +51,28 @@ export class UpdateJobRunner {
       console.log('[Cron] Automated mod updates are disabled.');
     }
 
+    // 1.5 Auto Server Restart Schedule
+    const autoRestartEnabled = Boolean(settings.autoRestartEnabled);
+    let restartCronExpr = settings.autoRestartCron;
+    if (!restartCronExpr) {
+      const timeStr = settings.autoRestartTime || '05:00';
+      const [h, m] = timeStr.split(':').map((v) => parseInt(v, 10) || 0);
+      restartCronExpr = `${m} ${h} * * *`;
+    }
+
+    if (autoRestartEnabled && cron.validate(restartCronExpr)) {
+      const restartTask = cron.schedule(
+        restartCronExpr,
+        async () => {
+          console.log(`[Cron] Triggering automated scheduled server restart (${restartCronExpr})...`);
+          await this.runDailyRestartJob();
+        },
+        { timezone: tz }
+      );
+      this.cronTasks.push(restartTask);
+      console.log(`[Cron] Automated server restart job scheduled: '${restartCronExpr}' (${tz}).`);
+    }
+
     // 2. Custom User Tasks
     const customTasks = db.getCustomTasks();
     for (const task of customTasks) {
@@ -136,6 +158,19 @@ export class UpdateJobRunner {
       }
       console.log(`[Event Trigger] Mod update event fired for task '${task.name}' on server ${serverId}...`);
       await this.executeCustomTask(task);
+    }
+  }
+
+  public async runDailyRestartJob(): Promise<void> {
+    try {
+      const servers = await serverManager.getServers();
+      const onlineServers = servers.filter((s) => s.status === 'online');
+      for (const server of onlineServers) {
+        console.log(`[Cron] Executing scheduled daily restart for server '${server.name}' (${server.id})...`);
+        await serverManager.restartServer(server.id);
+      }
+    } catch (err: any) {
+      console.error('[Cron] Error during scheduled daily restart:', err);
     }
   }
 

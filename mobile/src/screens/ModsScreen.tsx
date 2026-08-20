@@ -24,7 +24,7 @@ export const ModsScreen: React.FC = () => {
       const data = await wardenApi.getInstalledMods(selectedServerId);
       setMods(data);
     } catch (err) {
-      console.error('Error fetching mods:', err);
+      console.error('failed fetching mods', err);
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,6 @@ export const ModsScreen: React.FC = () => {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadMods} tintColor="#34d399" />}
     >
-      {/* Search Header Card */}
       <Card title="MODRINTH REPOSITORY SEARCH" icon={<IconSearch size={16} color="#34d399" />}>
         <View style={styles.searchRow}>
           <TextInput
@@ -114,7 +113,6 @@ export const ModsScreen: React.FC = () => {
         </View>
       </Card>
 
-      {/* Search Results Section */}
       {searchResults.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionTitleRow}>
@@ -159,7 +157,6 @@ export const ModsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Installed Mods Section */}
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
           <Text style={styles.sectionTitle}>INSTALLED MODS ({mods.length})</Text>
