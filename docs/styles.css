@@ -292,23 +292,22 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 12px;
+  padding: 6px 12px;
   color: var(--text-muted);
   text-decoration: none;
   font-size: 13px;
-  border-radius: 6px;
-  transition: all 0.15s ease;
+  border-left: 2px solid transparent;
+  transition: color 0.1s ease, border-color 0.1s ease;
 }
 
 .sidebar-link:hover {
   color: var(--text-bright);
-  background: var(--bg-card);
 }
 
 .sidebar-link.active {
   color: var(--color-accent);
-  background: rgba(16, 185, 129, 0.1);
-  font-weight: 600;
+  border-left-color: var(--color-accent);
+  font-weight: 700;
 }
 
 .sidebar-link svg {

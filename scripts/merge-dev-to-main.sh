@@ -85,7 +85,7 @@ npm run build
 cd ..
 
 # 6. Commit cleaned main branch
-git add server/src/app/settings/page.tsx server/src/routes/api.ts .gitignore
+git add server/src/app/settings/page.tsx server/src/routes/api.ts .gitignore version.json server/version.json server/src/version.ts
 if [ -n "$(git status --porcelain)" ]; then
   git commit -m "chore(main): strip dev tools and internal agent docs from production release"
 fi

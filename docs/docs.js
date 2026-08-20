@@ -150,34 +150,67 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── 5. SCROLLSPY & ACTIVE SIDEBAR LINK ──
   const navLinks = document.querySelectorAll('.sidebar-link');
   const tocLinks = document.querySelectorAll('.toc-link');
-  const trackedHeadings = document.querySelectorAll('h2[id], h1[id], .doc-section[id]');
 
-  function updateActiveNav() {
-    let currentId = '';
-    const scrollPos = window.scrollY + 100;
+  // Track all link target IDs
+  const linkTargetIds = Array.from(
+    new Set([
+      ...Array.from(navLinks).map((l) => l.getAttribute('href')?.replace('#', '')),
+      ...Array.from(tocLinks).map((l) => l.getAttribute('href')?.replace('#', '')),
+    ])
+  ).filter(Boolean);
 
-    trackedHeadings.forEach((heading) => {
-      if (heading.offsetTop <= scrollPos) {
-        currentId = heading.id;
+  let isManualClick = false;
+
+  function setActiveLink(targetId) {
+    if (!targetId) return;
+    navLinks.forEach((link) => {
+      if (link.getAttribute('href') === `#${targetId}`) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
       }
     });
 
-    if (currentId) {
-      navLinks.forEach((link) => {
-        if (link.getAttribute('href') === `#${currentId}`) {
-          link.classList.add('active');
-        } else {
-          link.classList.remove('active');
-        }
-      });
+    tocLinks.forEach((link) => {
+      if (link.getAttribute('href') === `#${targetId}`) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
+  }
 
-      tocLinks.forEach((link) => {
-        if (link.getAttribute('href') === `#${currentId}`) {
-          link.classList.add('active');
-        } else {
-          link.classList.remove('active');
+  // Handle immediate click selection
+  document.querySelectorAll('.sidebar-link, .toc-link').forEach((link) => {
+    link.addEventListener('click', () => {
+      const targetId = link.getAttribute('href')?.replace('#', '');
+      if (targetId) {
+        isManualClick = true;
+        setActiveLink(targetId);
+        setTimeout(() => {
+          isManualClick = false;
+        }, 800);
+      }
+    });
+  });
+
+  function updateActiveNav() {
+    if (isManualClick) return;
+    let currentId = '';
+    const scrollPos = window.scrollY + 120;
+
+    for (const id of linkTargetIds) {
+      const el = document.getElementById(id);
+      if (el) {
+        const top = el.getBoundingClientRect().top + window.scrollY;
+        if (top <= scrollPos) {
+          currentId = id;
         }
-      });
+      }
+    }
+
+    if (currentId) {
+      setActiveLink(currentId);
     }
   }
 
