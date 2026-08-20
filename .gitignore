@@ -58,3 +58,11 @@ test_*.js
 server/test_*.py
 server/test_*.ts
 server/test_*.js
+
+# Internal AI & Agent docs (dev only)
+PROJECT_RULES.md
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.cursorrules
+.github/copilot-instructions.md
